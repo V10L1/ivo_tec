@@ -23,9 +23,7 @@ const PORT = process.env.PORT || 8069;
 const JWT_SECRET = process.env.JWT_SECRET;
 
 if (!JWT_SECRET) {
-    console.error("FATAL ERROR: JWT_SECRET is not defined.");
-    // FIX: Cast process to any to bypass potential type definition issues.
-    (process as any).exit(1);
+    throw new Error("FATAL ERROR: JWT_SECRET is not defined. Please check your .env file.");
 }
 
 // --- Database Connection ---
@@ -36,8 +34,6 @@ const pool = new Pool({
 // --- Middleware ---
 app.use(cors());
 app.use(express.json());
-
-// FIX: Removed AuthRequest interface to use the augmented Express.Request instead.
 
 const verifyToken = (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers['authorization'];
