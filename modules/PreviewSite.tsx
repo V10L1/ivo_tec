@@ -1,57 +1,69 @@
-import React from 'react';
-import {
-  MotorcycleIcon, WrenchIcon, LifeBuoyIcon
-} from '../components/icons/Icons';
+import React, { useState, useEffect } from 'react';
+import { MotorcycleIcon } from '../components/icons/Icons';
+import { PageBlock } from '../types';
 
-type FeaturedBike = {
-  name: string;
-  description: string;
-  price: string;
-  imageUrl?: string;
-};
+// --- Dynamic Block Renderers for Preview ---
 
-const getParamsFromHash = () => {
-    const hash = window.location.hash;
-    const queryStringIndex = hash.indexOf('?');
-    if (queryStringIndex === -1) {
-        return new URLSearchParams('');
+const renderPreviewBlock = (block: PageBlock) => {
+    switch (block.type) {
+        case 'hero':
+            return (
+                <main key={block.id} className="container mx-auto px-6 py-16 text-center">
+                    <h1 className="text-5xl font-extrabold text-white mb-4">{block.content.title}</h1>
+                    <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-8">{block.content.subtitle}</p>
+                    <button className="bg-cyan-600 text-white font-bold py-3 px-8 rounded-full text-lg cursor-not-allowed opacity-50" disabled>
+                        {block.content.ctaText}
+                    </button>
+                </main>
+            );
+        case 'text':
+            return (
+                 <section key={block.id} className="py-12">
+                    <div className="container mx-auto px-6 max-w-3xl text-left">
+                        <h2 className="text-3xl font-bold text-center mb-6 text-white">{block.content.heading}</h2>
+                        <p className="text-slate-400 whitespace-pre-wrap leading-relaxed">{block.content.body}</p>
+                    </div>
+                </section>
+            );
+        case 'image':
+            return (
+                <section key={block.id} className="py-12">
+                    <div className="container mx-auto px-6">
+                        <img src={block.content.imageUrl} alt={block.content.altText} className="rounded-lg max-w-4xl h-auto mx-auto shadow-lg" />
+                    </div>
+                </section>
+            );
+        case 'button':
+            return (
+                 <section key={block.id} className="py-8 text-center">
+                    <a href={block.content.link} onClick={e => e.preventDefault()} className="bg-slate-700 text-white font-bold py-3 px-8 rounded-lg inline-block cursor-not-allowed opacity-50">
+                        {block.content.text}
+                    </a>
+                </section>
+            );
+        default:
+            return null;
     }
-    return new URLSearchParams(hash.substring(queryStringIndex));
 };
-
-
-const BikeCard: React.FC<FeaturedBike> = ({ name, description, price, imageUrl }) => (
-  <div className="border border-slate-800 rounded-lg bg-slate-800/30 overflow-hidden group">
-    <img src={imageUrl} alt={name} className="w-full h-48 object-cover"/>
-    <div className="p-6">
-      <h3 className="text-xl font-bold mb-2 text-white">{name}</h3>
-      <p className="text-slate-400 mb-4">{description}</p>
-      <div className="text-2xl font-bold text-cyan-400">${price}</div>
-    </div>
-  </div>
-);
 
 
 const PreviewSite: React.FC = () => {
-  const searchParams = getParamsFromHash();
-  const title = searchParams.get('title') || 'Find Your Dream Ride';
-  const subtitle = searchParams.get('subtitle') || 'Explore our collection of high-performance motorcycles...';
-  const ctaText = searchParams.get('cta') || 'View Our Collection';
-  
-  const bikesParam = searchParams.get('bikes');
-  let featuredBikes: FeaturedBike[] = [];
-  try {
-      if(bikesParam) {
-          featuredBikes = JSON.parse(bikesParam);
-      }
-  } catch(e) {
-      console.error("Failed to parse bikes data for preview:", e);
-  }
+  const [pageBlocks, setPageBlocks] = useState<PageBlock[]>([]);
 
+  useEffect(() => {
+    try {
+      const storedContent = localStorage.getItem('sitePreviewContent');
+      if (storedContent) {
+        setPageBlocks(JSON.parse(storedContent));
+      }
+    } catch (error) {
+      console.error("Failed to load preview content from localStorage:", error);
+    }
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 font-sans">
-      {/* Header */}
+      {/* Header with Preview Mode banner */}
       <header className="bg-slate-800/50 backdrop-blur-sm sticky top-0 z-10 border-b border-slate-800">
         <nav className="container mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -64,57 +76,17 @@ const PreviewSite: React.FC = () => {
         </nav>
       </header>
 
-      {/* Hero Section */}
-      <main className="container mx-auto px-6 py-16 text-center">
-        <h1 className="text-5xl font-extrabold text-white mb-4">{title}</h1>
-        <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-8">
-          {subtitle}
-        </p>
-        <button
-          className="bg-cyan-600 text-white font-bold py-3 px-8 rounded-full text-lg cursor-not-allowed opacity-50"
-          disabled
-        >
-          {ctaText}
-        </button>
-      </main>
-
-      {/* Featured Bikes Section */}
-      <section className="py-20">
-        <div className="container mx-auto px-6">
-            <h2 className="text-3xl font-bold text-center mb-12 text-white">Motos em Destaque</h2>
-            <div className="grid md:grid-cols-3 gap-8">
-                {featuredBikes.map(bike => <BikeCard key={bike.name} {...bike} imageUrl={`https://via.placeholder.com/400x300.png/1e293b/94a3b8?text=${encodeURIComponent(bike.name)}`} />)}
-            </div>
-        </div>
-      </section>
-
-       {/* Features Section */}
-      <section className="bg-slate-800/50 py-20">
-        <div className="container mx-auto px-6 grid md:grid-cols-3 gap-12">
-          <div className="text-center p-6">
-            <MotorcycleIcon className="w-12 h-12 text-cyan-400 mx-auto mb-4" />
-            <h3 className="text-xl font-bold mb-2">Wide Selection</h3>
-            <p className="text-slate-400">From cruisers to sport bikes, we have a ride for every style.</p>
-          </div>
-          <div className="text-center p-6">
-            <WrenchIcon className="w-12 h-12 text-cyan-400 mx-auto mb-4" />
-            <h3 className="text-xl font-bold mb-2">Certified Pre-Owned</h3>
-            <p className="text-slate-400">Peace of mind with our multi-point inspection and warranty.</p>
-          </div>
-          <div className="text-center p-6">
-            <LifeBuoyIcon className="w-12 h-12 text-cyan-400 mx-auto mb-4" />
-            <h3 className="text-xl font-bold mb-2">Expert Support</h3>
-            <p className="text-slate-400">Our team is here to help you with financing, service, and parts.</p>
-          </div>
-        </div>
-      </section>
-
+      {/* Dynamic Content Area */}
+      {pageBlocks.length > 0 ? (
+        pageBlocks.map(block => renderPreviewBlock(block))
+      ) : (
+        <div className="text-center py-20 text-slate-500">No content to preview.</div>
+      )}
+      
       {/* Footer */}
       <footer className="border-t border-slate-800 mt-20 py-8">
         <div className="container mx-auto px-6 text-center text-slate-500">
-          <p>
-            &copy; {new Date().getFullYear()} Moto World. All Rights Reserved.
-          </p>
+          <p>&copy; {new Date().getFullYear()} Moto World. All Rights Reserved.</p>
         </div>
       </footer>
     </div>

@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 export enum UserRole {
@@ -16,3 +15,35 @@ export interface AppModule {
   description: string;
   Icon: React.ComponentType<{ className?: string }>;
 }
+
+// --- Page Builder Content Types ---
+
+export interface HeroBlockContent {
+  title: string;
+  subtitle: string;
+  ctaText: string;
+}
+
+export interface TextBlockContent {
+  heading: string;
+  body: string;
+}
+
+export interface ImageBlockContent {
+  imageUrl: string;
+  altText: string;
+}
+
+export interface ButtonBlockContent {
+  text: string;
+  link: string; // e.g., '/#/store', 'https://example.com'
+}
+
+export type PageBlock = {
+  id: string; // Unique ID for the block (e.g., from nanoid)
+} & (
+  | { type: 'hero'; content: HeroBlockContent }
+  | { type: 'text'; content: TextBlockContent }
+  | { type: 'image'; content: ImageBlockContent }
+  | { type: 'button'; content: ButtonBlockContent }
+);

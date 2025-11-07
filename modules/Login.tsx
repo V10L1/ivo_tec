@@ -17,7 +17,7 @@ const Login: React.FC = () => {
       await login(email, password);
       // On success, the AppRouter will automatically render the AdminPanel
     } catch (err) {
-      setError('Invalid email or password. (Hint: use password "admin")');
+      setError('Invalid email or password.');
     } finally {
       setIsLoading(false);
     }

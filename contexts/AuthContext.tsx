@@ -1,44 +1,51 @@
-import React, { createContext, useState, useContext, useMemo } from 'react';
+import React, { createContext, useState, useContext, useMemo, useEffect } from 'react';
 import { UserRole, AppKey } from '../types';
 import { ROLE_PERMISSIONS } from '../constants';
 import { User } from '../database/schema';
 
-// Mock user database for demonstration
-const MOCK_USERS: User[] = [
-    {
-        id: 'a1b2c3d4',
-        name: 'Admin User',
-        email: 'admin@example.com',
-        role: UserRole.DEVELOPER,
-        passwordHash: 'admin', // In a real app, this would be a hash
-        createdAt: new Date().toISOString(),
-    },
-    {
-        id: 'e5f6g7h8',
-        name: 'Gamecard User',
-        email: 'gamecardiv@gmail.com',
-        role: UserRole.DEVELOPER,
-        passwordHash: 'senha12345', // In a real app, this would be a hash
-        createdAt: new Date().toISOString(),
-    }
-];
-
-
 interface AuthContextType {
   isAuthenticated: boolean;
   currentUser: User | null;
+  token: string | null;
   setRole: (role: UserRole) => void; // Kept for role switching demo
   permissions: AppKey[];
   login: (email: string, pass: string) => Promise<void>;
   logout: () => void;
+  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem('authToken'));
+  const [isLoading, setIsLoading] = useState(true);
 
-  const isAuthenticated = !!currentUser;
+  useEffect(() => {
+    // This effect runs on initial load to verify the token
+    const verifyToken = async () => {
+      const storedToken = localStorage.getItem('authToken');
+      if (storedToken) {
+        // In a real app, you would have a '/api/auth/verify' endpoint.
+        // For this demo, we decode the token to get user info.
+        try {
+            const payload = JSON.parse(atob(storedToken.split('.')[1]));
+            setCurrentUser(payload.user);
+            setToken(storedToken);
+        } catch (error) {
+            console.error("Invalid token:", error);
+            localStorage.removeItem('authToken');
+            setToken(null);
+            setCurrentUser(null);
+        }
+      }
+      setIsLoading(false);
+    };
+    verifyToken();
+  }, []);
+
+
+  const isAuthenticated = !!token && !!currentUser;
 
   const permissions = useMemo(() => {
     if (!currentUser) return [];
@@ -46,26 +53,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [currentUser]);
 
   const login = async (email: string, pass: string) => {
-    // Simulate API call
-    return new Promise<void>((resolve, reject) => {
-        setTimeout(() => {
-            const user = MOCK_USERS.find(u => u.email.toLowerCase() === email.toLowerCase());
-            
-            // In a real app, you would compare a hashed password.
-            // For this mock, we compare the plain text password.
-            if (user && user.passwordHash === pass) {
-                console.log('Login successful for:', email);
-                setCurrentUser(user);
-                resolve();
-            } else {
-                reject(new Error('Invalid credentials'));
-            }
-        }, 500);
-    });
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password: pass }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Invalid credentials');
+      }
+
+      const { token: receivedToken, user } = await response.json();
+      localStorage.setItem('authToken', receivedToken);
+      setToken(receivedToken);
+      setCurrentUser(user);
   };
 
   const logout = () => {
     setCurrentUser(null);
+    setToken(null);
+    localStorage.removeItem('authToken');
   };
   
   // For role switcher demo purposes
@@ -76,8 +84,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
 
+  if (isLoading) {
+    return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Loading...</div>;
+  }
+
   return (
-    <AuthContext.Provider value={{ isAuthenticated, currentUser, setRole, permissions, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, currentUser, token, setRole, permissions, login, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );
