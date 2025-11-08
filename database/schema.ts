@@ -2,98 +2,98 @@ import { UserRole } from '../types';
 
 /**
  * @file schema.ts
- * @description This file defines the TypeScript interfaces that represent the
- * database schema. It serves as a blueprint for the PostgreSQL database structure,
- * ensuring type safety and a clear data model for the application.
- * Each interface corresponds to a table in the database.
+ * @description Este arquivo define as interfaces TypeScript que representam o
+ * esquema do banco de dados. Ele serve como um projeto para a estrutura do banco de dados PostgreSQL,
+ * garantindo segurança de tipo e um modelo de dados claro para a aplicação.
+ * Cada interface corresponde a uma tabela no banco de dados.
  */
 
-// --- Core Tables ---
+// --- Tabelas Principais ---
 
 /**
- * Represents the `users` table.
- * Stores information about all users who can log into the admin platform.
+ * Representa a tabela `users`.
+ * Armazena informações sobre todos os usuários que podem fazer login na plataforma de administração.
  */
 export interface User {
-  id: string; // Primary Key (e.g., UUID)
+  id: string; // Chave Primária (ex., UUID)
   name: string;
-  email: string; // Unique constraint
+  email: string; // Restrição de unicidade
   role: UserRole;
   passwordHash: string;
-  createdAt: string; // ISO 8601 timestamp
+  createdAt: string; // Timestamp ISO 8601
 }
 
-// --- Module-specific Tables ---
+// --- Tabelas Específicas dos Módulos ---
 
 /**
- * Represents the `site_content` table (for the Site module).
- * A key-value store for editable content on the public website.
+ * Representa a tabela `site_content` (para o módulo Site).
+ * Um armazenamento de chave-valor para conteúdo editável no site público.
  */
 export interface SiteContent {
-  contentKey: string; // Primary Key (e.g., 'hero-title', 'about-us-paragraph')
-  contentValue: string; // The text or data for that key
-  lastUpdatedAt: string; // ISO 8601 timestamp
-  updatedBy: User['id']; // Foreign Key to users.id
+  contentKey: string; // Chave Primária (ex., 'hero-title', 'about-us-paragraph')
+  contentValue: string; // O texto ou dado para essa chave
+  lastUpdatedAt: string; // Timestamp ISO 8601
+  updatedBy: User['id']; // Chave Estrangeira para users.id
 }
 
 /**
- * Represents the `products` table (for the Loja module).
- * Stores details for each product available in the store.
+ * Representa a tabela `products` (para o módulo Loja).
+ * Armazena detalhes de cada produto disponível na loja.
  */
 export interface Product {
-  id: string; // Primary Key (e.g., UUID or SKU)
+  id: string; // Chave Primária (ex., UUID ou SKU)
   name: string;
   description: string;
-  price: number; // Stored as a decimal or integer (e.g., in cents)
-  categoryId: string; // Foreign Key to product_categories.id
+  price: number; // Armazenado como decimal ou inteiro (ex., em centavos)
+  categoryId: string; // Chave Estrangeira para product_categories.id
   imageUrl: string;
-  createdAt: string; // ISO 8601 timestamp
+  createdAt: string; // Timestamp ISO 8601
 }
 
 /**
- * Represents the `product_categories` table (for the Loja module).
+ * Representa a tabela `product_categories` (para o módulo Loja).
  */
 export interface ProductCategory {
-  id: string; // Primary Key
-  name: string; // e.g., 'Electronics', 'Furniture'
-  slug: string; // Unique URL-friendly identifier
+  id: string; // Chave Primária
+  name: string; // ex., 'Eletrônicos', 'Móveis'
+  slug: string; // Identificador único amigável para URL
 }
 
 /**
- * Represents the `stock_inventory` table (for the Estoque module).
- * Tracks the quantity of each product.
+ * Representa a tabela `stock_inventory` (para o módulo Estoque).
+ * Rastreia a quantidade de cada produto.
  */
 export interface StockItem {
-  productId: Product['id']; // Primary Key & Foreign Key to products.id
+  productId: Product['id']; // Chave Primária & Chave Estrangeira para products.id
   quantity: number;
-  lastUpdatedAt: string; // ISO 8601 timestamp
+  lastUpdatedAt: string; // Timestamp ISO 8601
 }
 
 /**
- * Represents the `chat_messages` table (for the Mensagens module).
- * Stores messages from the live chat system.
+ * Representa a tabela `chat_messages` (para o módulo Mensagens).
+ * Armazena mensagens do sistema de chat ao vivo.
  */
 export interface ChatMessage {
-  id: string; // Primary Key
-  conversationId: string; // Groups messages into a single chat session
+  id: string; // Chave Primária
+  conversationId: string; // Agrupa mensagens em uma única sessão de chat
   senderType: 'user' | 'operator';
-  senderId: string; // Could be a visitor session ID or a User['id']
+  senderId: string; // Pode ser um ID de sessão de visitante ou um User['id']
   content: string;
-  sentAt: string; // ISO 8601 timestamp
+  sentAt: string; // Timestamp ISO 8601
 }
 
 /**
- * Represents the `support_tickets` table (for the Suporte module).
- * Stores customer support requests.
+ * Representa a tabela `support_tickets` (para o módulo Suporte).
+ * Armazena solicitações de suporte ao cliente.
  */
 export interface SupportTicket {
-  id: number; // Primary Key (Serial)
+  id: number; // Chave Primária (Serial)
   subject: string;
   description: string;
-  status: 'Open' | 'In Progress' | 'Closed';
-  priority: 'Low' | 'Medium' | 'High';
-  submittedByEmail: string; // Email of the user who created the ticket
-  assignedTo?: User['id']; // Foreign Key to users.id
-  createdAt: string; // ISO 8601 timestamp
-  closedAt?: string; // ISO 8601 timestamp
+  status: 'Aberto' | 'Em Progresso' | 'Fechado';
+  priority: 'Baixa' | 'Média' | 'Alta';
+  submittedByEmail: string; // Email do usuário que criou o ticket
+  assignedTo?: User['id']; // Chave Estrangeira para users.id
+  createdAt: string; // Timestamp ISO 8601
+  closedAt?: string; // Timestamp ISO 8601
 }

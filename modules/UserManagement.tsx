@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { UserRole } from '../types';
 
@@ -13,21 +14,21 @@ const UserManagement: React.FC = () => {
   return (
     <div>
         <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xl font-semibold text-white">User and Permission Management</h3>
+            <h3 className="text-xl font-semibold text-white">Gerenciamento de Usuários e Permissões</h3>
             <button className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-            Invite New User
+            Convidar Novo Usuário
             </button>
       </div>
       <p className="mb-6 text-slate-400">
-        As a Developer, you can manage all users and their roles on the platform.
+        Como Desenvolvedor, você pode gerenciar todos os usuários e suas funções na plataforma.
       </p>
       <div className="overflow-x-auto">
         <table className="min-w-full bg-slate-900 rounded-lg">
           <thead>
             <tr className="border-b border-slate-700">
-              <th className="p-3 text-left text-sm font-semibold text-slate-400">User</th>
-              <th className="p-3 text-left text-sm font-semibold text-slate-400">Role</th>
-              <th className="p-3 text-left text-sm font-semibold text-slate-400">Actions</th>
+              <th className="p-3 text-left text-sm font-semibold text-slate-400">Usuário</th>
+              <th className="p-3 text-left text-sm font-semibold text-slate-400">Função</th>
+              <th className="p-3 text-left text-sm font-semibold text-slate-400">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -47,8 +48,8 @@ const UserManagement: React.FC = () => {
                     </select>
                 </td>
                 <td className="p-3 text-sm space-x-4">
-                  <a href="#" className="text-cyan-400 hover:text-cyan-300">Save</a>
-                  <a href="#" className="text-red-400 hover:text-red-300">Remove</a>
+                  <a href="#" className="text-cyan-400 hover:text-cyan-300">Salvar</a>
+                  <a href="#" className="text-red-400 hover:text-red-300">Remover</a>
                 </td>
               </tr>
             ))}

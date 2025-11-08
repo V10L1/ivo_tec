@@ -6,8 +6,8 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { User } from './database/schema';
 
-// FIX: Add user property to Express Request interface via declaration merging.
-// This is the idiomatic way to handle this in Express and avoids type conflicts.
+// FIX: Adiciona a propriedade user à interface Request do Express via 'declaration merging'.
+// Esta é a maneira idiomática de lidar com isso no Express e evita conflitos de tipo.
 declare global {
     namespace Express {
         export interface Request {
@@ -23,10 +23,10 @@ const PORT = process.env.PORT || 8069;
 const JWT_SECRET = process.env.JWT_SECRET;
 
 if (!JWT_SECRET) {
-    throw new Error("FATAL ERROR: JWT_SECRET is not defined. Please check your .env file.");
+    throw new Error("ERRO FATAL: JWT_SECRET não está definido. Por favor, verifique seu arquivo .env.");
 }
 
-// --- Database Connection ---
+// --- Conexão com o Banco de Dados ---
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
 });
@@ -40,25 +40,25 @@ const verifyToken = (req: Request, res: Response, next: NextFunction) => {
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
     if (!token) {
-        return res.status(401).json({ message: 'No token provided' });
+        return res.status(401).json({ message: 'Nenhum token fornecido' });
     }
 
     jwt.verify(token, JWT_SECRET, (err: any, decoded: any) => {
         if (err) {
-            return res.status(403).json({ message: 'Failed to authenticate token' });
+            return res.status(403).json({ message: 'Falha ao autenticar o token' });
         }
         req.user = decoded.user;
         next();
     });
 };
 
-// --- API Routes ---
+// --- Rotas da API ---
 
 // [POST] /api/auth/login
 app.post('/api/auth/login', async (req, res) => {
     const { email, password } = req.body;
     if (!email || !password) {
-        return res.status(400).json({ message: 'Email and password are required' });
+        return res.status(400).json({ message: 'E-mail e senha são obrigatórios' });
     }
 
     try {
@@ -66,13 +66,13 @@ app.post('/api/auth/login', async (req, res) => {
         const user = result.rows[0];
 
         if (!user) {
-            return res.status(401).json({ message: 'Invalid credentials' });
+            return res.status(401).json({ message: 'Credenciais inválidas' });
         }
 
         const isPasswordValid = await bcrypt.compare(password, user.password_hash);
 
         if (!isPasswordValid) {
-            return res.status(401).json({ message: 'Invalid credentials' });
+            return res.status(401).json({ message: 'Credenciais inválidas' });
         }
         
         const userPayload = {
@@ -87,8 +87,8 @@ app.post('/api/auth/login', async (req, res) => {
         res.json({ token, user: userPayload });
 
     } catch (error) {
-        console.error('Login error:', error);
-        res.status(500).json({ message: 'Internal server error' });
+        console.error('Erro de login:', error);
+        res.status(500).json({ message: 'Erro interno do servidor' });
     }
 });
 
@@ -96,15 +96,15 @@ app.post('/api/auth/login', async (req, res) => {
 // [GET] /api/site/content
 app.get('/api/site/content', async (req, res) => {
     try {
-        // We assume there's only one row for the main site content with id = 1
+        // Assumimos que há apenas uma linha para o conteúdo principal do site com id = 1
         const result = await pool.query('SELECT content FROM site_content WHERE id = 1');
         if (result.rows.length === 0) {
-            return res.json({ content: [] }); // Return empty array if no content found
+            return res.json({ content: [] }); // Retorna array vazio se nenhum conteúdo for encontrado
         }
         res.json(result.rows[0]);
     } catch (error) {
-        console.error('Error fetching site content:', error);
-        res.status(500).json({ message: 'Failed to fetch site content' });
+        console.error('Erro ao buscar conteúdo do site:', error);
+        res.status(500).json({ message: 'Falha ao buscar o conteúdo do site' });
     }
 });
 
@@ -113,11 +113,11 @@ app.get('/api/site/content', async (req, res) => {
 app.put('/api/site/content', verifyToken, async (req: Request, res) => {
     const { content } = req.body;
      if (!req.user || req.user.role !== 'Developer') {
-        return res.status(403).json({ message: 'Permission denied.' });
+        return res.status(403).json({ message: 'Permissão negada.' });
     }
     
     if (!content) {
-        return res.status(400).json({ message: 'Content is required' });
+        return res.status(400).json({ message: 'O conteúdo é obrigatório' });
     }
 
     try {
@@ -128,15 +128,15 @@ app.put('/api/site/content', verifyToken, async (req: Request, res) => {
             DO UPDATE SET content = $1, last_updated_at = NOW();
         `;
         await pool.query(query, [JSON.stringify(content)]);
-        res.status(200).json({ message: 'Content saved successfully' });
+        res.status(200).json({ message: 'Conteúdo salvo com sucesso' });
     } catch (error) {
-        console.error('Error saving site content:', error);
-        res.status(500).json({ message: 'Failed to save site content' });
+        console.error('Erro ao salvar conteúdo do site:', error);
+        res.status(500).json({ message: 'Falha ao salvar o conteúdo do site' });
     }
 });
 
 
-// --- Server Start ---
+// --- Início do Servidor ---
 app.listen(PORT, () => {
-    console.log(`Backend server is running on http://localhost:${PORT}`);
+    console.log(`Servidor backend está rodando em http://localhost:${PORT}`);
 });

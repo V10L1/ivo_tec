@@ -1,5 +1,5 @@
 {
-  "name": "Modular Admin Dashboard",
-  "description": "A scalable and modular admin dashboard with role-based access control, allowing for easy addition of new application modules. It serves as a central hub for managing various aspects of a customizable client-facing website.",
+  "name": "Painel de Administração Modular",
+  "description": "Um painel de administração escalável e modular com controle de acesso baseado em funções, permitindo a fácil adição de novos módulos de aplicação. Ele serve como um hub central para gerenciar vários aspectos de um site personalizável voltado para o cliente.",
   "requestFramePermissions": []
 }

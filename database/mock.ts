@@ -6,22 +6,22 @@ const MOCK_SITE_CONTENT: PageBlock[] = [
         "id": "block_1",
         "type": "hero",
         "content": {
-            "title": "Welcome to Moto World",
-            "subtitle": "Your one-stop shop for the best bikes on the planet. Start your adventure today.",
-            "ctaText": "Explore Collection"
+            "title": "Bem-vindo ao Mundo Moto",
+            "subtitle": "Sua loja completa para as melhores motos do planeta. Comece sua aventura hoje.",
+            "ctaText": "Explorar Coleção"
         }
     },
     {
         "id": "block_2",
         "type": "text",
         "content": {
-            "heading": "About Our Passion",
-            "body": "We live and breathe motorcycles. Our mission is to provide fellow enthusiasts with top-quality machines and unparalleled service. Every bike in our collection is hand-picked and inspected to ensure it meets our high standards of performance and reliability."
+            "heading": "Sobre Nossa Paixão",
+            "body": "Nós vivemos e respiramos motocicletas. Nossa missão é fornecer aos colegas entusiastas máquinas de alta qualidade e serviço incomparável. Cada moto em nossa coleção é escolhida a dedo e inspecionada para garantir que atenda aos nossos altos padrões de desempenho e confiabilidade."
         }
     }
 ];
 
-// Use localStorage to persist changes across reloads for a better demo experience.
+// Usa o localStorage para persistir as alterações entre recarregamentos para uma melhor experiência de demonstração.
 const getInitialContent = (): PageBlock[] => {
     try {
         const stored = localStorage.getItem('mockSiteContent');
@@ -29,19 +29,19 @@ const getInitialContent = (): PageBlock[] => {
             return JSON.parse(stored);
         }
     } catch (e) {
-        console.error("Failed to parse mock site content from localStorage", e);
+        console.error("Falha ao analisar o conteúdo do site mock do localStorage", e);
     }
-    // Initialize localStorage if it's not set
+    // Inicializa o localStorage se não estiver definido
     localStorage.setItem('mockSiteContent', JSON.stringify(MOCK_SITE_CONTENT));
     return MOCK_SITE_CONTENT;
 };
 
-// Mock API layer
+// Camada de API Mock
 export const mockApi = {
     login: async (email: string, pass: string): Promise<{ token: string; user: Omit<User, 'passwordHash' | 'createdAt'> }> => {
         const mockDevUser = { id: 'dev-user-1', name: 'Gamecard User', email: 'gamecardiv@gmail.com', role: UserRole.DEVELOPER };
         
-        await new Promise(res => setTimeout(res, 500)); // Simulate network delay
+        await new Promise(res => setTimeout(res, 500)); // Simula atraso de rede
 
         if (email.toLowerCase() === 'gamecardiv@gmail.com' && pass === 'senha12345') {
             const payload = { user: mockDevUser };
@@ -51,31 +51,31 @@ export const mockApi = {
             return Promise.resolve({ token, user: mockDevUser });
         }
         
-        return Promise.reject(new Error('Invalid credentials'));
+        return Promise.reject(new Error('Credenciais inválidas'));
     },
     getSiteContent: async (): Promise<{ content: PageBlock[] }> => {
-        await new Promise(res => setTimeout(res, 500)); // Simulate network delay
-        // Always read from localStorage to get the latest saved version
+        await new Promise(res => setTimeout(res, 500)); // Simula atraso de rede
+        // Sempre lê do localStorage para obter a versão salva mais recente
         return Promise.resolve({ content: getInitialContent() });
     },
     saveSiteContent: async (content: PageBlock[], token: string | null): Promise<{ message: string }> => {
-        await new Promise(res => setTimeout(res, 800)); // Simulate network delay
+        await new Promise(res => setTimeout(res, 800)); // Simula atraso de rede
 
         if (!token) {
-            return Promise.reject(new Error('Permission denied. No token provided.'));
+            return Promise.reject(new Error('Permissão negada. Nenhum token fornecido.'));
         }
         
         try {
             const payload = JSON.parse(atob(token.split('.')[1]));
-            // This is a simplified check for the mock environment, matching original server logic
+            // Esta é uma verificação simplificada para o ambiente mock, correspondendo à lógica original do servidor
             if (!payload.user || payload.user.role !== UserRole.DEVELOPER) {
-                 return Promise.reject(new Error('Permission denied.'));
+                 return Promise.reject(new Error('Permissão negada.'));
             }
         } catch(e) {
-             return Promise.reject(new Error('Invalid token.'));
+             return Promise.reject(new Error('Token inválido.'));
         }
 
         localStorage.setItem('mockSiteContent', JSON.stringify(content));
-        return Promise.resolve({ message: 'Content saved successfully' });
+        return Promise.resolve({ message: 'Conteúdo salvo com sucesso' });
     }
 };

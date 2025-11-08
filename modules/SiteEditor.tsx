@@ -5,10 +5,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { PlusCircleIcon, SettingsIcon, Trash2Icon, MotorcycleIcon, TypeIcon, ImageIcon, CodeIcon } from '../components/icons/Icons';
 import { mockApi } from '../database/mock';
 
-// A simple ID generator
+// Um gerador de ID simples
 const generateId = () => `block_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-// --- Components for the Canvas ---
+// --- Componentes para a Tela de Edição ---
 
 const renderBlock = (block: PageBlock) => {
   switch (block.type) {
@@ -47,58 +47,67 @@ const renderBlock = (block: PageBlock) => {
 };
 
 
-// --- Components for the Inspector ---
+// --- Componentes para o Inspetor ---
 
 const Inspector: React.FC<{ block: PageBlock; onUpdate: (updatedBlock: PageBlock) => void; }> = ({ block, onUpdate }) => {
     const handleContentChange = (field: string, value: string) => {
-        // FIX: Cast the updated block to PageBlock to resolve discriminated union type error.
+        // FIX: Faz o cast do bloco atualizado para PageBlock para resolver o erro de tipo de união discriminada.
         onUpdate({ ...block, content: { ...block.content, [field]: value } } as PageBlock);
     };
+
+    const blockTypeTranslations: Record<string, string> = {
+        hero: 'Herói',
+        text: 'Texto',
+        image: 'Imagem',
+        button: 'Botão'
+    };
+
+    const translatedBlockType = blockTypeTranslations[block.type] || block.type.charAt(0).toUpperCase() + block.type.slice(1);
 
     const renderInspectorFields = () => {
         switch (block.type) {
             case 'hero':
                 return (
                     <>
-                        <label className="block text-sm font-medium text-slate-400 mb-1">Title</label>
+                        <label className="block text-sm font-medium text-slate-400 mb-1">Título</label>
                         <input value={block.content.title} onChange={e => handleContentChange('title', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2" />
-                        <label className="block text-sm font-medium text-slate-400 mt-4 mb-1">Subtitle</label>
+                        <label className="block text-sm font-medium text-slate-400 mt-4 mb-1">Subtítulo</label>
                         <textarea value={block.content.subtitle} onChange={e => handleContentChange('subtitle', e.target.value)} rows={4} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2" />
-                        <label className="block text-sm font-medium text-slate-400 mt-4 mb-1">Button Text</label>
+                        <label className="block text-sm font-medium text-slate-400 mt-4 mb-1">Texto do Botão</label>
                         <input value={block.content.ctaText} onChange={e => handleContentChange('ctaText', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2" />
                     </>
                 );
             case 'text':
                 return (
                      <>
-                        <label className="block text-sm font-medium text-slate-400 mb-1">Heading</label>
+                        <label className="block text-sm font-medium text-slate-400 mb-1">Cabeçalho</label>
                         <input value={block.content.heading} onChange={e => handleContentChange('heading', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2" />
-                        <label className="block text-sm font-medium text-slate-400 mt-4 mb-1">Body Text</label>
+                        <label className="block text-sm font-medium text-slate-400 mt-4 mb-1">Corpo do Texto</label>
                         <textarea value={block.content.body} onChange={e => handleContentChange('body', e.target.value)} rows={6} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2" />
                     </>
                 );
             case 'image':
                  return (
                      <>
-                        <label className="block text-sm font-medium text-slate-400 mb-1">Image URL</label>
+                        <label className="block text-sm font-medium text-slate-400 mb-1">URL da Imagem</label>
                         <input value={block.content.imageUrl} onChange={e => handleContentChange('imageUrl', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2" />
-                        <label className="block text-sm font-medium text-slate-400 mt-4 mb-1">Alt Text</label>
+                        <label className="block text-sm font-medium text-slate-400 mt-4 mb-1">Texto Alternativo</label>
                         <input value={block.content.altText} onChange={e => handleContentChange('altText', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2" />
                     </>
                 );
             case 'button':
                 const addonLinks = [
-                    { name: 'Store', path: '#/store' },
-                    { name: 'Support', path: '#/support'}
+                    { name: 'Loja', path: '#/store' },
+                    { name: 'Suporte', path: '#/support'}
                 ];
                 return (
                      <>
-                        <label className="block text-sm font-medium text-slate-400 mb-1">Button Text</label>
+                        <label className="block text-sm font-medium text-slate-400 mb-1">Texto do Botão</label>
                         <input value={block.content.text} onChange={e => handleContentChange('text', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2" />
-                        <label className="block text-sm font-medium text-slate-400 mt-4 mb-1">Link URL</label>
+                        <label className="block text-sm font-medium text-slate-400 mt-4 mb-1">URL do Link</label>
                         <input value={block.content.link} onChange={e => handleContentChange('link', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 mb-2" />
                         <select onChange={e => handleContentChange('link', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2">
-                            <option value="">Or select an addon page...</option>
+                            <option value="">Ou selecione uma página do site...</option>
                             {addonLinks.map(link => <option key={link.path} value={link.path}>{link.name}</option>)}
                         </select>
                     </>
@@ -109,13 +118,13 @@ const Inspector: React.FC<{ block: PageBlock; onUpdate: (updatedBlock: PageBlock
     
     return (
         <div className="p-4 space-y-4">
-            <h3 className="text-lg font-bold text-cyan-400 flex items-center gap-2"><SettingsIcon className="w-5 h-5"/> Edit {block.type.charAt(0).toUpperCase() + block.type.slice(1)}</h3>
+            <h3 className="text-lg font-bold text-cyan-400 flex items-center gap-2"><SettingsIcon className="w-5 h-5"/> Editar {translatedBlockType}</h3>
             {renderInspectorFields()}
         </div>
     );
 };
 
-// --- Main Site Editor Component ---
+// --- Componente Principal do Editor de Site ---
 
 const SiteEditor: React.FC = () => {
   const [pageBlocks, setPageBlocks] = useState<PageBlock[]>([]);
@@ -143,16 +152,16 @@ const SiteEditor: React.FC = () => {
     const id = generateId();
     switch (type) {
         case 'hero':
-            newBlock = { id, type, content: { title: 'New Hero Title', subtitle: 'A compelling subtitle.', ctaText: 'Learn More' } };
+            newBlock = { id, type, content: { title: 'Novo Título de Herói', subtitle: 'Um subtítulo atraente.', ctaText: 'Saiba Mais' } };
             break;
         case 'text':
-            newBlock = { id, type, content: { heading: 'New Section', body: 'Some default body text.' } };
+            newBlock = { id, type, content: { heading: 'Nova Seção', body: 'Texto padrão.' } };
             break;
         case 'image':
-            newBlock = { id, type, content: { imageUrl: 'https://via.placeholder.com/800x400.png/1e293b/94a3b8?text=New+Image', altText: 'Placeholder' } };
+            newBlock = { id, type, content: { imageUrl: 'https://via.placeholder.com/800x400.png/1e293b/94a3b8?text=Nova+Imagem', altText: 'Imagem de Exemplo' } };
             break;
         case 'button':
-            newBlock = { id, type, content: { text: 'Click Me', link: '#' } };
+            newBlock = { id, type, content: { text: 'Clique Aqui', link: '#' } };
             break;
     }
     setPageBlocks([...pageBlocks, newBlock]);
@@ -188,7 +197,7 @@ const SiteEditor: React.FC = () => {
     try {
         await mockApi.saveSiteContent(pageBlocks, token);
         setStatus('idle');
-        // Optionally show a success message
+        // Opcionalmente, mostrar uma mensagem de sucesso
     } catch (error) {
         console.error(error);
         setStatus('error');
@@ -199,34 +208,34 @@ const SiteEditor: React.FC = () => {
 
   return (
     <div className="flex h-[calc(100vh-150px)] bg-slate-900 text-slate-300 rounded-lg border border-slate-700">
-      {/* Sidebar */}
+      {/* Barra Lateral */}
       <aside className="w-1/3 max-w-sm min-w-[300px] bg-slate-800/50 border-r border-slate-700 flex flex-col">
         {selectedBlock ? (
           <Inspector block={selectedBlock} onUpdate={handleUpdateBlock} />
         ) : (
           <div className="p-4">
-            <h3 className="text-lg font-bold text-cyan-400 mb-4 flex items-center gap-2"><PlusCircleIcon className="w-5 h-5"/> Add Component</h3>
+            <h3 className="text-lg font-bold text-cyan-400 mb-4 flex items-center gap-2"><PlusCircleIcon className="w-5 h-5"/> Adicionar Componente</h3>
             <div className="space-y-2">
-                <button onClick={() => handleAddBlock('hero')} className="w-full flex items-center gap-3 p-3 bg-slate-700 hover:bg-slate-600 rounded-md"><MotorcycleIcon className="w-5 h-5 text-cyan-400"/> Hero Section</button>
-                <button onClick={() => handleAddBlock('text')} className="w-full flex items-center gap-3 p-3 bg-slate-700 hover:bg-slate-600 rounded-md"><TypeIcon className="w-5 h-5 text-cyan-400"/> Text Block</button>
-                <button onClick={() => handleAddBlock('image')} className="w-full flex items-center gap-3 p-3 bg-slate-700 hover:bg-slate-600 rounded-md"><ImageIcon className="w-5 h-5 text-cyan-400"/> Image</button>
-                <button onClick={() => handleAddBlock('button')} className="w-full flex items-center gap-3 p-3 bg-slate-700 hover:bg-slate-600 rounded-md"><CodeIcon className="w-5 h-5 text-cyan-400"/> Button</button>
+                <button onClick={() => handleAddBlock('hero')} className="w-full flex items-center gap-3 p-3 bg-slate-700 hover:bg-slate-600 rounded-md"><MotorcycleIcon className="w-5 h-5 text-cyan-400"/> Seção de Herói</button>
+                <button onClick={() => handleAddBlock('text')} className="w-full flex items-center gap-3 p-3 bg-slate-700 hover:bg-slate-600 rounded-md"><TypeIcon className="w-5 h-5 text-cyan-400"/> Bloco de Texto</button>
+                <button onClick={() => handleAddBlock('image')} className="w-full flex items-center gap-3 p-3 bg-slate-700 hover:bg-slate-600 rounded-md"><ImageIcon className="w-5 h-5 text-cyan-400"/> Imagem</button>
+                <button onClick={() => handleAddBlock('button')} className="w-full flex items-center gap-3 p-3 bg-slate-700 hover:bg-slate-600 rounded-md"><CodeIcon className="w-5 h-5 text-cyan-400"/> Botão</button>
             </div>
           </div>
         )}
         <div className="mt-auto p-4 border-t border-slate-700 flex justify-end gap-3">
-            <button onClick={handlePreview} className="bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">Preview</button>
+            <button onClick={handlePreview} className="bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">Visualizar</button>
             <button onClick={handleSaveChanges} disabled={status === 'saving'} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-slate-600">
-                {status === 'saving' ? 'Saving...' : 'Save Changes'}
+                {status === 'saving' ? 'Salvando...' : 'Salvar Alterações'}
             </button>
         </div>
       </aside>
 
-      {/* Canvas */}
+      {/* Tela de Edição */}
       <main className="flex-1 overflow-y-auto p-4 bg-slate-900">
         <div className="max-w-4xl mx-auto bg-slate-800/30 rounded-lg p-2">
-           {status === 'loading' && <p>Loading content...</p>}
-           {status === 'error' && <p className="text-red-400">Error loading or saving content.</p>}
+           {status === 'loading' && <p>Carregando conteúdo...</p>}
+           {status === 'error' && <p className="text-red-400">Erro ao carregar ou salvar o conteúdo.</p>}
            <DragDropContext onDragEnd={onDragEnd}>
                 <Droppable droppableId="canvas">
                     {(provided) => (
@@ -245,7 +254,7 @@ const SiteEditor: React.FC = () => {
                                             }
                                         >
                                             <div className="absolute top-2 right-2 z-10 flex gap-1">
-                                                <button onClick={() => handleDeleteBlock(block.id)} className="p-1.5 bg-red-800/80 hover:bg-red-700 rounded-md text-white"><Trash2Icon className="w-4 h-4" /></button>
+                                                <button onClick={(e) => { e.stopPropagation(); handleDeleteBlock(block.id); }} className="p-1.5 bg-red-800/80 hover:bg-red-700 rounded-md text-white"><Trash2Icon className="w-4 h-4" /></button>
                                             </div>
                                             {renderBlock(block)}
                                         </div>

@@ -22,7 +22,7 @@ export const Header: React.FC = () => {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
         <div className="flex items-center gap-3">
             <CodeIcon className="w-8 h-8 text-cyan-400" />
-            <span className="text-xl font-bold text-slate-200">Admin Platform</span>
+            <span className="text-xl font-bold text-slate-200">Plataforma de Administração</span>
         </div>
         <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
@@ -44,7 +44,7 @@ export const Header: React.FC = () => {
             </select>
             <button
                 onClick={handleLogout}
-                title="Logout"
+                title="Sair"
                 className="bg-slate-800 hover:bg-red-500/20 text-slate-300 hover:text-red-400
                      p-2 rounded-lg inline-flex items-center
                      transition-colors duration-200 border border-slate-700 hover:border-red-500/30"

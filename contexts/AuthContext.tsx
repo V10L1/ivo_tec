@@ -8,7 +8,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   currentUser: User | null;
   token: string | null;
-  setRole: (role: UserRole) => void; // Kept for role switching demo
+  setRole: (role: UserRole) => void; // Mantido para a demonstração de troca de função
   permissions: AppKey[];
   login: (email: string, pass: string) => Promise<void>;
   logout: () => void;
@@ -23,26 +23,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // This effect runs on initial load to verify the token
+    // Este efeito é executado no carregamento inicial para verificar o token
     const verifyToken = async () => {
       const storedToken = localStorage.getItem('authToken');
       if (storedToken) {
-        // For this demo, we decode the token to get user info.
+        // Para esta demonstração, decodificamos o token para obter informações do usuário.
         try {
             const payload = JSON.parse(atob(storedToken.split('.')[1]));
             const userFromToken = payload.user;
             if (userFromToken && userFromToken.id && userFromToken.role) {
                 setCurrentUser({
                     ...userFromToken,
-                    passwordHash: '', // Not available/needed on client
-                    createdAt: new Date().toISOString(), // Dummy value
+                    passwordHash: '', // Não disponível/necessário no cliente
+                    createdAt: new Date().toISOString(), // Valor fictício
                 });
                 setToken(storedToken);
             } else {
-                throw new Error("Invalid user data in token");
+                throw new Error("Dados de usuário inválidos no token");
             }
         } catch (error) {
-            console.error("Invalid token:", error);
+            console.error("Token inválido:", error);
             localStorage.removeItem('authToken');
             setToken(null);
             setCurrentUser(null);
@@ -67,8 +67,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setToken(receivedToken);
       setCurrentUser({
           ...user,
-          passwordHash: '', // Not needed on client
-          createdAt: new Date().toISOString(), // dummy value
+          passwordHash: '', // Não é necessário no cliente
+          createdAt: new Date().toISOString(), // valor fictício
       });
   };
 
@@ -78,7 +78,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('authToken');
   };
   
-  // For role switcher demo purposes
+  // Para fins de demonstração do seletor de função
   const setRole = (role: UserRole) => {
     if (currentUser) {
       setCurrentUser({ ...currentUser, role });
@@ -87,7 +87,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 
   if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Loading...</div>;
+    return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Carregando...</div>;
   }
 
   return (
@@ -100,7 +100,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
   }
   return context;
 };

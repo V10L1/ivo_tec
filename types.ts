@@ -1,10 +1,10 @@
 import React from 'react';
 
 export enum UserRole {
-  OPERATOR = 'Operator',
-  SUPPORT = 'Support',
-  ADMIN = 'Administrator',
-  DEVELOPER = 'Developer',
+  OPERATOR = 'Operador',
+  SUPPORT = 'Suporte',
+  ADMIN = 'Administrador',
+  DEVELOPER = 'Desenvolvedor',
 }
 
 export type AppKey = 'SITE' | 'STORE' | 'STOCK' | 'MESSAGES' | 'SUPPORT' | 'USERS';
@@ -16,7 +16,7 @@ export interface AppModule {
   Icon: React.ComponentType<{ className?: string }>;
 }
 
-// --- Page Builder Content Types ---
+// --- Tipos de Conteúdo do Construtor de Páginas ---
 
 export interface HeroBlockContent {
   title: string;
@@ -36,11 +36,11 @@ export interface ImageBlockContent {
 
 export interface ButtonBlockContent {
   text: string;
-  link: string; // e.g., '/#/store', 'https://example.com'
+  link: string; // ex., '/#/store', 'https://example.com'
 }
 
 export type PageBlock = {
-  id: string; // Unique ID for the block (e.g., from nanoid)
+  id: string; // ID único para o bloco (ex., de nanoid)
 } & (
   | { type: 'hero'; content: HeroBlockContent }
   | { type: 'text'; content: TextBlockContent }

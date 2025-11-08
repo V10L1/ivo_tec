@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { ArrowLeftIcon } from './icons/Icons';
 
@@ -19,7 +20,7 @@ export const ModuleWrapper: React.FC<ModuleWrapperProps> = ({ title, onBack, chi
                      transition-colors duration-200 border border-slate-700"
         >
           <ArrowLeftIcon className="w-5 h-5 mr-2" />
-          <span>Dashboard</span>
+          <span>Painel</span>
         </button>
         <h2 className="text-2xl font-bold text-slate-100">{title}</h2>
       </div>
@@ -30,8 +31,8 @@ export const ModuleWrapper: React.FC<ModuleWrapperProps> = ({ title, onBack, chi
   );
 };
 
-// Add fade-in animation to tailwind config or global style if needed.
-// For simplicity, using inline style here.
+// Adiciona a animação de fade-in ao tailwind config ou estilo global se necessário.
+// Por simplicidade, usando estilo inline aqui.
 const style = document.createElement('style');
 style.innerHTML = `
   @keyframes fadeIn {

@@ -1,43 +1,44 @@
 
+
 import React from 'react';
 
 const tickets = [
-  { id: 723, subject: 'Login Issue', user: 'john.doe@email.com', status: 'Open', priority: 'High' },
-  { id: 722, subject: 'Feature Request: Dark Mode', user: 'jane.smith@email.com', status: 'In Progress', priority: 'Medium' },
-  { id: 721, subject: 'Billing question', user: 'sam.wilson@email.com', status: 'Closed', priority: 'Low' },
-  { id: 720, subject: 'Cannot update profile', user: 'chris.p@email.com', status: 'Open', priority: 'High' },
+  { id: 723, subject: 'Problema de Login', user: 'john.doe@email.com', status: 'Aberto', priority: 'Alta' },
+  { id: 722, subject: 'Sugestão de Recurso: Modo Escuro', user: 'jane.smith@email.com', status: 'Em Progresso', priority: 'Média' },
+  { id: 721, subject: 'Dúvida sobre Faturamento', user: 'sam.wilson@email.com', status: 'Fechado', priority: 'Baixa' },
+  { id: 720, subject: 'Não consigo atualizar o perfil', user: 'chris.p@email.com', status: 'Aberto', priority: 'Alta' },
 ];
 
 const SupportTickets: React.FC = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Open': return 'text-green-400';
-      case 'In Progress': return 'text-yellow-400';
-      case 'Closed': return 'text-slate-500';
+      case 'Aberto': return 'text-green-400';
+      case 'Em Progresso': return 'text-yellow-400';
+      case 'Fechado': return 'text-slate-500';
       default: return 'text-slate-300';
     }
   };
    const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'High': return 'bg-red-500/20 text-red-400';
-      case 'Medium': return 'bg-yellow-500/20 text-yellow-400';
-      case 'Low': return 'bg-blue-500/20 text-blue-400';
+      case 'Alta': return 'bg-red-500/20 text-red-400';
+      case 'Média': return 'bg-yellow-500/20 text-yellow-400';
+      case 'Baixa': return 'bg-blue-500/20 text-blue-400';
       default: return 'bg-slate-700 text-slate-300';
     }
   };
 
   return (
     <div>
-      <h3 className="text-xl font-semibold text-white mb-4">Support Ticket System</h3>
+      <h3 className="text-xl font-semibold text-white mb-4">Sistema de Tickets de Suporte</h3>
       <div className="overflow-x-auto">
         <table className="min-w-full bg-slate-900 rounded-lg">
           <thead>
             <tr className="border-b border-slate-700">
-              <th className="p-3 text-left text-sm font-semibold text-slate-400">Ticket ID</th>
-              <th className="p-3 text-left text-sm font-semibold text-slate-400">Subject</th>
+              <th className="p-3 text-left text-sm font-semibold text-slate-400">ID do Ticket</th>
+              <th className="p-3 text-left text-sm font-semibold text-slate-400">Assunto</th>
               <th className="p-3 text-left text-sm font-semibold text-slate-400">Status</th>
-              <th className="p-3 text-left text-sm font-semibold text-slate-400">Priority</th>
-              <th className="p-3 text-left text-sm font-semibold text-slate-400">Actions</th>
+              <th className="p-3 text-left text-sm font-semibold text-slate-400">Prioridade</th>
+              <th className="p-3 text-left text-sm font-semibold text-slate-400">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -52,7 +53,7 @@ const SupportTickets: React.FC = () => {
                     </span>
                 </td>
                 <td className="p-3 text-sm">
-                  <a href="#" className="text-cyan-400 hover:text-cyan-300">View</a>
+                  <a href="#" className="text-cyan-400 hover:text-cyan-300">Ver</a>
                 </td>
               </tr>
             ))}

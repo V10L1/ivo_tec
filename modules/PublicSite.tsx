@@ -4,7 +4,7 @@ import { useRouter } from '../App';
 import { PageBlock } from '../types';
 import { mockApi } from '../database/mock';
 
-// --- Dynamic Block Renderers ---
+// --- Renderizadores de Bloco Dinâmicos ---
 
 const renderBlock = (block: PageBlock) => {
     switch (block.type) {
@@ -60,7 +60,7 @@ const PublicSite: React.FC = () => {
             const data = await mockApi.getSiteContent();
             setPageBlocks(data.content || []);
         } catch (error) {
-            console.error("Failed to fetch page content:", error);
+            console.error("Falha ao buscar o conteúdo da página:", error);
         } finally {
             setIsLoading(false);
         }
@@ -75,30 +75,30 @@ const PublicSite: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 font-sans">
-      {/* Header */}
+      {/* Cabeçalho */}
       <header className="bg-slate-800/50 backdrop-blur-sm sticky top-0 z-10 border-b border-slate-800">
         <nav className="container mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <MotorcycleIcon className="w-8 h-8 text-cyan-400" />
-            <span className="text-xl font-bold">Moto World</span>
+            <span className="text-xl font-bold">Mundo Moto</span>
           </div>
           <a href="#/administrator" onClick={handleNavigate} className="bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-            Admin Login
+            Login do Admin
           </a>
         </nav>
       </header>
 
-      {/* Dynamic Content Area */}
+      {/* Área de Conteúdo Dinâmico */}
       {isLoading ? (
-        <div className="text-center py-20">Loading...</div>
+        <div className="text-center py-20">Carregando...</div>
       ) : (
         pageBlocks.map(block => renderBlock(block))
       )}
       
-      {/* Footer */}
+      {/* Rodapé */}
       <footer className="border-t border-slate-800 mt-20 py-8">
         <div className="container mx-auto px-6 text-center text-slate-500">
-          <p>&copy; {new Date().getFullYear()} Moto World. All Rights Reserved.</p>
+          <p>&copy; {new Date().getFullYear()} Mundo Moto. Todos os Direitos Reservados.</p>
         </div>
       </footer>
     </div>

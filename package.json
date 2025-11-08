@@ -1,7 +1,7 @@
 {
   "name": "modular-admin-platform",
   "version": "1.0.0",
-  "description": "A full-stack modular admin platform with a React frontend and Node.js backend.",
+  "description": "Uma plataforma de administração modular full-stack com frontend React e backend Node.js.",
   "main": "dist/server.js",
   "scripts": {
     "build": "tsc",
