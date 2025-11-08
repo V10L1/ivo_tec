@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { AppModule, AppKey, WidgetConfig } from '../types';
 import { SettingsIcon } from './icons/Icons';
+import { useLocalization } from '../contexts/LocalizationContext';
 
 interface DashboardCardProps {
   module: AppModule;
@@ -14,6 +15,7 @@ interface DashboardCardProps {
 export const DashboardCard: React.FC<DashboardCardProps> = ({ module, onClick, onUpdate, widgetKey, currentColSpan }) => {
   const { name, description, Icon } = module;
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const { t } = useLocalization();
 
   const handleColSpanChange = (span: 1 | 2 | 3) => {
     onUpdate(widgetKey, { colSpan: span });
@@ -35,7 +37,7 @@ export const DashboardCard: React.FC<DashboardCardProps> = ({ module, onClick, o
       <div className="absolute top-2 right-2 z-20">
         <button
           onClick={handleSettingsClick}
-          title="Widget settings"
+          title={t('dashboardCard.settings')}
           className="p-1.5 bg-slate-700/50 hover:bg-slate-600 rounded-md text-slate-400 hover:text-white
                      opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity duration-200"
         >
@@ -45,7 +47,7 @@ export const DashboardCard: React.FC<DashboardCardProps> = ({ module, onClick, o
            <div className="absolute top-full right-0 mt-2 w-36 bg-slate-900/80 backdrop-blur-sm border border-slate-700 rounded-lg shadow-xl p-2"
                 onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside
            >
-                <p className="text-xs font-semibold text-slate-400 px-2 pb-1">Widget Width</p>
+                <p className="text-xs font-semibold text-slate-400 px-2 pb-1">{t('dashboardCard.width')}</p>
                 <div className="flex flex-col gap-1">
                     {[1, 2, 3].map(span => (
                         <button
@@ -57,7 +59,7 @@ export const DashboardCard: React.FC<DashboardCardProps> = ({ module, onClick, o
                                 : 'text-slate-300 hover:bg-slate-700'
                             }`}
                         >
-                           {span} Column{span > 1 ? 's' : ''}
+                           {t(span > 1 ? 'dashboardCard.columns' : 'dashboardCard.column', { count: span })}
                         </button>
                     ))}
                 </div>
@@ -66,7 +68,7 @@ export const DashboardCard: React.FC<DashboardCardProps> = ({ module, onClick, o
       </div>
 
       <div className="p-3 bg-slate-700 rounded-md">
-        <Icon className="w-6 h-6 text-cyan-400" />
+        {Icon && <Icon className="w-6 h-6 text-cyan-400" />}
       </div>
       <div className="flex flex-col">
         <h3 className="font-bold text-lg text-slate-100">{name}</h3>

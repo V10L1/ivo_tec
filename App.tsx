@@ -1,5 +1,6 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { LocalizationProvider, useLocalization } from './contexts/LocalizationContext';
 import { Dashboard } from './components/Dashboard';
 import { Header } from './components/Header';
 import { ModuleWrapper } from './components/ModuleWrapper';
@@ -41,6 +42,7 @@ const ModuleViews: Record<AppKey, React.ComponentType> = {
 
 const AppContent: React.FC = () => {
   const { isAuthenticated } = useAuth();
+  const { t } = useLocalization();
   
   const getPathFromHash = () => window.location.hash.substring(1) || '/';
   const [path, setPath] = useState(getPathFromHash());
@@ -78,11 +80,11 @@ const AppContent: React.FC = () => {
       let adminContent;
       if (activeModule) {
         const ActiveModuleComponent = ModuleViews[activeModule];
-        const moduleInfo = APP_MODULES.find(m => m.key === activeModule);
+        const moduleTitle = t(`module.${activeModule}.name`);
 
-        if (ActiveModuleComponent && moduleInfo) {
+        if (ActiveModuleComponent && moduleTitle) {
           adminContent = (
-            <ModuleWrapper title={moduleInfo.name} onBack={handleGoToDashboard}>
+            <ModuleWrapper title={moduleTitle} onBack={handleGoToDashboard}>
               <ActiveModuleComponent />
             </ModuleWrapper>
           );
@@ -121,7 +123,9 @@ const AppContent: React.FC = () => {
 export default function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <LocalizationProvider>
+        <AppContent />
+      </LocalizationProvider>
     </AuthProvider>
   );
 }

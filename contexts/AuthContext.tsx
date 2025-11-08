@@ -2,6 +2,7 @@ import React, { createContext, useState, useContext, useMemo, useEffect } from '
 import { UserRole, AppKey } from '../types';
 import { ROLE_PERMISSIONS } from '../constants';
 import { User } from '../database/schema';
+import { useLocalization } from './LocalizationContext';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -20,6 +21,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('authToken'));
   const [isLoading, setIsLoading] = useState(true);
+  const { t } = useLocalization();
 
   useEffect(() => {
     // This effect runs on initial load to verify the token
@@ -85,7 +87,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 
   if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Loading...</div>;
+    return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">{t('loading')}</div>;
   }
 
   return (

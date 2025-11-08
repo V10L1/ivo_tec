@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useLocalization } from '../contexts/LocalizationContext';
 import { CodeIcon } from '../components/icons/Icons';
 
 const Login: React.FC = () => {
   const { login } = useAuth();
+  const { t } = useLocalization();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -17,7 +19,7 @@ const Login: React.FC = () => {
       await login(email, password);
       // On success, the AppRouter will automatically render the AdminPanel
     } catch (err) {
-      setError('Invalid email or password.');
+      setError(t('login.errorMessage'));
     } finally {
       setIsLoading(false);
     }
@@ -28,15 +30,15 @@ const Login: React.FC = () => {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
             <CodeIcon className="w-12 h-12 text-cyan-400 mx-auto" />
-            <h1 className="text-3xl font-bold text-slate-100 mt-4">Admin Platform</h1>
-            <p className="text-slate-400">Please sign in to continue</p>
+            <h1 className="text-3xl font-bold text-slate-100 mt-4">{t('login.title')}</h1>
+            <p className="text-slate-400">{t('login.subtitle')}</p>
         </div>
 
         <div className="bg-slate-800/50 border border-slate-800 rounded-lg shadow-lg p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-slate-400 mb-1">
-                Email Address
+                {t('login.emailLabel')}
               </label>
               <input
                 id="email"
@@ -52,7 +54,7 @@ const Login: React.FC = () => {
 
             <div>
               <label htmlFor="password"className="block text-sm font-medium text-slate-400 mb-1">
-                Password
+                {t('login.passwordLabel')}
               </label>
               <input
                 id="password"
@@ -74,7 +76,7 @@ const Login: React.FC = () => {
                 disabled={isLoading}
                 className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-cyan-500 disabled:bg-slate-600 disabled:cursor-not-allowed transition-colors"
               >
-                {isLoading ? 'Signing in...' : 'Sign in'}
+                {isLoading ? t('login.signingInButton') : t('login.signInButton')}
               </button>
             </div>
           </form>

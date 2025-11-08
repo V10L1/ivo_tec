@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { ArrowLeftIcon } from './icons/Icons';
+import { useLocalization } from '../contexts/LocalizationContext';
 
 interface ModuleWrapperProps {
   title: string;
@@ -9,6 +10,7 @@ interface ModuleWrapperProps {
 }
 
 export const ModuleWrapper: React.FC<ModuleWrapperProps> = ({ title, onBack, children }) => {
+  const { t } = useLocalization();
   return (
     <div className="animate-fade-in">
       <div className="mb-6 flex items-center gap-4">
@@ -19,7 +21,7 @@ export const ModuleWrapper: React.FC<ModuleWrapperProps> = ({ title, onBack, chi
                      transition-colors duration-200 border border-slate-700"
         >
           <ArrowLeftIcon className="w-5 h-5 mr-2" />
-          <span>Dashboard</span>
+          <span>{t('moduleWrapper.back')}</span>
         </button>
         <h2 className="text-2xl font-bold text-slate-100">{title}</h2>
       </div>

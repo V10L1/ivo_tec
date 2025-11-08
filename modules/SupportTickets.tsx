@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useLocalization } from '../contexts/LocalizationContext';
 import { SupportTicket } from '../database/schema';
 
 type Ticket = Omit<SupportTicket, 'description' | 'assignedTo' | 'createdAt' | 'closedAt' | 'submittedByEmail'> & {
@@ -11,6 +12,7 @@ const SupportTickets: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { token } = useAuth();
+  const { t } = useLocalization();
   
   useEffect(() => {
     const fetchTickets = async () => {
@@ -49,22 +51,40 @@ const SupportTickets: React.FC = () => {
     }
   };
 
+  const translateStatus = (status: Ticket['status']) => {
+      const keyMap = {
+          'Open': 'supportTickets.status.open',
+          'In Progress': 'supportTickets.status.inProgress',
+          'Closed': 'supportTickets.status.closed',
+      };
+      return t(keyMap[status] || status);
+  }
+
+  const translatePriority = (priority: Ticket['priority']) => {
+      const keyMap = {
+          'High': 'supportTickets.priority.high',
+          'Medium': 'supportTickets.priority.medium',
+          'Low': 'supportTickets.priority.low',
+      };
+      return t(keyMap[priority] || priority);
+  }
+
   return (
     <div>
-      <h3 className="text-xl font-semibold text-white mb-4">Support Ticket System</h3>
-      {isLoading && <p className="text-center text-slate-400">Loading tickets...</p>}
-      {error && <p className="text-center text-red-400">Error: {error}</p>}
+      <h3 className="text-xl font-semibold text-white mb-4">{t('supportTickets.title')}</h3>
+      {isLoading && <p className="text-center text-slate-400">{t('supportTickets.loading')}</p>}
+      {error && <p className="text-center text-red-400">{t('supportTickets.error', { error: error })}</p>}
       
       {!isLoading && !error && (
         <div className="overflow-x-auto">
           <table className="min-w-full bg-slate-900 rounded-lg">
             <thead>
               <tr className="border-b border-slate-700">
-                <th className="p-3 text-left text-sm font-semibold text-slate-400">Ticket ID</th>
-                <th className="p-3 text-left text-sm font-semibold text-slate-400">Subject</th>
-                <th className="p-3 text-left text-sm font-semibold text-slate-400">Status</th>
-                <th className="p-3 text-left text-sm font-semibold text-slate-400">Priority</th>
-                <th className="p-3 text-left text-sm font-semibold text-slate-400">Actions</th>
+                <th className="p-3 text-left text-sm font-semibold text-slate-400">{t('supportTickets.table.id')}</th>
+                <th className="p-3 text-left text-sm font-semibold text-slate-400">{t('supportTickets.table.subject')}</th>
+                <th className="p-3 text-left text-sm font-semibold text-slate-400">{t('supportTickets.table.status')}</th>
+                <th className="p-3 text-left text-sm font-semibold text-slate-400">{t('supportTickets.table.priority')}</th>
+                <th className="p-3 text-left text-sm font-semibold text-slate-400">{t('supportTickets.table.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -72,14 +92,14 @@ const SupportTickets: React.FC = () => {
                 <tr key={ticket.id} className="border-b border-slate-800 hover:bg-slate-800/50">
                   <td className="p-3 text-sm text-slate-400">#{ticket.id}</td>
                   <td className="p-3 text-sm text-slate-200 font-medium">{ticket.subject}</td>
-                  <td className={`p-3 text-sm font-semibold ${getStatusColor(ticket.status)}`}>{ticket.status}</td>
+                  <td className={`p-3 text-sm font-semibold ${getStatusColor(ticket.status)}`}>{translateStatus(ticket.status)}</td>
                   <td className="p-3 text-sm">
                       <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getPriorityColor(ticket.priority)}`}>
-                          {ticket.priority}
+                          {translatePriority(ticket.priority)}
                       </span>
                   </td>
                   <td className="p-3 text-sm">
-                    <a href="#" className="text-cyan-400 hover:text-cyan-300">View</a>
+                    <a href="#" className="text-cyan-400 hover:text-cyan-300">{t('supportTickets.table.view')}</a>
                   </td>
                 </tr>
               ))}

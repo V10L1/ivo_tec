@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable, OnDragEndResponder } from 'react-beautiful-dnd';
 import { PageBlock } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { useLocalization } from '../contexts/LocalizationContext';
 import { PlusCircleIcon, SettingsIcon, Trash2Icon, MotorcycleIcon, TypeIcon, ImageIcon, CodeIcon } from '../components/icons/Icons';
 
 // A simple ID generator
@@ -49,6 +50,8 @@ const renderBlock = (block: PageBlock) => {
 // --- Components for the Inspector ---
 
 const Inspector: React.FC<{ block: PageBlock; onUpdate: (updatedBlock: PageBlock) => void; }> = ({ block, onUpdate }) => {
+    const { t } = useLocalization();
+
     const handleContentChange = (field: string, value: string) => {
         // FIX: Cast the updated block to PageBlock to resolve discriminated union type error.
         onUpdate({ ...block, content: { ...block.content, [field]: value } } as PageBlock);
@@ -59,45 +62,45 @@ const Inspector: React.FC<{ block: PageBlock; onUpdate: (updatedBlock: PageBlock
             case 'hero':
                 return (
                     <>
-                        <label className="block text-sm font-medium text-slate-400 mb-1">Title</label>
+                        <label className="block text-sm font-medium text-slate-400 mb-1">{t('siteEditor.inspector.title')}</label>
                         <input value={block.content.title} onChange={e => handleContentChange('title', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2" />
-                        <label className="block text-sm font-medium text-slate-400 mt-4 mb-1">Subtitle</label>
+                        <label className="block text-sm font-medium text-slate-400 mt-4 mb-1">{t('siteEditor.inspector.subtitle')}</label>
                         <textarea value={block.content.subtitle} onChange={e => handleContentChange('subtitle', e.target.value)} rows={4} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2" />
-                        <label className="block text-sm font-medium text-slate-400 mt-4 mb-1">Button Text</label>
+                        <label className="block text-sm font-medium text-slate-400 mt-4 mb-1">{t('siteEditor.inspector.ctaText')}</label>
                         <input value={block.content.ctaText} onChange={e => handleContentChange('ctaText', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2" />
                     </>
                 );
             case 'text':
                 return (
                      <>
-                        <label className="block text-sm font-medium text-slate-400 mb-1">Heading</label>
+                        <label className="block text-sm font-medium text-slate-400 mb-1">{t('siteEditor.inspector.heading')}</label>
                         <input value={block.content.heading} onChange={e => handleContentChange('heading', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2" />
-                        <label className="block text-sm font-medium text-slate-400 mt-4 mb-1">Body Text</label>
+                        <label className="block text-sm font-medium text-slate-400 mt-4 mb-1">{t('siteEditor.inspector.body')}</label>
                         <textarea value={block.content.body} onChange={e => handleContentChange('body', e.target.value)} rows={6} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2" />
                     </>
                 );
             case 'image':
                  return (
                      <>
-                        <label className="block text-sm font-medium text-slate-400 mb-1">Image URL</label>
+                        <label className="block text-sm font-medium text-slate-400 mb-1">{t('siteEditor.inspector.imageUrl')}</label>
                         <input value={block.content.imageUrl} onChange={e => handleContentChange('imageUrl', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2" />
-                        <label className="block text-sm font-medium text-slate-400 mt-4 mb-1">Alt Text</label>
+                        <label className="block text-sm font-medium text-slate-400 mt-4 mb-1">{t('siteEditor.inspector.altText')}</label>
                         <input value={block.content.altText} onChange={e => handleContentChange('altText', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2" />
                     </>
                 );
             case 'button':
                 const addonLinks = [
-                    { name: 'Store', path: '#/store' },
-                    { name: 'Support', path: '#/support'}
+                    { name: t('siteEditor.inspector.storePage'), path: '#/store' },
+                    { name: t('siteEditor.inspector.supportPage'), path: '#/support'}
                 ];
                 return (
                      <>
-                        <label className="block text-sm font-medium text-slate-400 mb-1">Button Text</label>
+                        <label className="block text-sm font-medium text-slate-400 mb-1">{t('siteEditor.inspector.ctaText')}</label>
                         <input value={block.content.text} onChange={e => handleContentChange('text', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2" />
-                        <label className="block text-sm font-medium text-slate-400 mt-4 mb-1">Link URL</label>
+                        <label className="block text-sm font-medium text-slate-400 mt-4 mb-1">{t('siteEditor.inspector.linkUrl')}</label>
                         <input value={block.content.link} onChange={e => handleContentChange('link', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 mb-2" />
                         <select onChange={e => handleContentChange('link', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2">
-                            <option value="">Or select an addon page...</option>
+                            <option value="">{t('siteEditor.inspector.selectPage')}</option>
                             {addonLinks.map(link => <option key={link.path} value={link.path}>{link.name}</option>)}
                         </select>
                     </>
@@ -108,7 +111,7 @@ const Inspector: React.FC<{ block: PageBlock; onUpdate: (updatedBlock: PageBlock
     
     return (
         <div className="p-4 space-y-4">
-            <h3 className="text-lg font-bold text-cyan-400 flex items-center gap-2"><SettingsIcon className="w-5 h-5"/> Edit {block.type.charAt(0).toUpperCase() + block.type.slice(1)}</h3>
+            <h3 className="text-lg font-bold text-cyan-400 flex items-center gap-2"><SettingsIcon className="w-5 h-5"/> {t('siteEditor.editComponent', { componentType: block.type.charAt(0).toUpperCase() + block.type.slice(1) })}</h3>
             {renderInspectorFields()}
         </div>
     );
@@ -121,6 +124,7 @@ const SiteEditor: React.FC = () => {
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [status, setStatus] = useState<'idle' | 'loading' | 'saving' | 'error'>('loading');
   const { token } = useAuth();
+  const { t } = useLocalization();
 
   useEffect(() => {
     const fetchPageContent = async () => {
@@ -214,19 +218,19 @@ const SiteEditor: React.FC = () => {
           <Inspector block={selectedBlock} onUpdate={handleUpdateBlock} />
         ) : (
           <div className="p-4">
-            <h3 className="text-lg font-bold text-cyan-400 mb-4 flex items-center gap-2"><PlusCircleIcon className="w-5 h-5"/> Add Component</h3>
+            <h3 className="text-lg font-bold text-cyan-400 mb-4 flex items-center gap-2"><PlusCircleIcon className="w-5 h-5"/> {t('siteEditor.addComponent')}</h3>
             <div className="space-y-2">
-                <button onClick={() => handleAddBlock('hero')} className="w-full flex items-center gap-3 p-3 bg-slate-700 hover:bg-slate-600 rounded-md"><MotorcycleIcon className="w-5 h-5 text-cyan-400"/> Hero Section</button>
-                <button onClick={() => handleAddBlock('text')} className="w-full flex items-center gap-3 p-3 bg-slate-700 hover:bg-slate-600 rounded-md"><TypeIcon className="w-5 h-5 text-cyan-400"/> Text Block</button>
-                <button onClick={() => handleAddBlock('image')} className="w-full flex items-center gap-3 p-3 bg-slate-700 hover:bg-slate-600 rounded-md"><ImageIcon className="w-5 h-5 text-cyan-400"/> Image</button>
-                <button onClick={() => handleAddBlock('button')} className="w-full flex items-center gap-3 p-3 bg-slate-700 hover:bg-slate-600 rounded-md"><CodeIcon className="w-5 h-5 text-cyan-400"/> Button</button>
+                <button onClick={() => handleAddBlock('hero')} className="w-full flex items-center gap-3 p-3 bg-slate-700 hover:bg-slate-600 rounded-md"><MotorcycleIcon className="w-5 h-5 text-cyan-400"/> {t('siteEditor.hero')}</button>
+                <button onClick={() => handleAddBlock('text')} className="w-full flex items-center gap-3 p-3 bg-slate-700 hover:bg-slate-600 rounded-md"><TypeIcon className="w-5 h-5 text-cyan-400"/> {t('siteEditor.text')}</button>
+                <button onClick={() => handleAddBlock('image')} className="w-full flex items-center gap-3 p-3 bg-slate-700 hover:bg-slate-600 rounded-md"><ImageIcon className="w-5 h-5 text-cyan-400"/> {t('siteEditor.image')}</button>
+                <button onClick={() => handleAddBlock('button')} className="w-full flex items-center gap-3 p-3 bg-slate-700 hover:bg-slate-600 rounded-md"><CodeIcon className="w-5 h-5 text-cyan-400"/> {t('siteEditor.button')}</button>
             </div>
           </div>
         )}
         <div className="mt-auto p-4 border-t border-slate-700 flex justify-end gap-3">
-            <button onClick={handlePreview} className="bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">Preview</button>
+            <button onClick={handlePreview} className="bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">{t('siteEditor.preview')}</button>
             <button onClick={handleSaveChanges} disabled={status === 'saving'} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-slate-600">
-                {status === 'saving' ? 'Saving...' : 'Save Changes'}
+                {status === 'saving' ? t('siteEditor.saving') : t('siteEditor.save')}
             </button>
         </div>
       </aside>
@@ -234,8 +238,8 @@ const SiteEditor: React.FC = () => {
       {/* Canvas */}
       <main className="flex-1 overflow-y-auto p-4 bg-slate-900">
         <div className="max-w-4xl mx-auto bg-slate-800/30 rounded-lg p-2">
-           {status === 'loading' && <p>Loading content...</p>}
-           {status === 'error' && <p className="text-red-400">Error loading or saving content.</p>}
+           {status === 'loading' && <p>{t('siteEditor.loading')}</p>}
+           {status === 'error' && <p className="text-red-400">{t('siteEditor.error')}</p>}
            <DragDropContext onDragEnd={onDragEnd}>
                 <Droppable droppableId="canvas">
                     {(provided) => (

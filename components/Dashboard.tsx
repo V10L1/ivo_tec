@@ -4,7 +4,8 @@ import { DragDropContext, Droppable, Draggable, OnDragEndResponder } from 'react
 import { useAuth } from '../contexts/AuthContext';
 import { DashboardCard } from './DashboardCard';
 import { APP_MODULES } from '../constants';
-import { AppKey, WidgetConfig } from '../types';
+import { AppKey, WidgetConfig, AppModule } from '../types';
+import { useLocalization } from '../contexts/LocalizationContext';
 
 interface DashboardProps {
   onSelectModule: (key: AppKey) => void;
@@ -12,6 +13,7 @@ interface DashboardProps {
 
 export const Dashboard: React.FC<DashboardProps> = ({ onSelectModule }) => {
   const { permissions } = useAuth();
+  const { t } = useLocalization();
   const [widgetLayout, setWidgetLayout] = useState<WidgetConfig[]>([]);
 
   useEffect(() => {
@@ -68,12 +70,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectModule }) => {
     localStorage.setItem('dashboardLayout', JSON.stringify(newLayout));
   };
   
-  const getModuleInfo = (key: AppKey) => APP_MODULES.find(m => m.key === key);
+  const getModuleInfo = (key: AppKey): AppModule | null => {
+    const moduleDef = APP_MODULES.find(m => m.key === key);
+    if (!moduleDef) return null;
+    return {
+      ...moduleDef,
+      name: t(`module.${key}.name`),
+      description: t(`module.${key}.description`),
+    };
+  };
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-3xl font-bold text-slate-100">Application Dashboard</h1>
-      <p className="text-slate-400 -mt-4">Drag and drop to reorder, or use the settings on each widget to change its size.</p>
+      <h1 className="text-3xl font-bold text-slate-100">{t('dashboard.title')}</h1>
+      <p className="text-slate-400 -mt-4">{t('dashboard.description')}</p>
       <DragDropContext onDragEnd={onDragEnd}>
         <Droppable droppableId="dashboard">
           {(provided) => (

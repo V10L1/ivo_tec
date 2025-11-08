@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MotorcycleIcon, WrenchIcon, LifeBuoyIcon } from '../components/icons/Icons';
 import { useRouter } from '../App';
 import { PageBlock } from '../types';
+import { useLocalization } from '../contexts/LocalizationContext';
 
 // --- Dynamic Block Renderers ---
 
@@ -50,6 +51,7 @@ const renderBlock = (block: PageBlock) => {
 
 const PublicSite: React.FC = () => {
   const { navigate } = useRouter();
+  const { t } = useLocalization();
   const [pageBlocks, setPageBlocks] = useState<PageBlock[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -81,17 +83,17 @@ const PublicSite: React.FC = () => {
         <nav className="container mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <MotorcycleIcon className="w-8 h-8 text-cyan-400" />
-            <span className="text-xl font-bold">Moto World</span>
+            <span className="text-xl font-bold">{t('publicSite.brand')}</span>
           </div>
           <a href="#/administrator" onClick={handleNavigate} className="bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-            Admin Login
+            {t('publicSite.login')}
           </a>
         </nav>
       </header>
 
       {/* Dynamic Content Area */}
       {isLoading ? (
-        <div className="text-center py-20">Loading...</div>
+        <div className="text-center py-20">{t('loading')}</div>
       ) : (
         pageBlocks.map(block => renderBlock(block))
       )}
@@ -99,7 +101,7 @@ const PublicSite: React.FC = () => {
       {/* Footer */}
       <footer className="border-t border-slate-800 mt-20 py-8">
         <div className="container mx-auto px-6 text-center text-slate-500">
-          <p>&copy; {new Date().getFullYear()} Moto World. All Rights Reserved.</p>
+          <p>{t('publicSite.footer', { year: new Date().getFullYear() })}</p>
         </div>
       </footer>
     </div>
