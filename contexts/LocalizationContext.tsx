@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { Language } from '../types';
-import pt from '../locales/pt.json';
-import en from '../locales/en.json';
+import pt from '/locales/pt.json';
+import en from '/locales/en.json';
 
 const translations: Record<Language, any> = { pt, en };
 
