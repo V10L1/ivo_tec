@@ -16,6 +16,12 @@ export interface AppModule {
   Icon: React.ComponentType<{ className?: string }>;
 }
 
+export type WidgetConfig = {
+  key: AppKey;
+  colSpan: 1 | 2 | 3;
+};
+
+
 // --- Page Builder Content Types ---
 
 export interface HeroBlockContent {
