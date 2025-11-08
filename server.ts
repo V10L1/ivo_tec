@@ -135,6 +135,67 @@ app.put('/api/site/content', verifyToken, async (req: Request, res) => {
     }
 });
 
+// [GET] /api/products
+app.get('/api/products', verifyToken, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT p.id, p.name, c.name as category, p.price FROM products p JOIN product_categories c ON p.category_id = c.id ORDER BY p.name');
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error fetching products:', error);
+        res.status(500).json({ message: 'Failed to fetch products' });
+    }
+});
+
+// [GET] /api/inventory
+app.get('/api/inventory', verifyToken, async (req, res) => {
+    try {
+        const query = `
+            SELECT p.id, p.name, si.quantity as stock
+            FROM products p
+            LEFT JOIN stock_inventory si ON p.id = si.product_id
+            ORDER BY p.name;
+        `;
+        const result = await pool.query(query);
+        const inventory = result.rows.map(item => {
+            let status = 'Out of Stock';
+            if (item.stock > 10) status = 'In Stock';
+            else if (item.stock > 0) status = 'Low Stock';
+            return { ...item, status };
+        });
+        res.json(inventory);
+    } catch (error) {
+        console.error('Error fetching inventory:', error);
+        res.status(500).json({ message: 'Failed to fetch inventory' });
+    }
+});
+
+// [GET] /api/tickets
+app.get('/api/tickets', verifyToken, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT id, subject, submitted_by_email as user, status, priority FROM support_tickets ORDER BY created_at DESC');
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error fetching tickets:', error);
+        res.status(500).json({ message: 'Failed to fetch tickets' });
+    }
+});
+
+
+// [GET] /api/users
+app.get('/api/users', verifyToken, async (req, res) => {
+    // Role-based access control
+    if (req.user?.role !== 'Developer') {
+         return res.status(403).json({ message: 'Permission denied. Only Developers can view users.' });
+    }
+    try {
+        const result = await pool.query('SELECT id, name, email, role FROM users ORDER BY name');
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error fetching users:', error);
+        res.status(500).json({ message: 'Failed to fetch users' });
+    }
+});
+
 
 // --- Server Start ---
 app.listen(PORT, () => {

@@ -39,40 +39,9 @@ const ModuleViews: Record<AppKey, React.ComponentType> = {
   USERS: UserManagement,
 };
 
-const AdminPanel = () => {
-  const [activeModule, setActiveModule] = useState<AppKey | null>(null);
-
-  const handleSelectModule = (key: AppKey) => {
-    setActiveModule(key);
-  };
-
-  const handleGoToDashboard = () => {
-    setActiveModule(null);
-  };
-
-  const ActiveModuleComponent = activeModule ? ModuleViews[activeModule] : null;
-  const moduleInfo = activeModule ? APP_MODULES.find(m => m.key === activeModule) : null;
-
-  return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 font-sans">
-      <Header />
-      <main className="p-4 sm:p-6 lg:p-8">
-        {activeModule && ActiveModuleComponent && moduleInfo ? (
-          <ModuleWrapper title={moduleInfo.name} onBack={handleGoToDashboard}>
-            <ActiveModuleComponent />
-          </ModuleWrapper>
-        ) : (
-          <Dashboard onSelectModule={handleSelectModule} />
-        )}
-      </main>
-    </div>
-  );
-};
-
 const AppContent: React.FC = () => {
   const { isAuthenticated } = useAuth();
   
-  // Hash-based routing logic
   const getPathFromHash = () => window.location.hash.substring(1) || '/';
   const [path, setPath] = useState(getPathFromHash());
 
@@ -89,7 +58,51 @@ const AppContent: React.FC = () => {
 
   let content;
   if (path.startsWith('/administrator')) {
-    content = isAuthenticated ? <AdminPanel /> : <Login />;
+    if (!isAuthenticated) {
+      content = <Login />;
+    } else {
+      const pathParts = path.split('/').filter(Boolean); // e.g., ['administrator', 'site']
+      const activeModuleKeyStr = pathParts.length > 1 ? pathParts[1].toUpperCase() : null;
+      
+      const isValidKey = activeModuleKeyStr && Object.keys(ModuleViews).includes(activeModuleKeyStr);
+      const activeModule = isValidKey ? activeModuleKeyStr as AppKey : null;
+
+      const handleSelectModule = (key: AppKey) => {
+        navigate(`/administrator/${key.toLowerCase()}`);
+      };
+    
+      const handleGoToDashboard = () => {
+        navigate('/administrator');
+      };
+      
+      let adminContent;
+      if (activeModule) {
+        const ActiveModuleComponent = ModuleViews[activeModule];
+        const moduleInfo = APP_MODULES.find(m => m.key === activeModule);
+
+        if (ActiveModuleComponent && moduleInfo) {
+          adminContent = (
+            <ModuleWrapper title={moduleInfo.name} onBack={handleGoToDashboard}>
+              <ActiveModuleComponent />
+            </ModuleWrapper>
+          );
+        } else {
+          // Fallback to dashboard if module in URL is invalid
+          adminContent = <Dashboard onSelectModule={handleSelectModule} />;
+        }
+      } else {
+        adminContent = <Dashboard onSelectModule={handleSelectModule} />;
+      }
+      
+      content = (
+        <div className="min-h-screen bg-slate-900 text-slate-100 font-sans">
+          <Header />
+          <main className="p-4 sm:p-6 lg:p-8">
+            {adminContent}
+          </main>
+        </div>
+      );
+    }
   } else if (path.startsWith('/preview')) {
     content = <PreviewSite />;
   }
