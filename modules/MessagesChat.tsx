@@ -1,12 +1,10 @@
 
 import React from 'react';
-import { useLocalization } from '../contexts/LocalizationContext';
 
 const MessagesChat: React.FC = () => {
-  const { t } = useLocalization();
   return (
     <div className="flex flex-col h-[60vh] text-slate-300">
-      <h3 className="text-xl font-semibold mb-4 text-white">{t('messagesChat.title')}</h3>
+      <h3 className="text-xl font-semibold mb-4 text-white">Live Chat</h3>
       <div className="flex-grow bg-slate-900 border border-slate-700 rounded-lg p-4 flex flex-col space-y-4 overflow-y-auto">
         {/* Chat messages */}
         <div className="flex items-start gap-2">
@@ -31,11 +29,11 @@ const MessagesChat: React.FC = () => {
       <div className="mt-4 flex gap-3">
         <input
           type="text"
-          placeholder={t('messagesChat.placeholder')}
+          placeholder="Type your message..."
           className="flex-grow bg-slate-900 border border-slate-700 rounded-md p-2 text-slate-200 focus:ring-cyan-500 focus:border-cyan-500"
         />
         <button className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-          {t('messagesChat.send')}
+          Send
         </button>
       </div>
     </div>

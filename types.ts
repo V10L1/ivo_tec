@@ -9,20 +9,12 @@ export enum UserRole {
 
 export type AppKey = 'SITE' | 'STORE' | 'STOCK' | 'MESSAGES' | 'SUPPORT' | 'USERS';
 
-export type Language = 'pt' | 'en';
-
 export interface AppModule {
   key: AppKey;
-  name?: string;
-  description?: string;
+  name: string;
+  description: string;
   Icon: React.ComponentType<{ className?: string }>;
 }
-
-export type WidgetConfig = {
-  key: AppKey;
-  colSpan: 1 | 2 | 3;
-};
-
 
 // --- Page Builder Content Types ---
 

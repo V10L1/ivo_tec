@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, useMemo, useEffect } from '
 import { UserRole, AppKey } from '../types';
 import { ROLE_PERMISSIONS } from '../constants';
 import { User } from '../database/schema';
-import { useLocalization } from './LocalizationContext';
+import { mockApi } from '../database/mock';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -21,19 +21,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('authToken'));
   const [isLoading, setIsLoading] = useState(true);
-  const { t } = useLocalization();
 
   useEffect(() => {
     // This effect runs on initial load to verify the token
     const verifyToken = async () => {
       const storedToken = localStorage.getItem('authToken');
       if (storedToken) {
-        // In a real app, you would have a '/api/auth/verify' endpoint.
         // For this demo, we decode the token to get user info.
         try {
             const payload = JSON.parse(atob(storedToken.split('.')[1]));
-            setCurrentUser(payload.user);
-            setToken(storedToken);
+            const userFromToken = payload.user;
+            if (userFromToken && userFromToken.id && userFromToken.role) {
+                setCurrentUser({
+                    ...userFromToken,
+                    passwordHash: '', // Not available/needed on client
+                    createdAt: new Date().toISOString(), // Dummy value
+                });
+                setToken(storedToken);
+            } else {
+                throw new Error("Invalid user data in token");
+            }
         } catch (error) {
             console.error("Invalid token:", error);
             localStorage.removeItem('authToken');
@@ -55,21 +62,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [currentUser]);
 
   const login = async (email: string, pass: string) => {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password: pass }),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Invalid credentials');
-      }
-
-      const { token: receivedToken, user } = await response.json();
+      const { token: receivedToken, user } = await mockApi.login(email, pass);
       localStorage.setItem('authToken', receivedToken);
       setToken(receivedToken);
-      setCurrentUser(user);
+      setCurrentUser({
+          ...user,
+          passwordHash: '', // Not needed on client
+          createdAt: new Date().toISOString(), // dummy value
+      });
   };
 
   const logout = () => {
@@ -87,7 +87,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 
   if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">{t('loading')}</div>;
+    return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Loading...</div>;
   }
 
   return (

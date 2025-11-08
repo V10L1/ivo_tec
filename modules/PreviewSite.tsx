@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MotorcycleIcon } from '../components/icons/Icons';
 import { PageBlock } from '../types';
-import { useLocalization } from '../contexts/LocalizationContext';
 
 // --- Dynamic Block Renderers for Preview ---
 
@@ -50,7 +49,6 @@ const renderPreviewBlock = (block: PageBlock) => {
 
 const PreviewSite: React.FC = () => {
   const [pageBlocks, setPageBlocks] = useState<PageBlock[]>([]);
-  const { t } = useLocalization();
 
   useEffect(() => {
     try {
@@ -70,10 +68,10 @@ const PreviewSite: React.FC = () => {
         <nav className="container mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <MotorcycleIcon className="w-8 h-8 text-cyan-400" />
-            <span className="text-xl font-bold">{t('previewSite.brand')}</span>
+            <span className="text-xl font-bold">Moto World</span>
           </div>
           <div className="bg-yellow-500/20 text-yellow-300 text-sm font-bold px-4 py-2 rounded-lg">
-            {t('previewSite.mode')}
+            PREVIEW MODE
           </div>
         </nav>
       </header>
@@ -82,13 +80,13 @@ const PreviewSite: React.FC = () => {
       {pageBlocks.length > 0 ? (
         pageBlocks.map(block => renderPreviewBlock(block))
       ) : (
-        <div className="text-center py-20 text-slate-500">{t('previewSite.noContent')}</div>
+        <div className="text-center py-20 text-slate-500">No content to preview.</div>
       )}
       
       {/* Footer */}
       <footer className="border-t border-slate-800 mt-20 py-8">
         <div className="container mx-auto px-6 text-center text-slate-500">
-          <p>{t('previewSite.footer', { year: new Date().getFullYear() })}</p>
+          <p>&copy; {new Date().getFullYear()} Moto World. All Rights Reserved.</p>
         </div>
       </footer>
     </div>
