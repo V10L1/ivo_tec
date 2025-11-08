@@ -96,6 +96,10 @@ app.post('/api/auth/login', async (req, res) => {
 // [GET] /api/site/content
 app.get('/api/site/content', async (req, res) => {
     try {
+        // SOLUÇÃO PARA O CACHE: Este cabeçalho instrui o navegador a nunca armazenar
+        // a resposta em cache, garantindo que os dados mais recentes sejam sempre buscados.
+        res.setHeader('Cache-Control', 'no-store');
+
         // Assumimos que há apenas uma linha para o conteúdo principal do site com id = 1
         const result = await pool.query('SELECT content FROM site_content WHERE id = 1');
         if (result.rows.length === 0) {
