@@ -2,7 +2,6 @@ import React, { createContext, useState, useContext, useMemo, useEffect } from '
 import { UserRole, AppKey } from '../types';
 import { ROLE_PERMISSIONS } from '../constants';
 import { User } from '../database/schema';
-import { mockApi } from '../database/mock';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -62,7 +61,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [currentUser]);
 
   const login = async (email: string, pass: string) => {
-      const { token: receivedToken, user } = await mockApi.login(email, pass);
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password: pass }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Falha no login');
+      }
+
+      const { token: receivedToken, user } = await response.json();
       localStorage.setItem('authToken', receivedToken);
       setToken(receivedToken);
       setCurrentUser({

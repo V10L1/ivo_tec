@@ -3,7 +3,6 @@ import { DragDropContext, Droppable, Draggable, OnDragEndResponder } from 'react
 import { PageBlock } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { PlusCircleIcon, SettingsIcon, Trash2Icon, MotorcycleIcon, TypeIcon, ImageIcon, CodeIcon } from '../components/icons/Icons';
-import { mockApi } from '../database/mock';
 
 // Um gerador de ID simples
 const generateId = () => `block_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -136,11 +135,13 @@ const SiteEditor: React.FC = () => {
     const fetchPageContent = async () => {
       setStatus('loading');
       try {
-        const data = await mockApi.getSiteContent();
+        const response = await fetch('/api/site/content');
+        if (!response.ok) throw new Error('A resposta da rede não foi ok');
+        const data = await response.json();
         setPageBlocks(data.content || []);
         setStatus('idle');
       } catch (error) {
-        console.error(error);
+        console.error("Falha ao buscar o conteúdo da página:", error);
         setStatus('error');
       }
     };
@@ -195,7 +196,20 @@ const SiteEditor: React.FC = () => {
   const handleSaveChanges = async () => {
     setStatus('saving');
     try {
-        await mockApi.saveSiteContent(pageBlocks, token);
+        const response = await fetch('/api/site/content', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ content: pageBlocks })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Falha ao salvar o conteúdo');
+        }
+        
         setStatus('idle');
         // Opcionalmente, mostrar uma mensagem de sucesso
     } catch (error) {

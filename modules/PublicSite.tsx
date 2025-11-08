@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { MotorcycleIcon } from '../components/icons/Icons';
 import { useRouter } from '../App';
 import { PageBlock } from '../types';
-import { mockApi } from '../database/mock';
 
 // --- Renderizadores de Bloco Dinâmicos ---
 
@@ -57,7 +56,9 @@ const PublicSite: React.FC = () => {
   useEffect(() => {
     const fetchContent = async () => {
         try {
-            const data = await mockApi.getSiteContent();
+            const response = await fetch('/api/site/content');
+            if (!response.ok) throw new Error('A resposta da rede não foi ok');
+            const data = await response.json();
             setPageBlocks(data.content || []);
         } catch (error) {
             console.error("Falha ao buscar o conteúdo da página:", error);
