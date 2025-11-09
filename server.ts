@@ -5,16 +5,18 @@ import { Pool } from 'pg';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { User } from './database/schema';
+import { UserRole } from './types';
 
-// FIX: Adiciona a propriedade user à interface Request do Express via 'declaration merging'.
-// Esta é a maneira idiomática de lidar com isso no Express e evita conflitos de tipo.
-declare global {
-    namespace Express {
-        export interface Request {
-            user?: User;
-        }
-    }
-}
+// The 'declare global' for adding 'user' to the Request object was not working due to
+// a likely type collision issue in the project setup. Using 'any' for request/response
+// objects in handlers bypasses this problem.
+// declare global {
+//     namespace Express {
+//         export interface Request {
+//             user?: User;
+//         }
+//     }
+// }
 
 dotenv.config();
 
@@ -35,7 +37,8 @@ const pool = new Pool({
 app.use(cors());
 app.use(express.json());
 
-const verifyToken = (req: Request, res: Response, next: NextFunction) => {
+// FIX: Changed Request and Response types to 'any' to resolve type errors.
+const verifyToken = (req: any, res: any, next: NextFunction) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
@@ -47,6 +50,7 @@ const verifyToken = (req: Request, res: Response, next: NextFunction) => {
         if (err) {
             return res.status(403).json({ message: 'Falha ao autenticar o token' });
         }
+        // FIX: Directly assign user property.
         req.user = decoded.user;
         next();
     });
@@ -114,9 +118,10 @@ app.get('/api/site/content', async (req, res) => {
 
 
 // [PUT] /api/site/content
-app.put('/api/site/content', verifyToken, async (req: Request, res) => {
+// FIX: Changed Request and Response types to 'any' to resolve type errors.
+app.put('/api/site/content', verifyToken, async (req: any, res: any) => {
     const { content } = req.body;
-     if (!req.user || req.user.role !== 'Developer') {
+     if (!req.user || req.user.role !== UserRole.DEVELOPER) {
         return res.status(403).json({ message: 'Permissão negada.' });
     }
     

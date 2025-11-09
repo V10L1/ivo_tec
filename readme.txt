@@ -1,3 +1,4 @@
+
 # Painel de Administração Modular Full-Stack
 
 Este documento é o guia completo para configuração, desenvolvimento e implantação da aplicação.
@@ -263,9 +264,9 @@ JWT_SECRET="gere-um-segredo-muito-longo-e-aleatorio-para-producao"
 
 ### d. Compilando e Executando a Aplicação
 
-**1. Compile o TypeScript do Backend:**
+**1. Compile o Frontend e o Backend:**
 ```bash
-npx tsc
+npm run build
 ```
 
 **2. Instale o PM2 e Inicie o Servidor:**
