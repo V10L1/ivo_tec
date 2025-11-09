@@ -5,8 +5,8 @@ import dotenv from 'dotenv';
 import { Pool } from 'pg';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { User } from './database/schema';
-import { UserRole } from './types';
+import { User } from './database/schema.js';
+import { UserRole } from './types.js';
 
 // The 'declare global' for adding 'user' to the Request object was not working due to
 // a likely type collision issue in the project setup. Using 'any' for request/response

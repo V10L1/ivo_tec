@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable, OnDragEndResponder } from 'react-beautiful-dnd';
-import { PageBlock } from '../types';
-import { useAuth } from '../contexts/AuthContext';
-import { PlusCircleIcon, SettingsIcon, Trash2Icon, MotorcycleIcon, TypeIcon, ImageIcon, CodeIcon } from '../components/icons/Icons';
+import { PageBlock } from '../types.js';
+import { useAuth } from '../contexts/AuthContext.js';
+import { PlusCircleIcon, SettingsIcon, Trash2Icon, MotorcycleIcon, TypeIcon, ImageIcon, CodeIcon } from '../components/icons/Icons.js';
 
 // Um gerador de ID simples
 const generateId = () => `block_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;

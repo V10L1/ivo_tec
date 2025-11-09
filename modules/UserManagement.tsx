@@ -1,7 +1,8 @@
 
 
+
 import React from 'react';
-import { UserRole } from '../types';
+import { UserRole } from '../types.js';
 
 const users = [
   { id: 1, name: 'Alice', email: 'alice@example.com', role: UserRole.DEVELOPER },
