@@ -290,15 +290,12 @@ server {
     listen 80;
     listen [::]:80;
 
+    server_name SEU_IP_OU_DOMINIO;
+
     root /var/www/meu-app;
     index index.html;
 
-    server_name SEU_IP_OU_DOMINIO;
-
-    location / {
-        try_files $uri /index.html;
-    }
-
+    # Regra para a API (redireciona para o Node.js)
     location /api/ {
         proxy_pass http://localhost:8069;
         proxy_http_version 1.1;
@@ -306,6 +303,18 @@ server {
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
         proxy_cache_bypass $http_upgrade;
+    }
+
+    # Mapeamento explícito para a pasta de arquivos compilados.
+    # Garante que qualquer requisição para /dist/... seja servida
+    # diretamente da pasta /var/www/meu-app/dist/ no disco.
+    location /dist/ {
+        alias /var/www/meu-app/dist/;
+    }
+
+    # Regra principal para todas as outras rotas (carrega a SPA)
+    location / {
+        try_files $uri /index.html;
     }
 }
 ```
@@ -323,6 +332,7 @@ sudo systemctl restart nginx
 **1. Libere as portas no firewall:**
 ```bash
 sudo ufw allow 'Nginx Full'
+sudo ufw allow 'OpenSSH'
 sudo ufw enable
 sudo ufw status
 ```

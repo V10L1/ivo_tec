@@ -1,4 +1,5 @@
-import express, { Request, Response, NextFunction } from 'express';
+// FIX: import named export `json` to avoid type resolution issues with `express.json()`
+import express, { json, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { Pool } from 'pg';
@@ -35,7 +36,8 @@ const pool = new Pool({
 
 // --- Middleware ---
 app.use(cors());
-app.use(express.json());
+// FIX: Use the named import `json` to correctly apply the JSON parsing middleware. This resolves the overload error.
+app.use(json());
 
 // FIX: Changed Request and Response types to 'any' to resolve type errors.
 const verifyToken = (req: any, res: any, next: NextFunction) => {
