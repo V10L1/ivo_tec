@@ -1,6 +1,4 @@
-
-
-// FIX: Correctly import Request, Response, and NextFunction from express to resolve type errors.
+// Fix: Use the default express import and qualify types to resolve type conflicts.
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -16,11 +14,23 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 8069;
 const JWT_SECRET = process.env.JWT_SECRET;
+const DATABASE_URL = process.env.DATABASE_URL;
 
+// Verificações de ambiente críticas na inicialização
 if (!JWT_SECRET) {
     console.error("ERRO FATAL: JWT_SECRET não está definido. Por favor, verifique seu arquivo .env.");
     process.exit(1);
 }
+if (!DATABASE_URL) {
+    console.error("------------------------------------------------------------");
+    console.error("--- ERRO FATAL: A variável DATABASE_URL não foi encontrada. ---");
+    console.error("------------------------------------------------------------");
+    console.error("Verifique se o arquivo .env existe na raiz do projeto e se ele");
+    console.error("está acessível pelo processo da aplicação (verifique permissões).");
+    console.error("------------------------------------------------------------");
+    process.exit(1);
+}
+
 
 // Augment Express's Request type to include the user property for authenticated routes.
 declare global {
@@ -37,7 +47,7 @@ declare global {
 }
 
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: DATABASE_URL,
 });
 
 // --- Lógica de Inicialização do Banco de Dados ---
@@ -107,7 +117,6 @@ const initializeDatabase = async () => {
 app.use(cors());
 app.use(express.json());
 
-// FIX: Update function signature to use correct Express types.
 const verifyToken = (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -125,7 +134,6 @@ const verifyToken = (req: Request, res: Response, next: NextFunction) => {
     });
 };
 
-// FIX: Update function signature to use correct Express types.
 const isDeveloper = (req: Request, res: Response, next: NextFunction) => {
     if (req.user?.role !== UserRole.DEVELOPER) {
         return res.status(403).json({ message: 'Acesso negado. Apenas desenvolvedores.' });
@@ -135,7 +143,6 @@ const isDeveloper = (req: Request, res: Response, next: NextFunction) => {
 
 // --- Rotas da API (Devem vir antes do serviço de arquivos estáticos) ---
 
-// FIX: Update function signature to use correct Express types.
 app.get('/api/health', async (req: Request, res: Response) => {
     try {
         const client = await pool.connect();
@@ -147,7 +154,6 @@ app.get('/api/health', async (req: Request, res: Response) => {
     }
 });
 
-// FIX: Update function signature to use correct Express types.
 app.get('/api/setup/status', async (req: Request, res: Response) => {
     try {
         const result = await pool.query('SELECT COUNT(*) FROM users');
@@ -159,7 +165,6 @@ app.get('/api/setup/status', async (req: Request, res: Response) => {
     }
 });
 
-// FIX: Update function signature to use correct Express types.
 app.post('/api/setup/initialize', async (req: Request, res: Response) => {
     try {
         const userCheck = await pool.query('SELECT COUNT(*) FROM users');
@@ -188,7 +193,6 @@ app.post('/api/setup/initialize', async (req: Request, res: Response) => {
     }
 });
 
-// FIX: Update function signature to use correct Express types.
 app.post('/api/auth/login', async (req: Request, res: Response) => {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -226,7 +230,6 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
     }
 });
 
-// FIX: Update function signature to use correct Express types.
 app.post('/api/auth/register', async (req: Request, res: Response) => {
     const { name, email, password } = req.body;
     if (!name || !email || !password) {
@@ -254,7 +257,6 @@ app.post('/api/auth/register', async (req: Request, res: Response) => {
     }
 });
 
-// FIX: Update function signature to use correct Express types.
 app.post('/api/auth/reset-password', async (req: Request, res: Response) => {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -283,7 +285,6 @@ app.post('/api/auth/reset-password', async (req: Request, res: Response) => {
 });
 
 
-// FIX: Update function signature to use correct Express types.
 app.get('/api/site/content', async (req: Request, res: Response) => {
     try {
         res.setHeader('Cache-Control', 'no-store');
@@ -298,7 +299,6 @@ app.get('/api/site/content', async (req: Request, res: Response) => {
     }
 });
 
-// FIX: Update function signature to use correct Express types.
 app.put('/api/site/content', verifyToken, isDeveloper, async (req: Request, res: Response) => {
     const { content } = req.body;
     if (!content) {
@@ -322,7 +322,6 @@ app.put('/api/site/content', verifyToken, isDeveloper, async (req: Request, res:
 
 // --- Rotas de Gerenciamento de Usuários ---
 
-// FIX: Update function signature to use correct Express types.
 app.get('/api/users', verifyToken, isDeveloper, async (req: Request, res: Response) => {
     try {
         const result = await pool.query('SELECT id, name, email, role FROM users ORDER BY name');
@@ -333,7 +332,6 @@ app.get('/api/users', verifyToken, isDeveloper, async (req: Request, res: Respon
     }
 });
 
-// FIX: Update function signature to use correct Express types.
 app.post('/api/users', verifyToken, isDeveloper, async (req: Request, res: Response) => {
     const { name, email, password, role } = req.body;
     if (!name || !email || !password || !role) {
@@ -359,7 +357,6 @@ app.post('/api/users', verifyToken, isDeveloper, async (req: Request, res: Respo
     }
 });
 
-// FIX: Update function signature to use correct Express types.
 app.put('/api/users/:id', verifyToken, isDeveloper, async (req: Request, res: Response) => {
     const { id } = req.params;
     const { role } = req.body;
@@ -387,7 +384,6 @@ app.put('/api/users/:id', verifyToken, isDeveloper, async (req: Request, res: Re
     }
 });
 
-// FIX: Update function signature to use correct Express types.
 app.delete('/api/users/:id', verifyToken, isDeveloper, async (req: Request, res: Response) => {
     const { id } = req.params;
 
@@ -418,7 +414,6 @@ app.use('/dist/client', express.static(clientDistPath));
 
 app.use(express.static(staticRootPath));
 
-// FIX: Update function signature to use correct Express types.
 app.get('*', (req: Request, res: Response) => {
     if (req.path.startsWith('/api/')) {
         return res.status(404).json({ message: 'Endpoint da API não encontrado.' });

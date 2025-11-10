@@ -6,8 +6,8 @@ Este documento é o guia completo para configuração, desenvolvimento e implant
 
 Esta é uma aplicação full-stack com uma arquitetura moderna e desacoplada:
 
-1.  **Frontend:** Uma "Single Page Application" (SPA) construída com **React**. Utiliza uma abordagem "build-less" com **Import Maps** para carregar dependências diretamente no navegador, simplificando o desenvolvimento.
-2.  **Backend:** Um servidor API construído com **Node.js, Express e TypeScript**, responsável pela lógica de negócios, autenticação, comunicação com o banco de dados e por servir os arquivos do frontend no ambiente de desenvolvimento.
+1.  **Frontend:** Uma "Single Page Application" (SPA) construída com **React** e empacotada com **esbuild**.
+2.  **Backend:** Um servidor API construído com **Node.js, Express e TypeScript**, responsável pela lógica de negócios, autenticação, comunicação com o banco de dados e por servir os arquivos do frontend.
 3.  **Banco de Dados:** **PostgreSQL**, um sistema de banco de dados relacional robusto para garantir a persistência e a integridade dos dados.
 
 ---
@@ -50,7 +50,11 @@ volumes:
 ```
 
 **3. Configure as Variáveis de Ambiente:**
-Crie um arquivo `.env` a partir do `.env.example` (se existir) ou do zero e preencha-o:
+Crie um arquivo `.env` e preencha-o:
+```bash
+nano .env
+```
+Conteúdo do `.env`:
 ```env
 DATABASE_URL="postgresql://ivotec:ivo526526@localhost:5432/ivotec_db"
 PORT=8069
@@ -64,10 +68,9 @@ Abra um terminal, instale as dependências e inicie o servidor unificado.
 npm install
 
 # Iniciar o servidor de desenvolvimento (backend + frontend)
-# Este comando irá primeiro compilar os arquivos do frontend e depois iniciar o servidor.
 npm run dev:server
 ```
-O servidor irá compilar os arquivos e então iniciar. Você pode acessar a aplicação completa no endereço que aparecerá no seu terminal, geralmente `http://localhost:8069`.
+A aplicação completa estará acessível em `http://localhost:8069`.
 
 ---
 
@@ -109,10 +112,8 @@ GRANT ALL PRIVILEGES ON DATABASE ivotec_db TO ivotec;
 \q
 ```
 
-**3. Criação de Tabelas e Dados Iniciais (Automático!):**
-**Não é mais necessário executar comandos SQL manualmente!** A aplicação foi atualizada para criar automaticamente o esquema do banco de dados e inserir os dados iniciais na primeira vez que o servidor é iniciado. Este passo agora é totalmente automatizado para simplificar a implantação e evitar erros.
-
-**Nota Importante:** Ao acessar a aplicação pela primeira vez no navegador (no endereço `http://<IP_DO_SEU_SERVIDOR>/#/administrator`), você pode usar a tela de "Novo usuário" para criar sua conta de Desenvolvedor.
+**3. Criação de Tabelas (Automático!):**
+**Não é necessário executar comandos SQL manualmente!** A aplicação agora cria automaticamente o esquema do banco de dados na primeira vez que o servidor é iniciado.
 
 ### c. Implantação do Código
 
@@ -147,11 +148,12 @@ npm install
 npm run build
 ```
 
-**2. Instale o PM2 e Inicie o Servidor:**
+**2. Instale o PM2 e Inicie o Servidor com o Ecossistema:**
+O `ecosystem.config.js` garante que o PM2 inicie a aplicação com as configurações corretas, resolvendo problemas de diretório de trabalho.
 ```bash
 sudo npm install pm2 -g
 cd /var/www/ivotec
-pm2 start dist/server/server.js --name "ivotec-backend"
+pm2 start ecosystem.config.js
 pm2 startup
 # Copie e execute o comando gerado pelo `pm2 startup`
 pm2 save
@@ -174,7 +176,6 @@ server {
     root /var/www/ivotec;
     index index.html;
 
-    # Regra para a API (redireciona para o Node.js)
     location /api/ {
         proxy_pass http://localhost:8069;
         proxy_http_version 1.1;
@@ -184,9 +185,6 @@ server {
         proxy_cache_bypass $http_upgrade;
     }
 
-    # Regra principal para todas as outras rotas (carrega a SPA)
-    # O Nginx servirá os arquivos estáticos (como /dist/client/index.js)
-    # a partir do diretório 'root' antes de recorrer a esta regra.
     location / {
         try_files $uri /index.html;
     }
@@ -203,7 +201,7 @@ sudo systemctl restart nginx
 
 ### f. Permissões de Arquivo e Firewall
 
-**1. Dê ao Nginx Permissão para Ler os Arquivos:** (Passo CRÍTCIAL)
+**1. Dê ao Nginx Permissão para Ler os Arquivos:**
 ```bash
 sudo chown -R www-data:www-data /var/www/ivotec
 sudo chmod -R 755 /var/www/ivotec
@@ -212,35 +210,27 @@ sudo chmod -R 755 /var/www/ivotec
 **2. Libere as Portas no Firewall:**
 ```bash
 sudo ufw allow 'Nginx Full'
-sudo ufw allow 'OpenSSH'  # Essencial para não perder o acesso SSH
+sudo ufw allow 'OpenSSH'
 sudo ufw enable
 ```
 
 **3. Acesse sua aplicação:**
-Encontre o IP do seu servidor com `hostname -I`. Em qualquer dispositivo, abra o navegador e acesse: `http://<IP_DO_SEU_SERVIDOR>`
+Acesse `http://<IP_DO_SEU_SERVIDOR>` no seu navegador.
 
 ---
 
 ## 3. Solução de Problemas (Troubleshooting)
 
-### Erro 502 Bad Gateway ou Aplicação Offline
+### Erro `errored` no PM2 ou 502 Bad Gateway
 
-Um erro 502 significa que o Nginx (servidor web) não conseguiu se comunicar com a sua aplicação backend (Node.js/PM2). Isso geralmente acontece porque a aplicação backend travou na inicialização.
+Isso geralmente significa que a aplicação backend travou na inicialização.
 
 **1. Verifique os Logs do PM2:**
-Este é o primeiro e mais importante passo. Os logs mostrarão o erro exato que fez sua aplicação parar.
+Este é o primeiro e mais importante passo.
 ```bash
 pm2 logs ivotec-backend
 ```
-Procure por mensagens de erro em vermelho. A aplicação agora fornece logs detalhados para problemas de conexão com o banco de dados.
+A aplicação agora fornece logs detalhados. A causa mais comum é um erro no arquivo `.env`.
 
 **2. Use o Endpoint de Verificação de Saúde:**
-A aplicação agora tem um endpoint para verificar seu status. Acesse o seguinte URL no seu navegador:
-`http://SEU_IP_OU_DOMINIO/api/health`
-
-- **Resposta de Sucesso:** `{"status":"ok","message":"Backend está rodando e conectado ao banco de dados."}`
-  - Se você receber isso, a aplicação e o banco de dados estão funcionando. O problema pode estar na configuração do Nginx.
-
-- **Resposta de Erro ou Sem Resposta:**
-  - Se a página não carregar ou mostrar um erro 502, confirma que o processo do PM2 não está respondendo. Verifique os logs do PM2 para encontrar a causa.
-  - A causa mais comum é um erro no arquivo `.env` (senha do banco de dados incorreta, etc.).
+Acesse `http://SEU_IP_OU_DOMINIO/api/health` para verificar o status do backend e do banco de dados.
