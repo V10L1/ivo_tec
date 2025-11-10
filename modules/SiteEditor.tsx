@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable, OnDragEndResponder } from 'react-beautiful-dnd';
-import { PageBlock } from '../types.js';
-import { useAuth } from '../contexts/AuthContext.js';
-import { PlusCircleIcon, SettingsIcon, Trash2Icon, MotorcycleIcon, TypeIcon, ImageIcon, CodeIcon } from '../components/icons/Icons.js';
+import { PageBlock } from '../types';
+import { useAuth } from '../contexts/AuthContext';
+import { PlusCircleIcon, SettingsIcon, Trash2Icon, MotorcycleIcon, TypeIcon, ImageIcon, CodeIcon } from '../components/icons/Icons';
 
 // Um gerador de ID simples
 const generateId = () => `block_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -126,9 +126,10 @@ const Inspector: React.FC<{ block: PageBlock; onUpdate: (updatedBlock: PageBlock
 // --- Componente Principal do Editor de Site ---
 
 const SiteEditor: React.FC = () => {
-  const [pageBlocks, setPageBlocks] = useState<PageBlock[]>([]);
+  const [currentPageBlocks, setCurrentPageBlocks] = useState<PageBlock[]>([]);
+  const [savedPageBlocks, setSavedPageBlocks] = useState<PageBlock[]>([]);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
-  const [status, setStatus] = useState<'idle' | 'loading' | 'saving' | 'error'>('loading');
+  const [status, setStatus] = useState<'idle' | 'loading' | 'saving' | 'error' | 'success'>('loading');
   const { token } = useAuth();
 
   useEffect(() => {
@@ -138,7 +139,9 @@ const SiteEditor: React.FC = () => {
         const response = await fetch('/api/site/content');
         if (!response.ok) throw new Error('A resposta da rede não foi ok');
         const data = await response.json();
-        setPageBlocks(data.content || []);
+        const initialContent = data.content || [];
+        setCurrentPageBlocks(initialContent);
+        setSavedPageBlocks(initialContent);
         setStatus('idle');
       } catch (error) {
         console.error("Falha ao buscar o conteúdo da página:", error);
@@ -165,31 +168,31 @@ const SiteEditor: React.FC = () => {
             newBlock = { id, type, content: { text: 'Clique Aqui', link: '#' } };
             break;
     }
-    setPageBlocks([...pageBlocks, newBlock]);
+    setCurrentPageBlocks([...currentPageBlocks, newBlock]);
     setSelectedBlockId(newBlock.id);
   };
   
   const handleUpdateBlock = (updatedBlock: PageBlock) => {
-    setPageBlocks(pageBlocks.map(b => b.id === updatedBlock.id ? updatedBlock : b));
+    setCurrentPageBlocks(currentPageBlocks.map(b => b.id === updatedBlock.id ? updatedBlock : b));
   };
   
   const handleDeleteBlock = (idToDelete: string) => {
       if (selectedBlockId === idToDelete) {
           setSelectedBlockId(null);
       }
-      setPageBlocks(pageBlocks.filter(b => b.id !== idToDelete));
+      setCurrentPageBlocks(currentPageBlocks.filter(b => b.id !== idToDelete));
   };
 
   const onDragEnd: OnDragEndResponder = (result) => {
     if (!result.destination) return;
-    const items = Array.from(pageBlocks);
+    const items = Array.from(currentPageBlocks);
     const [reorderedItem] = items.splice(result.source.index, 1);
     items.splice(result.destination.index, 0, reorderedItem);
-    setPageBlocks(items);
+    setCurrentPageBlocks(items);
   };
 
   const handlePreview = () => {
-    localStorage.setItem('sitePreviewContent', JSON.stringify(pageBlocks));
+    localStorage.setItem('sitePreviewContent', JSON.stringify(currentPageBlocks));
     window.open('#/preview', '_blank');
   };
   
@@ -202,7 +205,7 @@ const SiteEditor: React.FC = () => {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ content: pageBlocks })
+            body: JSON.stringify({ content: currentPageBlocks })
         });
 
         if (!response.ok) {
@@ -210,15 +213,24 @@ const SiteEditor: React.FC = () => {
             throw new Error(errorData.message || 'Falha ao salvar o conteúdo');
         }
         
-        setStatus('idle');
-        // Opcionalmente, mostrar uma mensagem de sucesso
+        setSavedPageBlocks(currentPageBlocks);
+        setStatus('success');
+        setTimeout(() => setStatus('idle'), 2000); // Volta para o estado idle após 2s
     } catch (error) {
         console.error(error);
         setStatus('error');
     }
   };
 
-  const selectedBlock = pageBlocks.find(b => b.id === selectedBlockId);
+  const handleRevertChanges = () => {
+    if (window.confirm('Você tem certeza que deseja reverter todas as alterações não salvas?')) {
+        setCurrentPageBlocks(savedPageBlocks);
+        setStatus('idle');
+    }
+  };
+
+  const selectedBlock = currentPageBlocks.find(b => b.id === selectedBlockId);
+  const hasUnsavedChanges = JSON.stringify(currentPageBlocks) !== JSON.stringify(savedPageBlocks);
 
   return (
     <div className="flex h-[calc(100vh-150px)] bg-slate-900 text-slate-300 rounded-lg border border-slate-700">
@@ -237,11 +249,42 @@ const SiteEditor: React.FC = () => {
             </div>
           </div>
         )}
-        <div className="mt-auto p-4 border-t border-slate-700 flex justify-end gap-3">
-            <button onClick={handlePreview} className="bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">Visualizar</button>
-            <button onClick={handleSaveChanges} disabled={status === 'saving'} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-slate-600">
-                {status === 'saving' ? 'Salvando...' : 'Salvar Alterações'}
-            </button>
+        <div className="mt-auto p-4 border-t border-slate-700 space-y-3">
+            {hasUnsavedChanges && status !== 'error' && (
+                <div className="text-center text-yellow-400 text-sm p-2 bg-yellow-500/10 rounded-md">
+                    Você tem alterações não salvas (Prévia de edição).
+                </div>
+            )}
+             {status === 'success' && (
+                <div className="text-center text-green-400 text-sm p-2 bg-green-500/10 rounded-md">
+                    Alterações salvas com sucesso!
+                </div>
+            )}
+            {status === 'error' && (
+                <div className="text-center text-red-400 text-sm p-3 bg-red-500/10 rounded-md space-y-2">
+                    <p className="font-bold">Falha ao salvar!</p>
+                    <p>Suas alterações foram preservadas. Verifique sua conexão e tente novamente ou reverta para a última versão salva.</p>
+                    <div className="flex justify-center gap-3 pt-2">
+                        <button onClick={handleSaveChanges} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg">
+                            Tentar Novamente
+                        </button>
+                        <button onClick={handleRevertChanges} className="bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg">
+                            Reverter Alterações
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            <div className="flex justify-end gap-3">
+                <button onClick={handlePreview} className="bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">Visualizar</button>
+                <button 
+                    onClick={handleSaveChanges} 
+                    disabled={!hasUnsavedChanges || status === 'saving' || status === 'error'} 
+                    className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-slate-600 disabled:cursor-not-allowed"
+                >
+                    {status === 'saving' ? 'Salvando...' : 'Salvar Alterações'}
+                </button>
+            </div>
         </div>
       </aside>
 
@@ -249,12 +292,12 @@ const SiteEditor: React.FC = () => {
       <main className="flex-1 overflow-y-auto p-4 bg-slate-900">
         <div className="max-w-4xl mx-auto bg-slate-800/30 rounded-lg p-2">
            {status === 'loading' && <p>Carregando conteúdo...</p>}
-           {status === 'error' && <p className="text-red-400">Erro ao carregar ou salvar o conteúdo.</p>}
+           {status === 'error' && !hasUnsavedChanges && <p className="text-red-400">Erro ao carregar o conteúdo. Por favor, recarregue a página.</p>}
            <DragDropContext onDragEnd={onDragEnd}>
                 <Droppable droppableId="canvas">
                     {(provided) => (
                         <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-2">
-                            {pageBlocks.map((block, index) => (
+                            {currentPageBlocks.map((block, index) => (
                                 <Draggable key={block.id} draggableId={block.id} index={index}>
                                     {(provided, snapshot) => (
                                         <div 

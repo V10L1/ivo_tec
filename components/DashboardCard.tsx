@@ -1,7 +1,8 @@
 
 
+
 import React from 'react';
-import { AppModule } from '../types.js';
+import { AppModule } from '../types';
 
 interface DashboardCardProps {
   module: AppModule;

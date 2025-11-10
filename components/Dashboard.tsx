@@ -1,11 +1,13 @@
 
 
 
+
+
 import React from 'react';
-import { useAuth } from '../contexts/AuthContext.js';
-import { DashboardCard } from './DashboardCard.js';
-import { APP_MODULES } from '../constants.js';
-import { AppKey } from '../types.js';
+import { useAuth } from '../contexts/AuthContext';
+import { DashboardCard } from './DashboardCard';
+import { APP_MODULES } from '../constants';
+import { AppKey } from '../types';
 
 interface DashboardProps {
   onSelectModule: (key: AppKey) => void;

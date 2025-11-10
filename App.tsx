@@ -1,20 +1,20 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
-import { AuthProvider, useAuth } from './contexts/AuthContext.js';
-import { Dashboard } from './components/Dashboard.js';
-import { Header } from './components/Header.js';
-import { ModuleWrapper } from './components/ModuleWrapper.js';
-import { APP_MODULES } from './constants.js';
-import { AppKey } from './types.js';
-import SiteEditor from './modules/SiteEditor.js';
-import StoreManager from './modules/StoreManager.js';
-import StockControl from './modules/StockControl.js';
-import MessagesChat from './modules/MessagesChat.js';
-import SupportTickets from './modules/SupportTickets.js';
-import UserManagement from './modules/UserManagement.js';
-import PublicSite from './modules/PublicSite.js';
-import Login from './modules/Login.js';
-import PreviewSite from './modules/PreviewSite.js';
-import InitialSetup from './modules/InitialSetup.js';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { Dashboard } from './components/Dashboard';
+import { Header } from './components/Header';
+import { ModuleWrapper } from './components/ModuleWrapper';
+import { APP_MODULES } from './constants';
+import { AppKey } from './types';
+import SiteEditor from './modules/SiteEditor';
+import StoreManager from './modules/StoreManager';
+import StockControl from './modules/StockControl';
+import MessagesChat from './modules/MessagesChat';
+import SupportTickets from './modules/SupportTickets';
+import UserManagement from './modules/UserManagement';
+import PublicSite from './modules/PublicSite';
+import Login from './modules/Login';
+import PreviewSite from './modules/PreviewSite';
+import InitialSetup from './modules/InitialSetup';
 
 // --- Router Context ---
 interface RouterContextType {

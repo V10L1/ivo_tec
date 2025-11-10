@@ -1,4 +1,3 @@
-
 # Painel de Administração Modular Full-Stack
 
 Este documento é o guia completo para configuração, desenvolvimento e implantação da aplicação.
@@ -8,7 +7,7 @@ Este documento é o guia completo para configuração, desenvolvimento e implant
 Esta é uma aplicação full-stack com uma arquitetura moderna e desacoplada:
 
 1.  **Frontend:** Uma "Single Page Application" (SPA) construída com **React**. Utiliza uma abordagem "build-less" com **Import Maps** para carregar dependências diretamente no navegador, simplificando o desenvolvimento.
-2.  **Backend:** Um servidor API construído com **Node.js, Express e TypeScript**, responsável pela lógica de negócios, autenticação e comunicação com o banco de dados.
+2.  **Backend:** Um servidor API construído com **Node.js, Express e TypeScript**, responsável pela lógica de negócios, autenticação, comunicação com o banco de dados e por servir os arquivos do frontend no ambiente de desenvolvimento.
 3.  **Banco de Dados:** **PostgreSQL**, um sistema de banco de dados relacional robusto para garantir a persistência e a integridade dos dados.
 
 ---
@@ -59,16 +58,16 @@ JWT_SECRET="segredo-de-desenvolvimento-pode-ser-simples"
 ```
 
 **4. Instale Dependências e Rode a Aplicação:**
+Abra um terminal, instale as dependências e inicie o servidor unificado.
 ```bash
-# Terminal 1: Iniciar o Backend
+# Instalar dependências
 npm install
-npm run dev:server
 
-# Terminal 2: Servir o Frontend
-npm install -g serve
-serve -l 3000
+# Iniciar o servidor de desenvolvimento (backend + frontend)
+# Este comando irá primeiro compilar os arquivos do frontend e depois iniciar o servidor.
+npm run dev:server
 ```
-Acesse a aplicação em `http://localhost:3000`.
+O servidor irá compilar os arquivos e então iniciar. Você pode acessar a aplicação completa no endereço que aparecerá no seu terminal, geralmente `http://localhost:8069`.
 
 ---
 
@@ -174,7 +173,7 @@ npm run build
 ```bash
 sudo npm install pm2 -g
 cd /var/www/meu-app
-pm2 start dist/server.js --name "meu-app-backend"
+pm2 start dist/server/server.js --name "meu-app-backend"
 pm2 startup
 # Copie e execute o comando gerado pelo `pm2 startup`
 pm2 save
@@ -207,12 +206,9 @@ server {
         proxy_cache_bypass $http_upgrade;
     }
 
-    # Mapeamento explícito para a pasta de arquivos compilados.
-    location /dist/ {
-        alias /var/www/meu-app/dist/;
-    }
-
     # Regra principal para todas as outras rotas (carrega a SPA)
+    # O Nginx servirá os arquivos estáticos (como /dist/client/index.js)
+    # a partir do diretório 'root' antes de recorrer a esta regra.
     location / {
         try_files $uri /index.html;
     }

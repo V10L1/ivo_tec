@@ -1,15 +1,14 @@
-
 {
   "name": "modular-admin-platform",
   "version": "1.0.0",
   "description": "Uma plataforma de administração modular full-stack com frontend React e backend Node.js.",
-  "main": "dist/server.js",
+  "main": "dist/server/server.js",
   "scripts": {
     "build:backend": "tsc --project tsconfig.backend.json",
     "build:frontend": "tsc --project tsconfig.frontend.json",
     "build": "npm run build:backend && npm run build:frontend",
-    "dev:server": "ts-node-dev --respawn --transpile-only server.ts",
-    "start": "node dist/server.js"
+    "dev:server": "npm run build:frontend && ts-node-dev --respawn --transpile-only server.ts",
+    "start": "node dist/server/server.js"
   },
   "keywords": [
     "react",

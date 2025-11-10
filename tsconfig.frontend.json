@@ -1,10 +1,11 @@
+
 {
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",
     "lib": ["DOM", "DOM.Iterable", "ESNext"],
     "jsx": "react-jsx",
-    "outDir": "./dist",
+    "outDir": "./dist/client",
     "rootDir": "./",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,

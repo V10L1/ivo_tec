@@ -1,18 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { UserRole } from '../types.js';
-import { useAuth } from '../contexts/AuthContext.js';
-import { User } from '../database/schema.js';
+import { UserRole } from '../types';
+import { useAuth } from '../contexts/AuthContext';
+import { User } from '../database/schema';
 
 type DisplayUser = Omit<User, 'passwordHash' | 'createdAt'>;
 
 const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<DisplayUser[]>([]);
-  const [status, setStatus] = useState<'loading' | 'idle' | 'error'>('loading');
+  const [status, setStatus] = useState<'loading' | 'idle' | 'error' | 'submitting'>('loading');
   const [isAdding, setIsAdding] = useState(false);
   const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: UserRole.OPERATOR });
-  const [addError, setAddError] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ type: 'error' | 'success', message: string } | null>(null);
   
-  const { token } = useAuth();
+  const { token, currentUser } = useAuth();
 
   const fetchUsers = useCallback(async () => {
     setStatus('loading');
@@ -33,6 +33,11 @@ const UserManagement: React.FC = () => {
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
+  
+  const handleFeedback = (type: 'error' | 'success', message: string) => {
+    setFeedback({ type, message });
+    setTimeout(() => setFeedback(null), 5000);
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -41,7 +46,8 @@ const UserManagement: React.FC = () => {
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    setAddError(null);
+    setFeedback(null);
+    setStatus('submitting');
     try {
       const response = await fetch('/api/users', {
         method: 'POST',
@@ -55,15 +61,72 @@ const UserManagement: React.FC = () => {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Falha ao criar usuário.');
       }
-      // Reset form and state
       setIsAdding(false);
       setNewUser({ name: '', email: '', password: '', role: UserRole.OPERATOR });
-      // Refresh user list
+      handleFeedback('success', 'Usuário criado com sucesso!');
       fetchUsers();
     } catch (error: any) {
-      setAddError(error.message);
+      handleFeedback('error', error.message);
+    } finally {
+        setStatus('idle');
     }
   };
+
+  const handleUpdateUserRole = async (userId: string, newRole: UserRole) => {
+    if (!window.confirm(`Tem certeza que deseja alterar a função deste usuário para ${newRole}?`)) {
+      // Recarrega os usuários para reverter a mudança visual no select caso o usuário cancele
+      fetchUsers();
+      return;
+    }
+    setFeedback(null);
+    setStatus('submitting');
+    try {
+        const response = await fetch(`/api/users/${userId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ role: newRole })
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Falha ao atualizar a função.');
+        }
+        handleFeedback('success', 'Função do usuário atualizada com sucesso!');
+        fetchUsers(); // Refresca a lista para garantir a consistência
+    } catch (error: any) {
+        handleFeedback('error', error.message);
+        fetchUsers(); // Reverte a mudança visual no select se houver erro
+    } finally {
+        setStatus('idle');
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    if (!window.confirm('Você tem certeza que deseja remover este usuário? Esta ação é irreversível.')) {
+        return;
+    }
+    setFeedback(null);
+    setStatus('submitting');
+    try {
+        const response = await fetch(`/api/users/${userId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Falha ao remover o usuário.');
+        }
+        handleFeedback('success', 'Usuário removido com sucesso!');
+        setUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
+    } catch (error: any) {
+        handleFeedback('error', error.message);
+    } finally {
+        setStatus('idle');
+    }
+  };
+
 
   return (
     <div>
@@ -86,13 +149,21 @@ const UserManagement: React.FC = () => {
                 {Object.values(UserRole).map(r => <option key={r} value={r}>{r}</option>)}
               </select>
             </div>
-            {addError && <p className="text-red-400 text-sm">{addError}</p>}
             <div className="flex justify-end">
-              <button type="submit" className="bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded-lg">Criar Usuário</button>
+              <button type="submit" disabled={status === 'submitting'} className="bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded-lg disabled:bg-slate-600">
+                {status === 'submitting' ? 'Criando...' : 'Criar Usuário'}
+              </button>
             </div>
           </form>
         </div>
       )}
+      
+      {feedback && (
+        <div className={`p-3 rounded-lg mb-4 text-center ${feedback.type === 'error' ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>
+          {feedback.message}
+        </div>
+      )}
+
 
       <p className="mb-6 text-slate-400">
         Como Desenvolvedor, você pode gerenciar todos os usuários e suas funções na plataforma.
@@ -101,7 +172,7 @@ const UserManagement: React.FC = () => {
       {status === 'loading' && <p>Carregando usuários...</p>}
       {status === 'error' && <p className="text-red-400">Não foi possível carregar a lista de usuários.</p>}
       
-      {status === 'idle' && (
+      {status !== 'loading' && status !== 'error' && (
         <div className="overflow-x-auto">
           <table className="min-w-full bg-slate-900 rounded-lg">
             <thead>
@@ -112,27 +183,37 @@ const UserManagement: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {users.map((user) => (
-                <tr key={user.id} className="border-b border-slate-800 hover:bg-slate-800/50">
-                  <td className="p-3 text-sm text-slate-200">
-                      <div className="font-medium">{user.name}</div>
-                      <div className="text-slate-500">{user.email}</div>
-                  </td>
-                  <td className="p-3 text-sm text-slate-300">
-                      <select
-                          defaultValue={user.role}
-                          className="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg
-                                    focus:ring-cyan-500 focus:border-cyan-500 block w-full p-2"
+              {users.map((user) => {
+                const isCurrentUser = user.id === currentUser?.id;
+                return (
+                  <tr key={user.id} className={`border-b border-slate-800 ${isCurrentUser ? 'bg-slate-800/50' : 'hover:bg-slate-800/50'}`}>
+                    <td className="p-3 text-sm text-slate-200">
+                        <div className="font-medium">{user.name} {isCurrentUser && <span className="text-xs text-cyan-400">(Você)</span>}</div>
+                        <div className="text-slate-500">{user.email}</div>
+                    </td>
+                    <td className="p-3 text-sm text-slate-300">
+                        <select
+                            defaultValue={user.role}
+                            onChange={(e) => handleUpdateUserRole(user.id, e.target.value as UserRole)}
+                            disabled={isCurrentUser || status === 'submitting'}
+                            className="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg
+                                      focus:ring-cyan-500 focus:border-cyan-500 block w-full p-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {Object.values(UserRole).map(r => <option key={r} value={r}>{r}</option>)}
+                        </select>
+                    </td>
+                    <td className="p-3 text-sm">
+                      <button 
+                        onClick={() => handleDeleteUser(user.id)}
+                        disabled={isCurrentUser || status === 'submitting'}
+                        className="text-red-500 hover:text-red-400 font-semibold disabled:text-slate-600 disabled:cursor-not-allowed"
                       >
-                          {Object.values(UserRole).map(r => <option key={r} value={r}>{r}</option>)}
-                      </select>
-                  </td>
-                  <td className="p-3 text-sm space-x-4">
-                    <a href="#" className="text-cyan-400 hover:text-cyan-300">Salvar</a>
-                    <a href="#" className="text-red-400 hover:text-red-300">Remover</a>
-                  </td>
-                </tr>
-              ))}
+                        Remover
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

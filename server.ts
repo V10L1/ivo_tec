@@ -1,11 +1,13 @@
+// FIX: Explicitly import types from express to avoid type conflicts with global DOM types.
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { Pool } from 'pg';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { User } from './database/schema.js';
-import { UserRole } from './types.js';
+import path from 'path';
+import { User } from './database/schema';
+import { UserRole } from './types';
 
 dotenv.config();
 
@@ -17,15 +19,29 @@ if (!JWT_SECRET) {
     throw new Error("ERRO FATAL: JWT_SECRET não está definido. Por favor, verifique seu arquivo .env.");
 }
 
+// Augment Express's Request type to include the user property for authenticated routes.
+declare global {
+    namespace Express {
+        interface Request {
+            user?: {
+                id: string;
+                name: string;
+                email: string;
+                role: UserRole;
+            };
+        }
+    }
+}
+
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
 });
 
 app.use(cors());
-// FIX: Use express.json() directly to avoid a TypeScript overload resolution error.
 app.use(express.json());
 
-const verifyToken = (req: any, res: any, next: NextFunction) => {
+// Middleware to verify JWT token
+const verifyToken = (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
@@ -42,10 +58,18 @@ const verifyToken = (req: any, res: any, next: NextFunction) => {
     });
 };
 
-// --- Rotas de Configuração Inicial ---
+// Middleware to ensure user is a developer
+const isDeveloper = (req: Request, res: Response, next: NextFunction) => {
+    if (req.user?.role !== UserRole.DEVELOPER) {
+        return res.status(403).json({ message: 'Acesso negado. Apenas desenvolvedores.' });
+    }
+    next();
+};
+
+// --- Rotas da API (Devem vir antes do serviço de arquivos estáticos) ---
 
 // [GET] /api/setup/status
-app.get('/api/setup/status', async (req, res) => {
+app.get('/api/setup/status', async (req: Request, res: Response) => {
     try {
         const result = await pool.query('SELECT COUNT(*) FROM users');
         const userCount = parseInt(result.rows[0].count, 10);
@@ -57,7 +81,7 @@ app.get('/api/setup/status', async (req, res) => {
 });
 
 // [POST] /api/setup/initialize
-app.post('/api/setup/initialize', async (req, res) => {
+app.post('/api/setup/initialize', async (req: Request, res: Response) => {
     try {
         const userCheck = await pool.query('SELECT COUNT(*) FROM users');
         if (parseInt(userCheck.rows[0].count, 10) > 0) {
@@ -72,7 +96,6 @@ app.post('/api/setup/initialize', async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const passwordHash = await bcrypt.hash(password, salt);
 
-        // O primeiro usuário é sempre um Desenvolvedor
         await pool.query(
             'INSERT INTO users (name, email, role, password_hash) VALUES ($1, $2, $3, $4)',
             [name, email.toLowerCase(), UserRole.DEVELOPER, passwordHash]
@@ -86,11 +109,8 @@ app.post('/api/setup/initialize', async (req, res) => {
     }
 });
 
-
-// --- Rotas da API ---
-
 // [POST] /api/auth/login
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', async (req: Request, res: Response) => {
     const { email, password } = req.body;
     if (!email || !password) {
         return res.status(400).json({ message: 'E-mail e senha são obrigatórios' });
@@ -128,7 +148,7 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 // [GET] /api/site/content
-app.get('/api/site/content', async (req, res) => {
+app.get('/api/site/content', async (req: Request, res: Response) => {
     try {
         res.setHeader('Cache-Control', 'no-store');
         const result = await pool.query('SELECT content FROM site_content WHERE id = 1');
@@ -143,12 +163,8 @@ app.get('/api/site/content', async (req, res) => {
 });
 
 // [PUT] /api/site/content
-app.put('/api/site/content', verifyToken, async (req: any, res: any) => {
+app.put('/api/site/content', verifyToken, isDeveloper, async (req: Request, res: Response) => {
     const { content } = req.body;
-     if (!req.user || req.user.role !== UserRole.DEVELOPER) {
-        return res.status(403).json({ message: 'Permissão negada.' });
-    }
-    
     if (!content) {
         return res.status(400).json({ message: 'O conteúdo é obrigatório' });
     }
@@ -168,11 +184,10 @@ app.put('/api/site/content', verifyToken, async (req: any, res: any) => {
     }
 });
 
+// --- Rotas de Gerenciamento de Usuários ---
+
 // [GET] /api/users
-app.get('/api/users', verifyToken, async (req: any, res: any) => {
-    if (req.user.role !== UserRole.DEVELOPER) {
-        return res.status(403).json({ message: 'Permissão negada' });
-    }
+app.get('/api/users', verifyToken, isDeveloper, async (req: Request, res: Response) => {
     try {
         const result = await pool.query('SELECT id, name, email, role FROM users ORDER BY name');
         res.json(result.rows);
@@ -183,11 +198,7 @@ app.get('/api/users', verifyToken, async (req: any, res: any) => {
 });
 
 // [POST] /api/users
-app.post('/api/users', verifyToken, async (req: any, res: any) => {
-    if (req.user.role !== UserRole.DEVELOPER) {
-        return res.status(403).json({ message: 'Permissão negada' });
-    }
-
+app.post('/api/users', verifyToken, isDeveloper, async (req: Request, res: Response) => {
     const { name, email, password, role } = req.body;
     if (!name || !email || !password || !role) {
         return res.status(400).json({ message: 'Todos os campos são obrigatórios' });
@@ -212,8 +223,80 @@ app.post('/api/users', verifyToken, async (req: any, res: any) => {
     }
 });
 
+// [PUT] /api/users/:id
+app.put('/api/users/:id', verifyToken, isDeveloper, async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { role } = req.body;
+
+    if (req.user?.id === id) {
+        return res.status(403).json({ message: 'Não é permitido alterar a própria função.' });
+    }
+
+    if (!role || !Object.values(UserRole).includes(role)) {
+        return res.status(400).json({ message: 'Função inválida fornecida.' });
+    }
+    
+    try {
+        const result = await pool.query(
+            'UPDATE users SET role = $1 WHERE id = $2 RETURNING id, name, email, role',
+            [role, id]
+        );
+        if (result.rowCount === 0) {
+            return res.status(404).json({ message: 'Usuário não encontrado.' });
+        }
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Erro ao atualizar usuário:', error);
+        res.status(500).json({ message: 'Erro interno do servidor' });
+    }
+});
+
+// [DELETE] /api/users/:id
+app.delete('/api/users/:id', verifyToken, isDeveloper, async (req: Request, res: Response) => {
+    const { id } = req.params;
+
+    if (req.user?.id === id) {
+        return res.status(403).json({ message: 'Não é permitido remover a si mesmo.' });
+    }
+    
+    try {
+        const result = await pool.query('DELETE FROM users WHERE id = $1', [id]);
+        if (result.rowCount === 0) {
+            return res.status(404).json({ message: 'Usuário não encontrado.' });
+        }
+        res.status(204).send(); // 204 No Content
+    } catch (error) {
+        console.error('Erro ao remover usuário:', error);
+        res.status(500).json({ message: 'Erro interno do servidor' });
+    }
+});
+
+
+// --- Servindo o Frontend (Após as rotas da API) ---
+
+// Define o caminho para a raiz do projeto de forma robusta, usando o diretório de trabalho atual.
+const projectRoot = process.cwd();
+const clientDistPath = path.join(projectRoot, 'dist', 'client');
+const staticRootPath = projectRoot; // Onde index.html e outros assets estão
+
+// Serve os arquivos do cliente compilados a partir de /dist/client
+app.use('/dist/client', express.static(clientDistPath));
+
+// Serve outros arquivos estáticos da raiz do projeto (ex: /vite.svg)
+app.use(express.static(staticRootPath));
+
+// Fallback para SPA: Se nenhuma rota de API ou arquivo estático corresponder, serve o index.html.
+// Isso é crucial para o roteamento do lado do cliente do React funcionar corretamente.
+app.get('*', (req: Request, res: Response) => {
+    // Verificação de segurança para garantir que não estamos servindo index.html para uma chamada de API perdida
+    if (req.path.startsWith('/api/')) {
+        return res.status(404).json({ message: 'Endpoint da API não encontrado.' });
+    }
+    res.sendFile(path.join(staticRootPath, 'index.html'));
+});
+
 
 // --- Início do Servidor ---
 app.listen(PORT, () => {
-    console.log(`Servidor backend está rodando em http://localhost:${PORT}`);
+    console.log(`Servidor unificado (backend e frontend) está rodando em http://localhost:${PORT}`);
 });

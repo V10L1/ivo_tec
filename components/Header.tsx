@@ -1,16 +1,12 @@
 import React from 'react';
-import { useAuth } from '../contexts/AuthContext.js';
-import { UserRole } from '../types.js';
-import { CodeIcon, LogOutIcon } from './icons/Icons.js';
-import { useRouter } from '../App.js';
+import { useAuth } from '../contexts/AuthContext';
+import { UserRole } from '../types';
+import { CodeIcon, LogOutIcon } from './icons/Icons';
+import { useRouter } from '../App';
 
 export const Header: React.FC = () => {
-  const { currentUser, setRole, logout } = useAuth();
+  const { currentUser, logout } = useAuth();
   const { navigate } = useRouter();
-
-  const handleRoleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    setRole(event.target.value as UserRole);
-  };
 
   const handleLogout = () => {
     logout();
@@ -29,19 +25,9 @@ export const Header: React.FC = () => {
                 <p className="font-medium text-slate-200 text-sm">{currentUser?.name}</p>
                 <p className="text-xs text-slate-400">{currentUser?.email}</p>
             </div>
-            <select
-                id="role-select"
-                value={currentUser?.role}
-                onChange={handleRoleChange}
-                className="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg
-                           focus:ring-cyan-500 focus:border-cyan-500 block w-full p-2"
-            >
-            {Object.values(UserRole).map(r => (
-                <option key={r} value={r}>
-                {r}
-                </option>
-            ))}
-            </select>
+            <div className="flex items-center justify-center px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg" title={`Sua função é ${currentUser?.role}`}>
+                <span className="text-sm font-medium text-cyan-400">{currentUser?.role}</span>
+            </div>
             <button
                 onClick={handleLogout}
                 title="Sair"

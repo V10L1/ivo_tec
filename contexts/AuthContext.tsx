@@ -1,13 +1,12 @@
 import React, { createContext, useState, useContext, useMemo, useEffect } from 'react';
-import { UserRole, AppKey } from '../types.js';
-import { ROLE_PERMISSIONS } from '../constants.js';
-import { User } from '../database/schema.js';
+import { UserRole, AppKey } from '../types';
+import { ROLE_PERMISSIONS } from '../constants';
+import { User } from '../database/schema';
 
 interface AuthContextType {
   isAuthenticated: boolean;
   currentUser: User | null;
   token: string | null;
-  setRole: (role: UserRole) => void; // Mantido para a demonstração de troca de função
   permissions: AppKey[];
   login: (email: string, pass: string) => Promise<void>;
   logout: () => void;
@@ -87,20 +86,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('authToken');
   };
   
-  // Para fins de demonstração do seletor de função
-  const setRole = (role: UserRole) => {
-    if (currentUser) {
-      setCurrentUser({ ...currentUser, role });
-    }
-  };
-
 
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Carregando...</div>;
   }
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, currentUser, token, setRole, permissions, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ isAuthenticated, currentUser, token, permissions, login, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );
