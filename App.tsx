@@ -14,6 +14,7 @@ import UserManagement from './modules/UserManagement.js';
 import PublicSite from './modules/PublicSite.js';
 import Login from './modules/Login.js';
 import PreviewSite from './modules/PreviewSite.js';
+import InitialSetup from './modules/InitialSetup.js';
 
 // --- Router Context ---
 interface RouterContextType {
@@ -72,13 +73,13 @@ const AdminPanel = () => {
 const AppContent: React.FC = () => {
   const { isAuthenticated } = useAuth();
   
-  // Hash-based routing logic
   const getPathFromHash = () => window.location.hash.substring(1) || '/';
   const [path, setPath] = useState(getPathFromHash());
+  const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
 
   const navigate = (newPath: string) => {
     window.location.hash = newPath;
-    setPath(newPath); // Eagerly update state for instant UI response
+    setPath(newPath);
   };
 
   useEffect(() => {
@@ -87,9 +88,36 @@ const AppContent: React.FC = () => {
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
 
+  useEffect(() => {
+    const checkSetupStatus = async () => {
+      try {
+        const response = await fetch('/api/setup/status');
+        const data = await response.json();
+        setNeedsSetup(data.needsSetup);
+      } catch (error) {
+        console.error("Não foi possível verificar o status da configuração:", error);
+        setNeedsSetup(false); // Assume que a configuração não é necessária se a verificação falhar
+      }
+    };
+    if (path.startsWith('/administrator')) {
+        checkSetupStatus();
+    } else {
+        setNeedsSetup(false);
+    }
+  }, [path]);
+
+
+  if (needsSetup === null && path.startsWith('/administrator')) {
+    return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Verificando configuração...</div>;
+  }
+
   let content;
   if (path.startsWith('/administrator')) {
-    content = isAuthenticated ? <AdminPanel /> : <Login />;
+    if (needsSetup) {
+      content = <InitialSetup />;
+    } else {
+      content = isAuthenticated ? <AdminPanel /> : <Login />;
+    }
   } else if (path.startsWith('/preview')) {
     content = <PreviewSite />;
   }

@@ -1,5 +1,4 @@
-// FIX: import named export `json` to avoid type resolution issues with `express.json()`
-import express, { json, Request, Response, NextFunction } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { Pool } from 'pg';
@@ -7,17 +6,6 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { User } from './database/schema.js';
 import { UserRole } from './types.js';
-
-// The 'declare global' for adding 'user' to the Request object was not working due to
-// a likely type collision issue in the project setup. Using 'any' for request/response
-// objects in handlers bypasses this problem.
-// declare global {
-//     namespace Express {
-//         export interface Request {
-//             user?: User;
-//         }
-//     }
-// }
 
 dotenv.config();
 
@@ -29,20 +17,17 @@ if (!JWT_SECRET) {
     throw new Error("ERRO FATAL: JWT_SECRET não está definido. Por favor, verifique seu arquivo .env.");
 }
 
-// --- Conexão com o Banco de Dados ---
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
 });
 
-// --- Middleware ---
 app.use(cors());
-// FIX: Use the named import `json` to correctly apply the JSON parsing middleware. This resolves the overload error.
-app.use(json());
+// FIX: Use express.json() directly to avoid a TypeScript overload resolution error.
+app.use(express.json());
 
-// FIX: Changed Request and Response types to 'any' to resolve type errors.
 const verifyToken = (req: any, res: any, next: NextFunction) => {
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+    const token = authHeader && authHeader.split(' ')[1];
 
     if (!token) {
         return res.status(401).json({ message: 'Nenhum token fornecido' });
@@ -52,11 +37,55 @@ const verifyToken = (req: any, res: any, next: NextFunction) => {
         if (err) {
             return res.status(403).json({ message: 'Falha ao autenticar o token' });
         }
-        // FIX: Directly assign user property.
         req.user = decoded.user;
         next();
     });
 };
+
+// --- Rotas de Configuração Inicial ---
+
+// [GET] /api/setup/status
+app.get('/api/setup/status', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT COUNT(*) FROM users');
+        const userCount = parseInt(result.rows[0].count, 10);
+        res.json({ needsSetup: userCount === 0 });
+    } catch (error) {
+        console.error('Erro ao verificar o status da configuração:', error);
+        res.status(500).json({ message: 'Erro interno do servidor' });
+    }
+});
+
+// [POST] /api/setup/initialize
+app.post('/api/setup/initialize', async (req, res) => {
+    try {
+        const userCheck = await pool.query('SELECT COUNT(*) FROM users');
+        if (parseInt(userCheck.rows[0].count, 10) > 0) {
+            return res.status(403).json({ message: 'A configuração já foi concluída.' });
+        }
+
+        const { name, email, password } = req.body;
+        if (!name || !email || !password) {
+            return res.status(400).json({ message: 'Nome, e-mail e senha são obrigatórios.' });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const passwordHash = await bcrypt.hash(password, salt);
+
+        // O primeiro usuário é sempre um Desenvolvedor
+        await pool.query(
+            'INSERT INTO users (name, email, role, password_hash) VALUES ($1, $2, $3, $4)',
+            [name, email.toLowerCase(), UserRole.DEVELOPER, passwordHash]
+        );
+
+        res.status(201).json({ message: 'Primeiro usuário administrador criado com sucesso.' });
+
+    } catch (error) {
+        console.error('Erro ao inicializar:', error);
+        res.status(500).json({ message: 'Erro interno do servidor' });
+    }
+});
+
 
 // --- Rotas da API ---
 
@@ -98,18 +127,13 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
-
 // [GET] /api/site/content
 app.get('/api/site/content', async (req, res) => {
     try {
-        // SOLUÇÃO PARA O CACHE: Este cabeçalho instrui o navegador a nunca armazenar
-        // a resposta em cache, garantindo que os dados mais recentes sejam sempre buscados.
         res.setHeader('Cache-Control', 'no-store');
-
-        // Assumimos que há apenas uma linha para o conteúdo principal do site com id = 1
         const result = await pool.query('SELECT content FROM site_content WHERE id = 1');
         if (result.rows.length === 0) {
-            return res.json({ content: [] }); // Retorna array vazio se nenhum conteúdo for encontrado
+            return res.json({ content: [] });
         }
         res.json(result.rows[0]);
     } catch (error) {
@@ -118,9 +142,7 @@ app.get('/api/site/content', async (req, res) => {
     }
 });
 
-
 // [PUT] /api/site/content
-// FIX: Changed Request and Response types to 'any' to resolve type errors.
 app.put('/api/site/content', verifyToken, async (req: any, res: any) => {
     const { content } = req.body;
      if (!req.user || req.user.role !== UserRole.DEVELOPER) {
@@ -143,6 +165,50 @@ app.put('/api/site/content', verifyToken, async (req: any, res: any) => {
     } catch (error) {
         console.error('Erro ao salvar conteúdo do site:', error);
         res.status(500).json({ message: 'Falha ao salvar o conteúdo do site' });
+    }
+});
+
+// [GET] /api/users
+app.get('/api/users', verifyToken, async (req: any, res: any) => {
+    if (req.user.role !== UserRole.DEVELOPER) {
+        return res.status(403).json({ message: 'Permissão negada' });
+    }
+    try {
+        const result = await pool.query('SELECT id, name, email, role FROM users ORDER BY name');
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Erro ao buscar usuários:', error);
+        res.status(500).json({ message: 'Erro interno do servidor' });
+    }
+});
+
+// [POST] /api/users
+app.post('/api/users', verifyToken, async (req: any, res: any) => {
+    if (req.user.role !== UserRole.DEVELOPER) {
+        return res.status(403).json({ message: 'Permissão negada' });
+    }
+
+    const { name, email, password, role } = req.body;
+    if (!name || !email || !password || !role) {
+        return res.status(400).json({ message: 'Todos os campos são obrigatórios' });
+    }
+
+    try {
+        const salt = await bcrypt.genSalt(10);
+        const passwordHash = await bcrypt.hash(password, salt);
+
+        const result = await pool.query(
+            'INSERT INTO users (name, email, role, password_hash) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role',
+            [name, email.toLowerCase(), role, passwordHash]
+        );
+        
+        res.status(201).json(result.rows[0]);
+    } catch (error: any) {
+        if (error.code === '23505') {
+            return res.status(409).json({ message: 'O e-mail já está em uso.' });
+        }
+        console.error('Erro ao criar usuário:', error);
+        res.status(500).json({ message: 'Erro interno do servidor' });
     }
 });
 
