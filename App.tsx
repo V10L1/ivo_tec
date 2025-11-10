@@ -101,8 +101,6 @@ const AppContent: React.FC = () => {
     };
     if (path.startsWith('/administrator')) {
         checkSetupStatus();
-    } else {
-        setNeedsSetup(false);
     }
   }, [path]);
 
