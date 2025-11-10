@@ -1,5 +1,6 @@
 // FIX: Explicitly import types from express to avoid type conflicts with global DOM types.
-import express, { Request, Response, NextFunction } from 'express';
+// FIX: Aliased Request and Response to avoid conflicts with DOM types.
+import express, { Request as ExpressRequest, Response as ExpressResponse, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { Pool } from 'pg';
@@ -41,7 +42,7 @@ app.use(cors());
 app.use(express.json());
 
 // Middleware to verify JWT token
-const verifyToken = (req: Request, res: Response, next: NextFunction) => {
+const verifyToken = (req: ExpressRequest, res: ExpressResponse, next: NextFunction) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
@@ -59,7 +60,7 @@ const verifyToken = (req: Request, res: Response, next: NextFunction) => {
 };
 
 // Middleware to ensure user is a developer
-const isDeveloper = (req: Request, res: Response, next: NextFunction) => {
+const isDeveloper = (req: ExpressRequest, res: ExpressResponse, next: NextFunction) => {
     if (req.user?.role !== UserRole.DEVELOPER) {
         return res.status(403).json({ message: 'Acesso negado. Apenas desenvolvedores.' });
     }
@@ -69,7 +70,7 @@ const isDeveloper = (req: Request, res: Response, next: NextFunction) => {
 // --- Rotas da API (Devem vir antes do serviço de arquivos estáticos) ---
 
 // [GET] /api/setup/status
-app.get('/api/setup/status', async (req: Request, res: Response) => {
+app.get('/api/setup/status', async (req: ExpressRequest, res: ExpressResponse) => {
     try {
         const result = await pool.query('SELECT COUNT(*) FROM users');
         const userCount = parseInt(result.rows[0].count, 10);
@@ -81,7 +82,7 @@ app.get('/api/setup/status', async (req: Request, res: Response) => {
 });
 
 // [POST] /api/setup/initialize
-app.post('/api/setup/initialize', async (req: Request, res: Response) => {
+app.post('/api/setup/initialize', async (req: ExpressRequest, res: ExpressResponse) => {
     try {
         const userCheck = await pool.query('SELECT COUNT(*) FROM users');
         if (parseInt(userCheck.rows[0].count, 10) > 0) {
@@ -110,7 +111,7 @@ app.post('/api/setup/initialize', async (req: Request, res: Response) => {
 });
 
 // [POST] /api/auth/login
-app.post('/api/auth/login', async (req: Request, res: Response) => {
+app.post('/api/auth/login', async (req: ExpressRequest, res: ExpressResponse) => {
     const { email, password } = req.body;
     if (!email || !password) {
         return res.status(400).json({ message: 'E-mail e senha são obrigatórios' });
@@ -148,7 +149,7 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
 });
 
 // [GET] /api/site/content
-app.get('/api/site/content', async (req: Request, res: Response) => {
+app.get('/api/site/content', async (req: ExpressRequest, res: ExpressResponse) => {
     try {
         res.setHeader('Cache-Control', 'no-store');
         const result = await pool.query('SELECT content FROM site_content WHERE id = 1');
@@ -163,7 +164,7 @@ app.get('/api/site/content', async (req: Request, res: Response) => {
 });
 
 // [PUT] /api/site/content
-app.put('/api/site/content', verifyToken, isDeveloper, async (req: Request, res: Response) => {
+app.put('/api/site/content', verifyToken, isDeveloper, async (req: ExpressRequest, res: ExpressResponse) => {
     const { content } = req.body;
     if (!content) {
         return res.status(400).json({ message: 'O conteúdo é obrigatório' });
@@ -187,7 +188,7 @@ app.put('/api/site/content', verifyToken, isDeveloper, async (req: Request, res:
 // --- Rotas de Gerenciamento de Usuários ---
 
 // [GET] /api/users
-app.get('/api/users', verifyToken, isDeveloper, async (req: Request, res: Response) => {
+app.get('/api/users', verifyToken, isDeveloper, async (req: ExpressRequest, res: ExpressResponse) => {
     try {
         const result = await pool.query('SELECT id, name, email, role FROM users ORDER BY name');
         res.json(result.rows);
@@ -198,7 +199,7 @@ app.get('/api/users', verifyToken, isDeveloper, async (req: Request, res: Respon
 });
 
 // [POST] /api/users
-app.post('/api/users', verifyToken, isDeveloper, async (req: Request, res: Response) => {
+app.post('/api/users', verifyToken, isDeveloper, async (req: ExpressRequest, res: ExpressResponse) => {
     const { name, email, password, role } = req.body;
     if (!name || !email || !password || !role) {
         return res.status(400).json({ message: 'Todos os campos são obrigatórios' });
@@ -224,7 +225,7 @@ app.post('/api/users', verifyToken, isDeveloper, async (req: Request, res: Respo
 });
 
 // [PUT] /api/users/:id
-app.put('/api/users/:id', verifyToken, isDeveloper, async (req: Request, res: Response) => {
+app.put('/api/users/:id', verifyToken, isDeveloper, async (req: ExpressRequest, res: ExpressResponse) => {
     const { id } = req.params;
     const { role } = req.body;
 
@@ -252,7 +253,7 @@ app.put('/api/users/:id', verifyToken, isDeveloper, async (req: Request, res: Re
 });
 
 // [DELETE] /api/users/:id
-app.delete('/api/users/:id', verifyToken, isDeveloper, async (req: Request, res: Response) => {
+app.delete('/api/users/:id', verifyToken, isDeveloper, async (req: ExpressRequest, res: ExpressResponse) => {
     const { id } = req.params;
 
     if (req.user?.id === id) {
@@ -287,7 +288,7 @@ app.use(express.static(staticRootPath));
 
 // Fallback para SPA: Se nenhuma rota de API ou arquivo estático corresponder, serve o index.html.
 // Isso é crucial para o roteamento do lado do cliente do React funcionar corretamente.
-app.get('*', (req: Request, res: Response) => {
+app.get('*', (req: ExpressRequest, res: ExpressResponse) => {
     // Verificação de segurança para garantir que não estamos servindo index.html para uma chamada de API perdida
     if (req.path.startsWith('/api/')) {
         return res.status(404).json({ message: 'Endpoint da API não encontrado.' });
