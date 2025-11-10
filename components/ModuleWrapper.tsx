@@ -1,11 +1,5 @@
-
-
-
-
-
-
 import React from 'react';
-import { ArrowLeftIcon } from './icons/Icons.js';
+import { ArrowLeftIcon } from './icons/Icons';
 
 interface ModuleWrapperProps {
   title: string;

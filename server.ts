@@ -1,5 +1,5 @@
-// FIX: Use fully qualified express types (e.g., express.Request) to avoid conflicts with global DOM types,
-// which can occur in a project with a shared tsconfig for both frontend and backend code.
+
+// Fix: Changed import to use namespace for express types to avoid conflicts.
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -17,7 +17,8 @@ const PORT = process.env.PORT || 8069;
 const JWT_SECRET = process.env.JWT_SECRET;
 
 if (!JWT_SECRET) {
-    throw new Error("ERRO FATAL: JWT_SECRET não está definido. Por favor, verifique seu arquivo .env.");
+    console.error("ERRO FATAL: JWT_SECRET não está definido. Por favor, verifique seu arquivo .env.");
+    process.exit(1);
 }
 
 // Augment Express's Request type to include the user property for authenticated routes.
@@ -38,11 +39,74 @@ const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
 });
 
+// --- Lógica de Inicialização do Banco de Dados ---
+const initializeDatabase = async () => {
+    let client;
+    try {
+        client = await pool.connect();
+        console.log("Conexão com o banco de dados estabelecida com sucesso. Verificando o esquema...");
+
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS users (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                name VARCHAR(255) NOT NULL,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                role VARCHAR(50) NOT NULL,
+                password_hash VARCHAR(255) NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT NOW()
+            );
+        `);
+
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS site_content (
+                id INT PRIMARY KEY,
+                content JSONB,
+                last_updated_at TIMESTAMPTZ DEFAULT NOW()
+            );
+        `);
+        
+        const siteContentResult = await client.query('SELECT id FROM site_content WHERE id = 1');
+        if (siteContentResult.rowCount === 0) {
+             await client.query(`
+                INSERT INTO site_content (id, content) VALUES (1, '[{"id": "block_1", "type": "hero", "content": { "title": "Bem-vindo ao Mundo Moto", "subtitle": "Sua parada única para as melhores motos do planeta. Comece sua aventura hoje.", "ctaText": "Explorar Coleção" }}, {"id": "block_2", "type": "text", "content": { "heading": "Sobre Nossa Paixão", "body": "Nós vivemos e respiramos motocicletas. Nossa missão é fornecer aos entusiastas máquinas de alta qualidade e serviço incomparável. Cada moto em nossa coleção é escolhida a dedo e inspecionada para garantir que atenda aos nossos altos padrões de desempenho e confiabilidade." }}]');
+             `);
+             console.log("Conteúdo inicial do site inserido.");
+        }
+
+        await client.query(`CREATE TABLE IF NOT EXISTS product_categories (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name VARCHAR(255) NOT NULL, slug VARCHAR(255) UNIQUE NOT NULL);`);
+        await client.query(`CREATE TABLE IF NOT EXISTS products (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name VARCHAR(255) NOT NULL, description TEXT, price DECIMAL(10, 2) NOT NULL, category_id UUID REFERENCES product_categories(id), image_url VARCHAR(2048), created_at TIMESTAMPTZ DEFAULT NOW());`);
+        await client.query(`CREATE TABLE IF NOT EXISTS stock_inventory (product_id UUID PRIMARY KEY REFERENCES products(id) ON DELETE CASCADE, quantity INT NOT NULL DEFAULT 0, last_updated_at TIMESTAMPTZ DEFAULT NOW());`);
+        await client.query(`CREATE TABLE IF NOT EXISTS chat_messages (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), conversation_id VARCHAR(255) NOT NULL, sender_type VARCHAR(50) NOT NULL, sender_id VARCHAR(255) NOT NULL, content TEXT NOT NULL, sent_at TIMESTAMPTZ DEFAULT NOW());`);
+        await client.query(`CREATE TABLE IF NOT EXISTS support_tickets (id SERIAL PRIMARY KEY, subject VARCHAR(255) NOT NULL, description TEXT, status VARCHAR(50) NOT NULL DEFAULT 'Aberto', priority VARCHAR(50) NOT NULL DEFAULT 'Baixa', submitted_by_email VARCHAR(255) NOT NULL, assigned_to UUID REFERENCES users(id), created_at TIMESTAMPTZ DEFAULT NOW(), closed_at TIMESTAMPTZ);`);
+
+        console.log("Esquema do banco de dados verificado com sucesso.");
+        return true;
+
+    } catch (error: any) {
+        console.error("------------------------------------------------------------");
+        console.error("--- ERRO CRÍTICO: FALHA AO CONECTAR/INICIALIZAR O BANCO DE DADOS ---");
+        console.error("------------------------------------------------------------");
+        console.error("Mensagem de Erro:", error.message);
+        console.error("\nPossíveis Causas:");
+        console.error("  1. O serviço do PostgreSQL não está rodando no servidor.");
+        console.error("  2. As credenciais em DATABASE_URL no arquivo .env estão incorretas (usuário, senha, nome do banco).");
+        console.error("  3. O firewall está bloqueando a conexão na porta 5432.");
+        console.error("  4. O banco de dados especificado não existe e não foi criado.");
+        console.error("\nAplicação será encerrada. Verifique a configuração e reinicie.");
+        console.error("------------------------------------------------------------");
+        process.exit(1);
+    } finally {
+        if (client) {
+            client.release();
+        }
+    }
+};
+
+
 app.use(cors());
 app.use(express.json());
 
-// Middleware to verify JWT token
-// FIX: Use fully qualified express types to avoid conflicts with global DOM types.
+// Fix: Use express.Request, express.Response, and express.NextFunction for type annotations.
 const verifyToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -60,8 +124,7 @@ const verifyToken = (req: express.Request, res: express.Response, next: express.
     });
 };
 
-// Middleware to ensure user is a developer
-// FIX: Use fully qualified express types to avoid conflicts with global DOM types.
+// Fix: Use express.Request, express.Response, and express.NextFunction for type annotations.
 const isDeveloper = (req: express.Request, res: express.Response, next: express.NextFunction) => {
     if (req.user?.role !== UserRole.DEVELOPER) {
         return res.status(403).json({ message: 'Acesso negado. Apenas desenvolvedores.' });
@@ -71,8 +134,19 @@ const isDeveloper = (req: express.Request, res: express.Response, next: express.
 
 // --- Rotas da API (Devem vir antes do serviço de arquivos estáticos) ---
 
-// [GET] /api/setup/status
-// FIX: Use fully qualified express types to avoid conflicts with global DOM types.
+// Fix: Use express.Request and express.Response for type annotations.
+app.get('/api/health', async (req: express.Request, res: express.Response) => {
+    try {
+        const client = await pool.connect();
+        await client.query('SELECT 1'); // Teste simples de conectividade
+        client.release();
+        res.status(200).json({ status: 'ok', message: 'Backend está rodando e conectado ao banco de dados.' });
+    } catch (error) {
+        res.status(503).json({ status: 'error', message: 'Falha ao conectar ao banco de dados.' });
+    }
+});
+
+// Fix: Use express.Request and express.Response for type annotations.
 app.get('/api/setup/status', async (req: express.Request, res: express.Response) => {
     try {
         const result = await pool.query('SELECT COUNT(*) FROM users');
@@ -84,8 +158,7 @@ app.get('/api/setup/status', async (req: express.Request, res: express.Response)
     }
 });
 
-// [POST] /api/setup/initialize
-// FIX: Use fully qualified express types to avoid conflicts with global DOM types.
+// Fix: Use express.Request and express.Response for type annotations.
 app.post('/api/setup/initialize', async (req: express.Request, res: express.Response) => {
     try {
         const userCheck = await pool.query('SELECT COUNT(*) FROM users');
@@ -114,8 +187,7 @@ app.post('/api/setup/initialize', async (req: express.Request, res: express.Resp
     }
 });
 
-// [POST] /api/auth/login
-// FIX: Use fully qualified express types to avoid conflicts with global DOM types.
+// Fix: Use express.Request and express.Response for type annotations.
 app.post('/api/auth/login', async (req: express.Request, res: express.Response) => {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -153,8 +225,64 @@ app.post('/api/auth/login', async (req: express.Request, res: express.Response) 
     }
 });
 
-// [GET] /api/site/content
-// FIX: Use fully qualified express types to avoid conflicts with global DOM types.
+// Fix: Use express.Request and express.Response for type annotations.
+app.post('/api/auth/register', async (req: express.Request, res: express.Response) => {
+    const { name, email, password } = req.body;
+    if (!name || !email || !password) {
+        return res.status(400).json({ message: 'Nome, e-mail e senha são obrigatórios.' });
+    }
+
+    try {
+        const salt = await bcrypt.genSalt(10);
+        const passwordHash = await bcrypt.hash(password, salt);
+        
+        // Conforme solicitado, novos usuários são criados como Desenvolvedores
+        const result = await pool.query(
+            'INSERT INTO users (name, email, role, password_hash) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role',
+            [name, email.toLowerCase(), UserRole.DEVELOPER, passwordHash]
+        );
+        
+        res.status(201).json(result.rows[0]);
+
+    } catch (error: any) {
+        if (error.code === '23505') { // Código de erro do PostgreSQL para violação de unicidade
+            return res.status(409).json({ message: 'O e-mail já está em uso.' });
+        }
+        console.error('Erro ao registrar usuário:', error);
+        res.status(500).json({ message: 'Erro interno do servidor.' });
+    }
+});
+
+// Fix: Use express.Request and express.Response for type annotations.
+app.post('/api/auth/reset-password', async (req: express.Request, res: express.Response) => {
+    const { email, password } = req.body;
+    if (!email || !password) {
+        return res.status(400).json({ message: 'E-mail e nova senha são obrigatórios.' });
+    }
+
+    try {
+        const salt = await bcrypt.genSalt(10);
+        const passwordHash = await bcrypt.hash(password, salt);
+
+        const result = await pool.query(
+            'UPDATE users SET password_hash = $1 WHERE email = $2',
+            [passwordHash, email.toLowerCase()]
+        );
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ message: 'Usuário não encontrado com este e-mail.' });
+        }
+
+        res.status(200).json({ message: 'Senha redefinida com sucesso.' });
+
+    } catch (error) {
+        console.error('Erro ao redefinir senha:', error);
+        res.status(500).json({ message: 'Erro interno do servidor.' });
+    }
+});
+
+
+// Fix: Use express.Request and express.Response for type annotations.
 app.get('/api/site/content', async (req: express.Request, res: express.Response) => {
     try {
         res.setHeader('Cache-Control', 'no-store');
@@ -169,8 +297,7 @@ app.get('/api/site/content', async (req: express.Request, res: express.Response)
     }
 });
 
-// [PUT] /api/site/content
-// FIX: Use fully qualified express types to avoid conflicts with global DOM types.
+// Fix: Use express.Request and express.Response for type annotations.
 app.put('/api/site/content', verifyToken, isDeveloper, async (req: express.Request, res: express.Response) => {
     const { content } = req.body;
     if (!content) {
@@ -194,8 +321,7 @@ app.put('/api/site/content', verifyToken, isDeveloper, async (req: express.Reque
 
 // --- Rotas de Gerenciamento de Usuários ---
 
-// [GET] /api/users
-// FIX: Use fully qualified express types to avoid conflicts with global DOM types.
+// Fix: Use express.Request and express.Response for type annotations.
 app.get('/api/users', verifyToken, isDeveloper, async (req: express.Request, res: express.Response) => {
     try {
         const result = await pool.query('SELECT id, name, email, role FROM users ORDER BY name');
@@ -206,8 +332,7 @@ app.get('/api/users', verifyToken, isDeveloper, async (req: express.Request, res
     }
 });
 
-// [POST] /api/users
-// FIX: Use fully qualified express types to avoid conflicts with global DOM types.
+// Fix: Use express.Request and express.Response for type annotations.
 app.post('/api/users', verifyToken, isDeveloper, async (req: express.Request, res: express.Response) => {
     const { name, email, password, role } = req.body;
     if (!name || !email || !password || !role) {
@@ -233,8 +358,7 @@ app.post('/api/users', verifyToken, isDeveloper, async (req: express.Request, re
     }
 });
 
-// [PUT] /api/users/:id
-// FIX: Use fully qualified express types to avoid conflicts with global DOM types.
+// Fix: Use express.Request and express.Response for type annotations.
 app.put('/api/users/:id', verifyToken, isDeveloper, async (req: express.Request, res: express.Response) => {
     const { id } = req.params;
     const { role } = req.body;
@@ -262,8 +386,7 @@ app.put('/api/users/:id', verifyToken, isDeveloper, async (req: express.Request,
     }
 });
 
-// [DELETE] /api/users/:id
-// FIX: Use fully qualified express types to avoid conflicts with global DOM types.
+// Fix: Use express.Request and express.Response for type annotations.
 app.delete('/api/users/:id', verifyToken, isDeveloper, async (req: express.Request, res: express.Response) => {
     const { id } = req.params;
 
@@ -286,22 +409,16 @@ app.delete('/api/users/:id', verifyToken, isDeveloper, async (req: express.Reque
 
 // --- Servindo o Frontend (Após as rotas da API) ---
 
-// Define o caminho para a raiz do projeto de forma robusta, usando o diretório de trabalho atual.
 const projectRoot = process.cwd();
 const clientDistPath = path.join(projectRoot, 'dist', 'client');
-const staticRootPath = projectRoot; // Onde index.html e outros assets estão
+const staticRootPath = projectRoot; 
 
-// Serve os arquivos do cliente compilados a partir de /dist/client
 app.use('/dist/client', express.static(clientDistPath));
 
-// Serve outros arquivos estáticos da raiz do projeto (ex: /vite.svg)
 app.use(express.static(staticRootPath));
 
-// Fallback para SPA: Se nenhuma rota de API ou arquivo estático corresponder, serve o index.html.
-// Isso é crucial para o roteamento do lado do cliente do React funcionar corretamente.
-// FIX: Use fully qualified express types to avoid conflicts with global DOM types.
+// Fix: Use express.Request and express.Response for type annotations.
 app.get('*', (req: express.Request, res: express.Response) => {
-    // Verificação de segurança para garantir que não estamos servindo index.html para uma chamada de API perdida
     if (req.path.startsWith('/api/')) {
         return res.status(404).json({ message: 'Endpoint da API não encontrado.' });
     }
@@ -310,6 +427,13 @@ app.get('*', (req: express.Request, res: express.Response) => {
 
 
 // --- Início do Servidor ---
-app.listen(PORT, () => {
-    console.log(`Servidor unificado (backend e frontend) está rodando em http://localhost:${PORT}`);
-});
+const startServer = async () => {
+    const dbInitialized = await initializeDatabase();
+    if (dbInitialized) {
+        app.listen(PORT, () => {
+            console.log(`Servidor unificado (backend e frontend) está rodando em http://localhost:${PORT}`);
+        });
+    }
+};
+
+startServer();

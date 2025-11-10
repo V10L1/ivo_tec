@@ -1,8 +1,5 @@
-
-
-
-import { AppModule, AppKey, UserRole } from './types.js';
-import { GlobeIcon, ShoppingCartIcon, ArchiveIcon, MessageSquareIcon, LifeBuoyIcon, UsersIcon } from './components/icons/Icons.js';
+import { AppModule, AppKey, UserRole } from './types';
+import { GlobeIcon, ShoppingCartIcon, ArchiveIcon, MessageSquareIcon, LifeBuoyIcon, UsersIcon } from './components/icons/Icons';
 
 export const APP_MODULES: AppModule[] = [
   {

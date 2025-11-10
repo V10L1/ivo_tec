@@ -1,20 +1,22 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
-import { AuthProvider, useAuth } from './contexts/AuthContext.js';
-import { Dashboard } from './components/Dashboard.js';
-import { Header } from './components/Header.js';
-import { ModuleWrapper } from './components/ModuleWrapper.js';
-import { APP_MODULES } from './constants.js';
-import { AppKey } from './types.js';
-import SiteEditor from './modules/SiteEditor.js';
-import StoreManager from './modules/StoreManager.js';
-import StockControl from './modules/StockControl.js';
-import MessagesChat from './modules/MessagesChat.js';
-import SupportTickets from './modules/SupportTickets.js';
-import UserManagement from './modules/UserManagement.js';
-import PublicSite from './modules/PublicSite.js';
-import Login from './modules/Login.js';
-import PreviewSite from './modules/PreviewSite.js';
-import InitialSetup from './modules/InitialSetup.js';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { Dashboard } from './components/Dashboard';
+import { Header } from './components/Header';
+import { ModuleWrapper } from './components/ModuleWrapper';
+import { APP_MODULES } from './constants';
+import { AppKey } from './types';
+import SiteEditor from './modules/SiteEditor';
+import StoreManager from './modules/StoreManager';
+import StockControl from './modules/StockControl';
+import MessagesChat from './modules/MessagesChat';
+import SupportTickets from './modules/SupportTickets';
+import UserManagement from './modules/UserManagement';
+import PublicSite from './modules/PublicSite';
+import Login from './modules/Login';
+import PreviewSite from './modules/PreviewSite';
+import InitialSetup from './modules/InitialSetup';
+import ForgotPassword from './modules/ForgotPassword';
+import Register from './modules/Register';
 
 // --- Router Context ---
 interface RouterContextType {
@@ -76,6 +78,7 @@ const AppContent: React.FC = () => {
   const getPathFromHash = () => window.location.hash.substring(1) || '/';
   const [path, setPath] = useState(getPathFromHash());
   const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
+  const [setupError, setSetupError] = useState<string | null>(null);
 
   const navigate = (newPath: string) => {
     window.location.hash = newPath;
@@ -90,27 +93,46 @@ const AppContent: React.FC = () => {
 
   useEffect(() => {
     const checkSetupStatus = async () => {
+      setSetupError(null);
       try {
         const response = await fetch('/api/setup/status');
+        if (!response.ok) {
+            throw new Error(`O servidor respondeu com o status ${response.status}`);
+        }
         const data = await response.json();
         setNeedsSetup(data.needsSetup);
       } catch (error) {
         console.error("Não foi possível verificar o status da configuração:", error);
-        setNeedsSetup(false); // Assume que a configuração não é necessária se a verificação falhar
+        setSetupError("Não foi possível conectar ao servidor. Verifique se o backend está rodando e se o banco de dados está acessível.");
+        setNeedsSetup(null);
       }
     };
-    if (path.startsWith('/administrator')) {
+    if (path.startsWith('/administrator') || path.startsWith('/register')) {
         checkSetupStatus();
     }
   }, [path]);
 
 
-  if (needsSetup === null && path.startsWith('/administrator')) {
+  if (needsSetup === null && (path.startsWith('/administrator') || path.startsWith('/register'))) {
+      if (setupError) {
+          return (
+              <div className="min-h-screen flex items-center justify-center bg-slate-900 text-red-400 text-center p-4">
+                  <div>
+                      <h2 className="text-xl font-bold mb-2">Erro de Configuração</h2>
+                      <p>{setupError}</p>
+                  </div>
+              </div>
+          );
+      }
     return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Verificando configuração...</div>;
   }
 
   let content;
-  if (path.startsWith('/administrator')) {
+  if (path === '/register') {
+    content = needsSetup ? <InitialSetup /> : <Register />;
+  } else if (path === '/forgot-password') {
+    content = <ForgotPassword />;
+  } else if (path.startsWith('/administrator')) {
     if (needsSetup) {
       content = <InitialSetup />;
     } else {

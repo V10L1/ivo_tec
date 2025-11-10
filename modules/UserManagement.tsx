@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { UserRole } from '../types.js';
-import { useAuth } from '../contexts/AuthContext.js';
-import { User } from '../database/schema.js';
+import { UserRole } from '../types';
+import { useAuth } from '../contexts/AuthContext';
+import { User } from '../database/schema';
 
 type DisplayUser = Omit<User, 'passwordHash' | 'createdAt'>;
 

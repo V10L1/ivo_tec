@@ -4,7 +4,6 @@
     "module": "ESNext",
     "lib": ["DOM", "DOM.Iterable", "ESNext"],
     "jsx": "react-jsx",
-    "outDir": "./dist/client",
     "rootDir": "./",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
@@ -12,8 +11,8 @@
     "skipLibCheck": true,
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
-    "isolatedModules": false,
-    "noEmit": false
+    "isolatedModules": true,
+    "noEmit": true
   },
   "include": [
     "index.tsx",

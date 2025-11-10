@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { useAuth } from '../contexts/AuthContext.js';
-import { CodeIcon } from '../components/icons/Icons.js';
+import { useAuth } from '../contexts/AuthContext';
+import { CodeIcon } from '../components/icons/Icons';
+import { useRouter } from '../App';
 
 const Login: React.FC = () => {
   const { login } = useAuth();
+  const { navigate } = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -78,6 +80,15 @@ const Login: React.FC = () => {
               </button>
             </div>
           </form>
+          <div className="mt-6 text-center text-sm">
+            <a href="#/forgot-password" onClick={(e) => { e.preventDefault(); navigate('/forgot-password'); }} className="font-medium text-cyan-400 hover:text-cyan-300">
+              Esqueci minha senha
+            </a>
+            <span className="text-slate-500 mx-2">|</span>
+            <a href="#/register" onClick={(e) => { e.preventDefault(); navigate('/register'); }} className="font-medium text-cyan-400 hover:text-cyan-300">
+              Novo usuário
+            </a>
+          </div>
         </div>
       </div>
     </div>

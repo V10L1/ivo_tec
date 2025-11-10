@@ -109,26 +109,10 @@ GRANT ALL PRIVILEGES ON DATABASE meu_app_db TO meu_app_user;
 \q
 ```
 
-**3. Crie as Tabelas:** Conecte-se ao novo banco (`sudo -u postgres psql -d meu_app_db`) e execute os seguintes comandos SQL.
+**3. Criação de Tabelas e Dados Iniciais (Automático!):**
+**Não é mais necessário executar comandos SQL manualmente!** A aplicação foi atualizada para criar automaticamente o esquema do banco de dados e inserir os dados iniciais na primeira vez que o servidor é iniciado. Este passo agora é totalmente automatizado para simplificar a implantação e evitar erros.
 
-**Tabelas:**
-```sql
-CREATE TABLE users (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name VARCHAR(255) NOT NULL, email VARCHAR(255) UNIQUE NOT NULL, role VARCHAR(50) NOT NULL, password_hash VARCHAR(255) NOT NULL, created_at TIMESTAMPTZ DEFAULT NOW());
-CREATE TABLE site_content (id INT PRIMARY KEY, content JSONB, last_updated_at TIMESTAMPTZ DEFAULT NOW());
-CREATE TABLE product_categories (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name VARCHAR(255) NOT NULL, slug VARCHAR(255) UNIQUE NOT NULL);
-CREATE TABLE products (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name VARCHAR(255) NOT NULL, description TEXT, price DECIMAL(10, 2) NOT NULL, category_id UUID REFERENCES product_categories(id), image_url VARCHAR(2048), created_at TIMESTAMPTZ DEFAULT NOW());
-CREATE TABLE stock_inventory (product_id UUID PRIMARY KEY REFERENCES products(id) ON DELETE CASCADE, quantity INT NOT NULL DEFAULT 0, last_updated_at TIMESTAMPTZ DEFAULT NOW());
-CREATE TABLE chat_messages (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), conversation_id VARCHAR(255) NOT NULL, sender_type VARCHAR(50) NOT NULL, sender_id VARCHAR(255) NOT NULL, content TEXT NOT NULL, sent_at TIMESTAMPTZ DEFAULT NOW());
-CREATE TABLE support_tickets (id SERIAL PRIMARY KEY, subject VARCHAR(255) NOT NULL, description TEXT, status VARCHAR(50) NOT NULL DEFAULT 'Aberto', priority VARCHAR(50) NOT NULL DEFAULT 'Baixa', submitted_by_email VARCHAR(255) NOT NULL, assigned_to UUID REFERENCES users(id), created_at TIMESTAMPTZ DEFAULT NOW(), closed_at TIMESTAMPTZ);
-```
-
-**4. Insira os Dados Iniciais:**
-```sql
-INSERT INTO site_content (id, content) VALUES (1, '[{"id": "block_1", "type": "hero", "content": { "title": "Bem-vindo ao Mundo Moto", "subtitle": "Sua parada única para as melhores motos do planeta. Comece sua aventura hoje.", "ctaText": "Explorar Coleção" }}, {"id": "block_2", "type": "text", "content": { "heading": "Sobre Nossa Paixão", "body": "Nós vivemos e respiramos motocicletas. Nossa missão é fornecer aos entusiastas máquinas de alta qualidade e serviço incomparável. Cada moto em nossa coleção é escolhida a dedo e inspecionada para garantir que atenda aos nossos altos padrões de desempenho e confiabilidade." }}]');
-```
-Saia do psql com `\q`.
-
-**Nota Importante:** O primeiro usuário administrador **não é mais criado manualmente**. Continue com os passos de implantação. Ao acessar a aplicação pela primeira vez no navegador (no endereço `http://<IP_DO_SEU_SERVIDOR>/#/administrator`), você será redirecionado para uma tela de "Configuração Inicial" onde deverá criar o primeiro usuário com a função de Desenvolvedor.
+**Nota Importante:** O primeiro usuário administrador **também não é mais criado manualmente**. Continue com os passos de implantação. Ao acessar a aplicação pela primeira vez no navegador (no endereço `http://<IP_DO_SEU_SERVIDOR>/#/administrator`), você será redirecionado para uma tela de "Configuração Inicial" onde deverá criar o primeiro usuário com a função de Desenvolvedor.
 
 ### c. Implantação do Código
 
@@ -139,13 +123,7 @@ cd /var/www/meu-app
 git clone <URL_DO_SEU_REPOSITORIO> .
 ```
 
-**2. Configure a Identidade do Git:** (Necessário no primeiro commit)
-```bash
-git config --global user.email "seu_email@exemplo.com"
-git config --global user.name "Seu Nome"
-```
-
-**3. Configure as Variáveis de Ambiente:**
+**2. Configure as Variáveis de Ambiente:**
 Crie um arquivo `.env` com suas informações de produção:
 ```bash
 nano .env
@@ -157,7 +135,7 @@ PORT=8069
 JWT_SECRET="gere-um-segredo-muito-longo-e-aleatorio-para-producao"
 ```
 
-**4. Instale as Dependências:**
+**3. Instale as Dependências:**
 ```bash
 npm install
 ```
@@ -240,3 +218,29 @@ sudo ufw enable
 
 **3. Acesse sua aplicação:**
 Encontre o IP do seu servidor com `hostname -I`. Em qualquer dispositivo, abra o navegador e acesse: `http://<IP_DO_SEU_SERVIDOR>`
+
+---
+
+## 3. Solução de Problemas (Troubleshooting)
+
+### Erro 502 Bad Gateway ou Aplicação Offline
+
+Um erro 502 significa que o Nginx (servidor web) não conseguiu se comunicar com a sua aplicação backend (Node.js/PM2). Isso geralmente acontece porque a aplicação backend travou na inicialização.
+
+**1. Verifique os Logs do PM2:**
+Este é o primeiro e mais importante passo. Os logs mostrarão o erro exato que fez sua aplicação parar.
+```bash
+pm2 logs meu-app-backend
+```
+Procure por mensagens de erro em vermelho. A aplicação agora fornece logs detalhados para problemas de conexão com o banco de dados.
+
+**2. Use o Endpoint de Verificação de Saúde:**
+A aplicação agora tem um endpoint para verificar seu status. Acesse o seguinte URL no seu navegador:
+`http://SEU_IP_OU_DOMINIO/api/health`
+
+- **Resposta de Sucesso:** `{"status":"ok","message":"Backend está rodando e conectado ao banco de dados."}`
+  - Se você receber isso, a aplicação e o banco de dados estão funcionando. O problema pode estar na configuração do Nginx.
+
+- **Resposta de Erro ou Sem Resposta:**
+  - Se a página não carregar ou mostrar um erro 502, confirma que o processo do PM2 não está respondendo. Verifique os logs do PM2 para encontrar a causa.
+  - A causa mais comum é um erro no arquivo `.env` (senha do banco de dados incorreta, etc.).

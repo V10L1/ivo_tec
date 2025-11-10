@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext, useMemo, useEffect } from 'react';
-import { UserRole, AppKey } from '../types.js';
-import { ROLE_PERMISSIONS } from '../constants.js';
-import { User } from '../database/schema.js';
+import { UserRole, AppKey } from '../types';
+import { ROLE_PERMISSIONS } from '../constants';
+import { User } from '../database/schema';
 
 interface AuthContextType {
   isAuthenticated: boolean;
