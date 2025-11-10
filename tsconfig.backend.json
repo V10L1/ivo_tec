@@ -11,6 +11,6 @@
     "skipLibCheck": true,
     "resolveJsonModule": true
   },
-  "include": ["server.ts", "database/schema.ts", "types.ts"],
+  "include": ["server.ts", "database/schema.ts", "types.ts", "core/**/*.ts", "api/**/*.ts"],
   "exclude": ["node_modules"]
 }

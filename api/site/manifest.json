@@ -1,0 +1,5 @@
+{
+  "name": "Módulo de Conteúdo do Site",
+  "prefix": "/api/site",
+  "routesFile": "./site.routes.js"
+}

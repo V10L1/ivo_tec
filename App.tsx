@@ -5,18 +5,18 @@ import { Header } from './components/Header';
 import { ModuleWrapper } from './components/ModuleWrapper';
 import { APP_MODULES } from './constants';
 import { AppKey } from './types';
-import SiteEditor from './modules/SiteEditor';
-import StoreManager from './modules/StoreManager';
-import StockControl from './modules/StockControl';
-import MessagesChat from './modules/MessagesChat';
-import SupportTickets from './modules/SupportTickets';
-import UserManagement from './modules/UserManagement';
-import PublicSite from './modules/PublicSite';
-import Login from './modules/Login';
-import PreviewSite from './modules/PreviewSite';
-import InitialSetup from './modules/InitialSetup';
-import ForgotPassword from './modules/ForgotPassword';
-import Register from './modules/Register';
+import SiteEditor from './modules/site/SiteEditor';
+import StoreManager from './modules/loja/StoreManager';
+import StockControl from './modules/estoque/StockControl';
+import MessagesChat from './modules/mensagens/MessagesChat';
+import SupportTickets from './modules/suporte/SupportTickets';
+import UserManagement from './modules/usuario/UserManagement';
+import PublicSite from './modules/site/PublicSite';
+import Login from './modules/usuario/Login';
+import PreviewSite from './modules/site/PreviewSite';
+import InitialSetup from './modules/usuario/InitialSetup';
+import ForgotPassword from './modules/usuario/ForgotPassword';
+import Register from './modules/usuario/Register';
 
 // --- Router Context ---
 interface RouterContextType {
