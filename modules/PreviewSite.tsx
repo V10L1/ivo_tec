@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { MotorcycleIcon } from '../components/icons/Icons';
-import { PageBlock } from '../types';
+import { MotorcycleIcon } from '../components/icons/Icons.js';
+import { PageBlock } from '../types.js';
 
 // --- Renderizadores de Bloco Dinâmicos para Visualização ---
 

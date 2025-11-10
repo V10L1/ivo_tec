@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { CodeIcon } from '../components/icons/Icons';
+import { useAuth } from '../contexts/AuthContext.js';
+import { CodeIcon } from '../components/icons/Icons.js';
 
 const Login: React.FC = () => {
   const { login } = useAuth();

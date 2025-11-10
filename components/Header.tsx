@@ -1,8 +1,8 @@
 import React from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { UserRole } from '../types';
-import { CodeIcon, LogOutIcon } from './icons/Icons';
-import { useRouter } from '../App';
+import { useAuth } from '../contexts/AuthContext.js';
+import { UserRole } from '../types.js';
+import { CodeIcon, LogOutIcon } from './icons/Icons.js';
+import { useRouter } from '../App.js';
 
 export const Header: React.FC = () => {
   const { currentUser, logout } = useAuth();
