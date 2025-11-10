@@ -1,6 +1,7 @@
 
-// Fix: Changed import to use namespace for express types to avoid conflicts.
-import express from 'express';
+
+// FIX: Correctly import Request, Response, and NextFunction from express to resolve type errors.
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { Pool } from 'pg';
@@ -106,8 +107,8 @@ const initializeDatabase = async () => {
 app.use(cors());
 app.use(express.json());
 
-// Fix: Use express.Request, express.Response, and express.NextFunction for type annotations.
-const verifyToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+// FIX: Update function signature to use correct Express types.
+const verifyToken = (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
@@ -124,8 +125,8 @@ const verifyToken = (req: express.Request, res: express.Response, next: express.
     });
 };
 
-// Fix: Use express.Request, express.Response, and express.NextFunction for type annotations.
-const isDeveloper = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+// FIX: Update function signature to use correct Express types.
+const isDeveloper = (req: Request, res: Response, next: NextFunction) => {
     if (req.user?.role !== UserRole.DEVELOPER) {
         return res.status(403).json({ message: 'Acesso negado. Apenas desenvolvedores.' });
     }
@@ -134,8 +135,8 @@ const isDeveloper = (req: express.Request, res: express.Response, next: express.
 
 // --- Rotas da API (Devem vir antes do serviço de arquivos estáticos) ---
 
-// Fix: Use express.Request and express.Response for type annotations.
-app.get('/api/health', async (req: express.Request, res: express.Response) => {
+// FIX: Update function signature to use correct Express types.
+app.get('/api/health', async (req: Request, res: Response) => {
     try {
         const client = await pool.connect();
         await client.query('SELECT 1'); // Teste simples de conectividade
@@ -146,8 +147,8 @@ app.get('/api/health', async (req: express.Request, res: express.Response) => {
     }
 });
 
-// Fix: Use express.Request and express.Response for type annotations.
-app.get('/api/setup/status', async (req: express.Request, res: express.Response) => {
+// FIX: Update function signature to use correct Express types.
+app.get('/api/setup/status', async (req: Request, res: Response) => {
     try {
         const result = await pool.query('SELECT COUNT(*) FROM users');
         const userCount = parseInt(result.rows[0].count, 10);
@@ -158,8 +159,8 @@ app.get('/api/setup/status', async (req: express.Request, res: express.Response)
     }
 });
 
-// Fix: Use express.Request and express.Response for type annotations.
-app.post('/api/setup/initialize', async (req: express.Request, res: express.Response) => {
+// FIX: Update function signature to use correct Express types.
+app.post('/api/setup/initialize', async (req: Request, res: Response) => {
     try {
         const userCheck = await pool.query('SELECT COUNT(*) FROM users');
         if (parseInt(userCheck.rows[0].count, 10) > 0) {
@@ -187,8 +188,8 @@ app.post('/api/setup/initialize', async (req: express.Request, res: express.Resp
     }
 });
 
-// Fix: Use express.Request and express.Response for type annotations.
-app.post('/api/auth/login', async (req: express.Request, res: express.Response) => {
+// FIX: Update function signature to use correct Express types.
+app.post('/api/auth/login', async (req: Request, res: Response) => {
     const { email, password } = req.body;
     if (!email || !password) {
         return res.status(400).json({ message: 'E-mail e senha são obrigatórios' });
@@ -225,8 +226,8 @@ app.post('/api/auth/login', async (req: express.Request, res: express.Response) 
     }
 });
 
-// Fix: Use express.Request and express.Response for type annotations.
-app.post('/api/auth/register', async (req: express.Request, res: express.Response) => {
+// FIX: Update function signature to use correct Express types.
+app.post('/api/auth/register', async (req: Request, res: Response) => {
     const { name, email, password } = req.body;
     if (!name || !email || !password) {
         return res.status(400).json({ message: 'Nome, e-mail e senha são obrigatórios.' });
@@ -253,8 +254,8 @@ app.post('/api/auth/register', async (req: express.Request, res: express.Respons
     }
 });
 
-// Fix: Use express.Request and express.Response for type annotations.
-app.post('/api/auth/reset-password', async (req: express.Request, res: express.Response) => {
+// FIX: Update function signature to use correct Express types.
+app.post('/api/auth/reset-password', async (req: Request, res: Response) => {
     const { email, password } = req.body;
     if (!email || !password) {
         return res.status(400).json({ message: 'E-mail e nova senha são obrigatórios.' });
@@ -282,8 +283,8 @@ app.post('/api/auth/reset-password', async (req: express.Request, res: express.R
 });
 
 
-// Fix: Use express.Request and express.Response for type annotations.
-app.get('/api/site/content', async (req: express.Request, res: express.Response) => {
+// FIX: Update function signature to use correct Express types.
+app.get('/api/site/content', async (req: Request, res: Response) => {
     try {
         res.setHeader('Cache-Control', 'no-store');
         const result = await pool.query('SELECT content FROM site_content WHERE id = 1');
@@ -297,8 +298,8 @@ app.get('/api/site/content', async (req: express.Request, res: express.Response)
     }
 });
 
-// Fix: Use express.Request and express.Response for type annotations.
-app.put('/api/site/content', verifyToken, isDeveloper, async (req: express.Request, res: express.Response) => {
+// FIX: Update function signature to use correct Express types.
+app.put('/api/site/content', verifyToken, isDeveloper, async (req: Request, res: Response) => {
     const { content } = req.body;
     if (!content) {
         return res.status(400).json({ message: 'O conteúdo é obrigatório' });
@@ -321,8 +322,8 @@ app.put('/api/site/content', verifyToken, isDeveloper, async (req: express.Reque
 
 // --- Rotas de Gerenciamento de Usuários ---
 
-// Fix: Use express.Request and express.Response for type annotations.
-app.get('/api/users', verifyToken, isDeveloper, async (req: express.Request, res: express.Response) => {
+// FIX: Update function signature to use correct Express types.
+app.get('/api/users', verifyToken, isDeveloper, async (req: Request, res: Response) => {
     try {
         const result = await pool.query('SELECT id, name, email, role FROM users ORDER BY name');
         res.json(result.rows);
@@ -332,8 +333,8 @@ app.get('/api/users', verifyToken, isDeveloper, async (req: express.Request, res
     }
 });
 
-// Fix: Use express.Request and express.Response for type annotations.
-app.post('/api/users', verifyToken, isDeveloper, async (req: express.Request, res: express.Response) => {
+// FIX: Update function signature to use correct Express types.
+app.post('/api/users', verifyToken, isDeveloper, async (req: Request, res: Response) => {
     const { name, email, password, role } = req.body;
     if (!name || !email || !password || !role) {
         return res.status(400).json({ message: 'Todos os campos são obrigatórios' });
@@ -358,8 +359,8 @@ app.post('/api/users', verifyToken, isDeveloper, async (req: express.Request, re
     }
 });
 
-// Fix: Use express.Request and express.Response for type annotations.
-app.put('/api/users/:id', verifyToken, isDeveloper, async (req: express.Request, res: express.Response) => {
+// FIX: Update function signature to use correct Express types.
+app.put('/api/users/:id', verifyToken, isDeveloper, async (req: Request, res: Response) => {
     const { id } = req.params;
     const { role } = req.body;
 
@@ -386,8 +387,8 @@ app.put('/api/users/:id', verifyToken, isDeveloper, async (req: express.Request,
     }
 });
 
-// Fix: Use express.Request and express.Response for type annotations.
-app.delete('/api/users/:id', verifyToken, isDeveloper, async (req: express.Request, res: express.Response) => {
+// FIX: Update function signature to use correct Express types.
+app.delete('/api/users/:id', verifyToken, isDeveloper, async (req: Request, res: Response) => {
     const { id } = req.params;
 
     if (req.user?.id === id) {
@@ -417,8 +418,8 @@ app.use('/dist/client', express.static(clientDistPath));
 
 app.use(express.static(staticRootPath));
 
-// Fix: Use express.Request and express.Response for type annotations.
-app.get('*', (req: express.Request, res: express.Response) => {
+// FIX: Update function signature to use correct Express types.
+app.get('*', (req: Request, res: Response) => {
     if (req.path.startsWith('/api/')) {
         return res.status(404).json({ message: 'Endpoint da API não encontrado.' });
     }

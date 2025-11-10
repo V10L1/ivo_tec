@@ -25,8 +25,8 @@ Siga estes passos para configurar um ambiente de desenvolvimento na sua máquina
 
 **1. Clone o repositório:**
 ```bash
-git clone <URL_DO_SEU_REPOSITORIO> meu-app
-cd meu-app
+git clone <URL_DO_SEU_REPOSITORIO> ivotec
+cd ivotec
 ```
 
 **2. Configure e inicie o Banco de Dados com Docker:**
@@ -38,9 +38,9 @@ services:
     image: postgres:15
     restart: always
     environment:
-      POSTGRES_USER: meu_app_user
-      POSTGRES_PASSWORD: sua_senha_segura
-      POSTGRES_DB: meu_app_db
+      POSTGRES_USER: ivotec
+      POSTGRES_PASSWORD: ivo526526
+      POSTGRES_DB: ivotec_db
     ports:
       - "5432:5432"
     volumes:
@@ -50,9 +50,9 @@ volumes:
 ```
 
 **3. Configure as Variáveis de Ambiente:**
-Crie um arquivo `.env` a partir do `.env.example` e preencha-o:
+Crie um arquivo `.env` a partir do `.env.example` (se existir) ou do zero e preencha-o:
 ```env
-DATABASE_URL="postgresql://meu_app_user:sua_senha_segura@localhost:5432/meu_app_db"
+DATABASE_URL="postgresql://ivotec:ivo526526@localhost:5432/ivotec_db"
 PORT=8069
 JWT_SECRET="segredo-de-desenvolvimento-pode-ser-simples"
 ```
@@ -101,25 +101,25 @@ nvm install --lts
 sudo -u postgres psql
 ```
 
-**2. Crie o Banco de Dados e o Usuário:** (Substitua a senha)
+**2. Crie o Banco de Dados e o Usuário:**
 ```sql
-CREATE DATABASE meu_app_db;
-CREATE USER meu_app_user WITH PASSWORD 'sua_senha_segura_de_producao';
-GRANT ALL PRIVILEGES ON DATABASE meu_app_db TO meu_app_user;
+CREATE DATABASE ivotec_db;
+CREATE USER ivotec WITH PASSWORD 'ivo526526';
+GRANT ALL PRIVILEGES ON DATABASE ivotec_db TO ivotec;
 \q
 ```
 
 **3. Criação de Tabelas e Dados Iniciais (Automático!):**
 **Não é mais necessário executar comandos SQL manualmente!** A aplicação foi atualizada para criar automaticamente o esquema do banco de dados e inserir os dados iniciais na primeira vez que o servidor é iniciado. Este passo agora é totalmente automatizado para simplificar a implantação e evitar erros.
 
-**Nota Importante:** O primeiro usuário administrador **também não é mais criado manualmente**. Continue com os passos de implantação. Ao acessar a aplicação pela primeira vez no navegador (no endereço `http://<IP_DO_SEU_SERVIDOR>/#/administrator`), você será redirecionado para uma tela de "Configuração Inicial" onde deverá criar o primeiro usuário com a função de Desenvolvedor.
+**Nota Importante:** Ao acessar a aplicação pela primeira vez no navegador (no endereço `http://<IP_DO_SEU_SERVIDOR>/#/administrator`), você pode usar a tela de "Novo usuário" para criar sua conta de Desenvolvedor.
 
 ### c. Implantação do Código
 
 **1. Clone o Repositório:**
 ```bash
-sudo mkdir -p /var/www/meu-app && sudo chown -R $USER:$USER /var/www/meu-app
-cd /var/www/meu-app
+sudo mkdir -p /var/www/ivotec && sudo chown -R $USER:$USER /var/www/ivotec
+cd /var/www/ivotec
 git clone <URL_DO_SEU_REPOSITORIO> .
 ```
 
@@ -130,7 +130,7 @@ nano .env
 ```
 Conteúdo do `.env`:
 ```env
-DATABASE_URL="postgresql://meu_app_user:sua_senha_segura_de_producao@localhost:5432/meu_app_db"
+DATABASE_URL="postgresql://ivotec:ivo526526@localhost:5432/ivotec_db"
 PORT=8069
 JWT_SECRET="gere-um-segredo-muito-longo-e-aleatorio-para-producao"
 ```
@@ -150,8 +150,8 @@ npm run build
 **2. Instale o PM2 e Inicie o Servidor:**
 ```bash
 sudo npm install pm2 -g
-cd /var/www/meu-app
-pm2 start dist/server/server.js --name "meu-app-backend"
+cd /var/www/ivotec
+pm2 start dist/server/server.js --name "ivotec-backend"
 pm2 startup
 # Copie e execute o comando gerado pelo `pm2 startup`
 pm2 save
@@ -161,7 +161,7 @@ pm2 save
 
 **1. Crie um arquivo de configuração para o site:**
 ```bash
-sudo nano /etc/nginx/sites-available/meu-app
+sudo nano /etc/nginx/sites-available/ivotec
 ```
 Cole a seguinte configuração (substitua `SEU_IP_OU_DOMINIO`):
 ```nginx
@@ -171,7 +171,7 @@ server {
 
     server_name SEU_IP_OU_DOMINIO;
 
-    root /var/www/meu-app;
+    root /var/www/ivotec;
     index index.html;
 
     # Regra para a API (redireciona para o Node.js)
@@ -195,7 +195,7 @@ server {
 
 **2. Ative o site e reinicie o Nginx:**
 ```bash
-sudo ln -s /etc/nginx/sites-available/meu-app /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/ivotec /etc/nginx/sites-enabled/
 sudo rm /etc/nginx/sites-enabled/default
 sudo nginx -t
 sudo systemctl restart nginx
@@ -203,10 +203,10 @@ sudo systemctl restart nginx
 
 ### f. Permissões de Arquivo e Firewall
 
-**1. Dê ao Nginx Permissão para Ler os Arquivos:** (Passo CRUCIAL)
+**1. Dê ao Nginx Permissão para Ler os Arquivos:** (Passo CRÍTCIAL)
 ```bash
-sudo chown -R www-data:www-data /var/www/meu-app
-sudo chmod -R 755 /var/www/meu-app
+sudo chown -R www-data:www-data /var/www/ivotec
+sudo chmod -R 755 /var/www/ivotec
 ```
 
 **2. Libere as Portas no Firewall:**
@@ -230,7 +230,7 @@ Um erro 502 significa que o Nginx (servidor web) não conseguiu se comunicar com
 **1. Verifique os Logs do PM2:**
 Este é o primeiro e mais importante passo. Os logs mostrarão o erro exato que fez sua aplicação parar.
 ```bash
-pm2 logs meu-app-backend
+pm2 logs ivotec-backend
 ```
 Procure por mensagens de erro em vermelho. A aplicação agora fornece logs detalhados para problemas de conexão com o banco de dados.
 
