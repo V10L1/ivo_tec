@@ -93,7 +93,7 @@ const PublicSite: React.FC = () => {
       {isLoading ? (
         <div className="text-center py-20">Carregando...</div>
       ) : (
-        siteData?.blocks.map(block => renderBlock(block))
+        siteData?.blocks?.map(block => renderBlock(block))
       )}
       
       {/* Rodapé */}

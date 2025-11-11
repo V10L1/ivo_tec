@@ -1,18 +1,19 @@
 // api/site/site.routes.ts
-// Use the default express import and qualify types from it to resolve type conflicts.
-import express from 'express';
+// FIX: Import Request and Response types directly from express to resolve type conflicts.
+import express, { Request, Response } from 'express';
 import { pool } from '../../core/db';
 import { verifyToken, checkModulePermission } from '../../core/auth.middleware';
 
 const router = express.Router();
 
-// Use fully qualified express types to fix missing properties on req/res.
-router.get('/content', async (req: express.Request, res: express.Response) => {
+// FIX: Use imported Request and Response types.
+router.get('/content', async (req: Request, res: Response) => {
     try {
         res.setHeader('Cache-Control', 'no-store');
         const result = await pool.query('SELECT content FROM site_content WHERE id = 1');
         if (result.rows.length === 0) {
-            return res.json({ content: [] });
+            // FIX: Return a null content object, which the frontend can correctly fallback from.
+            return res.json({ content: null });
         }
         res.json(result.rows[0]);
     } catch (error) {
@@ -21,8 +22,8 @@ router.get('/content', async (req: express.Request, res: express.Response) => {
     }
 });
 
-// Use fully qualified express types to fix missing properties on req/res.
-router.put('/content', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
+// FIX: Use imported Request and Response types.
+router.put('/content', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
     const { content } = req.body;
     if (!content) {
         return res.status(400).json({ message: 'O conteúdo é obrigatório' });

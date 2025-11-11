@@ -2,8 +2,8 @@
 // FIX: Add Node.js type reference to resolve globals like 'process' and '__dirname'.
 /// <reference types="node" />
 
-// Use the default express import and qualify types from it to resolve type conflicts.
-import express from 'express';
+// FIX: Import Request and Response types directly from express to resolve type conflicts.
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -22,8 +22,8 @@ app.use(cors());
 app.use(express.json());
 
 // --- Rota de Verificação de Saúde ---
-// Use fully qualified express types to fix missing properties on req/res.
-app.get('/api/health', async (req: express.Request, res: express.Response) => {
+// FIX: Use imported Request and Response types.
+app.get('/api/health', async (req: Request, res: Response) => {
     try {
         const client = await pool.connect();
         await client.query('SELECT 1');
@@ -81,8 +81,8 @@ const serveFrontend = () => {
     app.use('/dist/client', express.static(clientDistPath));
     app.use(express.static(staticRootPath));
 
-    // Use fully qualified express types to fix missing properties on req/res.
-    app.get('*', (req: express.Request, res: express.Response) => {
+    // FIX: Use imported Request and Response types.
+    app.get('*', (req: Request, res: Response) => {
         if (req.path.startsWith('/api/')) {
             return res.status(404).json({ message: 'Endpoint da API não encontrado.' });
         }
