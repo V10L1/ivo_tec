@@ -1,13 +1,13 @@
 // api/site/site.routes.ts
-// FIX: Explicitly import types from express to avoid conflicts and resolve type errors.
-import express, { Request, Response } from 'express';
+// FIX: Explicitly import types from express using aliases to avoid conflicts with global DOM types.
+import express, { Request as ExpressRequest, Response as ExpressResponse } from 'express';
 import { pool } from '../../core/db';
 import { verifyToken, isDeveloper } from '../../core/auth.middleware';
 
 const router = express.Router();
 
-// FIX: Use explicit Request and Response types.
-router.get('/content', async (req: Request, res: Response) => {
+// FIX: Use explicit aliased express types.
+router.get('/content', async (req: ExpressRequest, res: ExpressResponse) => {
     try {
         res.setHeader('Cache-Control', 'no-store');
         const result = await pool.query('SELECT content FROM site_content WHERE id = 1');
@@ -21,8 +21,8 @@ router.get('/content', async (req: Request, res: Response) => {
     }
 });
 
-// FIX: Use explicit Request and Response types.
-router.put('/content', verifyToken, isDeveloper, async (req: Request, res: Response) => {
+// FIX: Use explicit aliased express types.
+router.put('/content', verifyToken, isDeveloper, async (req: ExpressRequest, res: ExpressResponse) => {
     const { content } = req.body;
     if (!content) {
         return res.status(400).json({ message: 'O conteúdo é obrigatório' });
