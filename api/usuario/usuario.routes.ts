@@ -1,6 +1,5 @@
 // api/usuario/usuario.routes.ts
 // FIX: Removed aliasing for Request and Response types from express to resolve type conflicts.
-import { Request, Response } from 'express';
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -13,7 +12,7 @@ const JWT_SECRET = process.env.JWT_SECRET!;
 
 // --- Rotas de Setup e Saúde (parte do núcleo de usuário) ---
 
-router.get('/setup/status', async (req: Request, res: Response) => {
+router.get('/setup/status', async (req: express.Request, res: express.Response) => {
     try {
         const result = await pool.query('SELECT COUNT(*) FROM users');
         const userCount = parseInt(result.rows[0].count, 10);
@@ -24,7 +23,7 @@ router.get('/setup/status', async (req: Request, res: Response) => {
     }
 });
 
-router.post('/setup/initialize', async (req: Request, res: Response) => {
+router.post('/setup/initialize', async (req: express.Request, res: express.Response) => {
     try {
         const userCheck = await pool.query('SELECT COUNT(*) FROM users');
         if (parseInt(userCheck.rows[0].count, 10) > 0) {
@@ -53,7 +52,7 @@ router.post('/setup/initialize', async (req: Request, res: Response) => {
 });
 
 // --- Rotas de Autenticação ---
-router.post('/auth/login', async (req: Request, res: Response) => {
+router.post('/auth/login', async (req: express.Request, res: express.Response) => {
     const { email, password } = req.body;
     if (!email || !password) {
         return res.status(400).json({ message: 'E-mail e senha são obrigatórios' });
@@ -104,7 +103,7 @@ router.post('/auth/login', async (req: Request, res: Response) => {
 });
 
 // Rota para verificar um token e obter dados do usuário atual
-router.get('/auth/me', verifyToken, async (req: Request, res: Response) => {
+router.get('/auth/me', verifyToken, async (req: express.Request, res: express.Response) => {
     if (!req.user) {
         return res.status(401).json({ message: 'Não autenticado' });
     }
@@ -130,7 +129,7 @@ router.get('/auth/me', verifyToken, async (req: Request, res: Response) => {
 });
 
 
-router.post('/auth/register', async (req: Request, res: Response) => {
+router.post('/auth/register', async (req: express.Request, res: express.Response) => {
     const { name, email, password } = req.body;
     if (!name || !email || !password) {
         return res.status(400).json({ message: 'Nome, e-mail e senha são obrigatórios.' });
@@ -156,7 +155,7 @@ router.post('/auth/register', async (req: Request, res: Response) => {
     }
 });
 
-router.post('/auth/reset-password', async (req: Request, res: Response) => {
+router.post('/auth/reset-password', async (req: express.Request, res: express.Response) => {
     const { email, password } = req.body;
     if (!email || !password) {
         return res.status(400).json({ message: 'E-mail e nova senha são obrigatórios.' });
@@ -185,7 +184,7 @@ router.post('/auth/reset-password', async (req: Request, res: Response) => {
 
 // --- Rotas de Gerenciamento de Usuários (Protegidas) ---
 
-router.get('/users', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
+router.get('/users', verifyToken, checkModulePermission('USERS'), async (req: express.Request, res: express.Response) => {
     try {
         const result = await pool.query('SELECT id, name, email, role FROM users ORDER BY name');
         res.json(result.rows);
@@ -195,7 +194,7 @@ router.get('/users', verifyToken, checkModulePermission('USERS'), async (req: Re
     }
 });
 
-router.post('/users', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
+router.post('/users', verifyToken, checkModulePermission('USERS'), async (req: express.Request, res: express.Response) => {
     const { name, email, password, role } = req.body;
     if (!name || !email || !password || !role) {
         return res.status(400).json({ message: 'Todos os campos são obrigatórios' });
@@ -220,7 +219,7 @@ router.post('/users', verifyToken, checkModulePermission('USERS'), async (req: R
     }
 });
 
-router.put('/users/:id', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
+router.put('/users/:id', verifyToken, checkModulePermission('USERS'), async (req: express.Request, res: express.Response) => {
     const { id } = req.params;
     const { role } = req.body;
 
@@ -247,7 +246,7 @@ router.put('/users/:id', verifyToken, checkModulePermission('USERS'), async (req
     }
 });
 
-router.delete('/users/:id', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
+router.delete('/users/:id', verifyToken, checkModulePermission('USERS'), async (req: express.Request, res: express.Response) => {
     const { id } = req.params;
 
     if (req.user?.id === id) {
@@ -268,7 +267,7 @@ router.delete('/users/:id', verifyToken, checkModulePermission('USERS'), async (
 
 // --- Rotas de Gerenciamento de Permissões (Protegidas) ---
 
-router.get('/permissions', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
+router.get('/permissions', verifyToken, checkModulePermission('USERS'), async (req: express.Request, res: express.Response) => {
     try {
         const result = await pool.query('SELECT role, permissions FROM role_permissions');
         const permissionsByRole = result.rows.reduce((acc, row) => {
@@ -282,7 +281,7 @@ router.get('/permissions', verifyToken, checkModulePermission('USERS'), async (r
     }
 });
 
-router.post('/permissions', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
+router.post('/permissions', verifyToken, checkModulePermission('USERS'), async (req: express.Request, res: express.Response) => {
     const { role, permissions = [] } = req.body;
 
     if (!role || typeof role !== 'string' || role.trim() === '') {
@@ -308,7 +307,7 @@ router.post('/permissions', verifyToken, checkModulePermission('USERS'), async (
 });
 
 
-router.put('/permissions/:role', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
+router.put('/permissions/:role', verifyToken, checkModulePermission('USERS'), async (req: express.Request, res: express.Response) => {
     const { role } = req.params;
     const { permissions } = req.body;
 
@@ -328,7 +327,7 @@ router.put('/permissions/:role', verifyToken, checkModulePermission('USERS'), as
     }
 });
 
-router.delete('/permissions/:role', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
+router.delete('/permissions/:role', verifyToken, checkModulePermission('USERS'), async (req: express.Request, res: express.Response) => {
     const { role } = req.params;
 
     // Prevenir a exclusão de grupos de sistema essenciais

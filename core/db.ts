@@ -103,25 +103,50 @@ export const initializeDatabase = async () => {
              const initialContent = {
                 settings: {
                     brandName: "Mundo Moto",
-                    loginButtonText: "Login do Admin"
+                    loginButtonText: "Login do Admin",
+                    backgroundColor: "#0f172a"
                 },
-                blocks: [
+                sections: [
                     {
-                        id: "block_1",
-                        type: "hero",
-                        content: {
-                            title: "Bem-vindo ao Mundo Moto",
-                            subtitle: "Sua parada única para as melhores motos do planeta. Comece sua aventura hoje.",
-                            ctaText: "Explorar Coleção"
-                        }
+                        id: "section_1",
+                        style: { backgroundColor: 'transparent', paddingTop: '4rem', paddingBottom: '4rem', backgroundImage: '' },
+                        columns: [
+                            {
+                                id: "col_1",
+                                style: { width: '100%' },
+                                blocks: [
+                                    {
+                                        id: "block_1",
+                                        type: "hero",
+                                        content: {
+                                            title: "Bem-vindo ao Mundo Moto",
+                                            subtitle: "Sua parada única para as melhores motos do planeta. Comece sua aventura hoje.",
+                                            ctaText: "Explorar Coleção"
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
                     },
-                    {
-                        id: "block_2",
-                        type: "text",
-                        content: {
-                            heading: "Sobre Nossa Paixão",
-                            body: "Nós vivemos e respiramos motocicletas. Nossa missão é fornecer aos entusiastas máquinas de alta qualidade e serviço incomparável. Cada moto em nossa coleção é escolhida a dedo e inspecionada para garantir que atenda aos nossos altos padrões de desempenho e confiabilidade."
-                        }
+                     {
+                        id: "section_2",
+                        style: { backgroundColor: '#1e293b', paddingTop: '4rem', paddingBottom: '4rem', backgroundImage: '' },
+                        columns: [
+                             {
+                                id: "col_2",
+                                style: { width: '100%' },
+                                blocks: [
+                                     {
+                                        id: "block_2",
+                                        type: "text",
+                                        content: {
+                                            heading: "Sobre Nossa Paixão",
+                                            body: "Nós vivemos e respiramos motocicletas. Nossa missão é fornecer aos entusiastas máquinas de alta qualidade e serviço incomparável. Cada moto em nossa coleção é escolhida a dedo e inspecionada para garantir que atenda aos nossos altos padrões de desempenho e confiabilidade."
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
                     }
                 ]
              };

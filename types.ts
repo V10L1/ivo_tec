@@ -36,29 +36,60 @@ export interface ImageBlockContent {
 
 export interface ButtonBlockContent {
   text: string;
-  link: string; // ex., '/#/store', 'https://example.com'
+  link: string;
+}
+
+export interface MenuItem {
+  id: string;
+  label: string;
+  link: string;
+}
+
+export interface MenuBlockContent {
+  items: MenuItem[];
 }
 
 export type PageBlock = {
-  id: string; // ID único para o bloco (ex., de nanoid)
+  id: string;
 } & (
   | { type: 'hero'; content: HeroBlockContent }
   | { type: 'text'; content: TextBlockContent }
   | { type: 'image'; content: ImageBlockContent }
   | { type: 'button'; content: ButtonBlockContent }
+  | { type: 'menu'; content: MenuBlockContent }
 );
+
+export interface Column {
+    id: string;
+    blocks: PageBlock[];
+    style: {
+        width: string; // ex., '50%'
+    };
+}
+
+export interface SectionBlock {
+    id: string;
+    columns: Column[];
+    style: {
+        backgroundColor: string;
+        paddingTop: string;
+        paddingBottom: string;
+        backgroundImage: string;
+    };
+}
 
 // --- Tipos de Dados do Site ---
 
 export interface SiteSettings {
   brandName: string;
   loginButtonText: string;
+  backgroundColor: string;
 }
 
 // Representa o objeto de conteúdo JSONB dentro de cada página
 export interface SiteData {
   settings: SiteSettings;
-  blocks: PageBlock[];
+  sections: SectionBlock[];
 }
 
 // Representa uma página individual no banco de dados

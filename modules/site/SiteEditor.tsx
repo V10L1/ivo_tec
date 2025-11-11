@@ -1,173 +1,222 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { DragDropContext, Droppable, Draggable, OnDragEndResponder, DroppableProps } from 'react-beautiful-dnd';
-import { PageBlock, Page, SiteData, SiteSettings, HeroBlockContent, TextBlockContent, ImageBlockContent, ButtonBlockContent } from '../../types';
+import { Page, SiteData, PageBlock, SectionBlock, Column, SiteSettings, HeroBlockContent, TextBlockContent, ImageBlockContent, ButtonBlockContent, MenuBlockContent, MenuItem } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
-import { PlusCircleIcon, SettingsIcon, Trash2Icon, MotorcycleIcon, TypeIcon, ImageIcon, CodeIcon, ChevronLeftIcon, ChevronRightIcon, XIcon, SaveIcon, ArrowLeftIcon, FilePlusIcon, EditIcon } from '../../components/icons/Icons';
+import { PlusCircleIcon, SettingsIcon, Trash2Icon, MotorcycleIcon, TypeIcon, ImageIcon, CodeIcon, ChevronLeftIcon, ChevronRightIcon, SaveIcon, ArrowLeftIcon, FilePlusIcon, EditIcon, LayoutIcon, MenuIcon } from '../../components/icons/Icons';
 
-// FIX: Wrapper para react-beautiful-dnd para garantir compatibilidade com React 18 StrictMode.
+// --- UTILITIES & HELPERS ---
+
+const generateId = (prefix = 'id') => `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
 const StrictModeDroppable: React.FC<DroppableProps> = ({ children, ...props }) => {
   const [enabled, setEnabled] = useState(false);
   useEffect(() => {
     const animation = requestAnimationFrame(() => setEnabled(true));
-    return () => {
-      cancelAnimationFrame(animation);
-      setEnabled(false);
-    };
+    return () => { cancelAnimationFrame(animation); setEnabled(false); };
   }, []);
-  if (!enabled) {
-    return null;
-  }
+  if (!enabled) return null;
   return <Droppable {...props}>{children}</Droppable>;
 };
 
-const generateId = () => `block_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+const defaultPageContent: SiteData = {
+  settings: { brandName: 'Nova Marca', loginButtonText: 'Login', backgroundColor: '#0f172a' },
+  sections: [],
+};
 
-// FIX: Implemented the stubbed renderPreviewBlock function to fix return type errors.
-const renderPreviewBlock = (block: PageBlock) => {
-    switch (block.type) {
-        case 'hero':
-            return (
-                <main key={block.id} className="container mx-auto px-6 py-16 text-center">
-                    <h1 className="text-5xl font-extrabold text-white mb-4">{block.content.title}</h1>
-                    <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-8">{block.content.subtitle}</p>
-                    <button className="bg-cyan-600 text-white font-bold py-3 px-8 rounded-full text-lg cursor-not-allowed opacity-50" disabled>
-                        {block.content.ctaText}
-                    </button>
-                </main>
-            );
-        case 'text':
-            return (
-                 <section key={block.id} className="py-12">
-                    <div className="container mx-auto px-6 max-w-3xl text-left">
-                        <h2 className="text-3xl font-bold text-center mb-6 text-white">{block.content.heading}</h2>
-                        <p className="text-slate-400 whitespace-pre-wrap leading-relaxed">{block.content.body}</p>
-                    </div>
-                </section>
-            );
-        case 'image':
-            return (
-                <section key={block.id} className="py-12">
-                    <div className="container mx-auto px-6">
-                        <img src={block.content.imageUrl} alt={block.content.altText} className="rounded-lg max-w-4xl h-auto mx-auto shadow-lg" />
-                    </div>
-                </section>
-            );
-        case 'button':
-            return (
-                 <section key={block.id} className="py-8 text-center">
-                    <a href={block.content.link} onClick={e => e.preventDefault()} className="bg-slate-700 text-white font-bold py-3 px-8 rounded-lg inline-block cursor-not-allowed opacity-50">
-                        {block.content.text}
-                    </a>
-                </section>
-            );
-        default:
-            return null;
+const createNewBlock = (type: PageBlock['type']): PageBlock => {
+    const id = generateId('block');
+    switch (type) {
+      case 'hero': return { id, type, content: { title: 'Novo Título de Herói', subtitle: 'Um subtítulo atraente.', ctaText: 'Saiba Mais' } };
+      case 'text': return { id, type, content: { heading: 'Nova Seção', body: 'Texto padrão.' } };
+      case 'image': return { id, type, content: { imageUrl: 'https://via.placeholder.com/1200x600.png/1e293b/94a3b8?text=Imagem', altText: 'Imagem de Exemplo' } };
+      case 'button': return { id, type, content: { text: 'Clique Aqui', link: '#' } };
+      case 'menu': return { id, type, content: { items: [{ id: generateId('menuitem'), label: 'Home', link: '#/'}, { id: generateId('menuitem'), label: 'Sobre', link: '#/sobre'}] } };
+      // FIX: Add a default case to handle potential new block types and satisfy TypeScript's requirement that all paths return a value.
+      default:
+        throw new Error(`Unsupported block type: ${type}`);
     }
 };
 
-// --- Inspetor de Bloco ---
-// FIX: Implemented the stubbed Inspector component to fix return type errors.
-const Inspector: React.FC<{ block: PageBlock; onUpdate: (updatedBlock: PageBlock) => void; onBack: () => void; }> = ({ block, onUpdate, onBack }) => {
-    const handleContentChange = (field: string, value: string) => {
-        // FIX: Use a type-safe switch to handle updates for the discriminated union.
-        // This ensures that the content object matches the block's type.
+// --- RENDERER COMPONENTS (used in both Editor Canvas and Public Site) ---
+
+const BlockRenderer: React.FC<{ block: PageBlock }> = React.memo(({ block }) => {
+    // Simplified rendering for the editor canvas
+    switch (block.type) {
+        case 'hero': return <div className="p-4 bg-slate-700 rounded text-center"><h3 className="font-bold">{block.content.title}</h3><p className="text-sm text-slate-400">{block.content.subtitle}</p></div>;
+        case 'text': return <div className="p-4 bg-slate-700 rounded"><h3 className="font-bold">{block.content.heading}</h3><p className="text-sm text-slate-400 truncate">{block.content.body}</p></div>;
+        case 'image': return <img src={block.content.imageUrl} alt={block.content.altText} className="w-full h-auto rounded"/>;
+        case 'button': return <div className="text-center p-2"><button className="bg-cyan-600 text-white font-bold py-2 px-4 rounded">{block.content.text}</button></div>;
+        case 'menu': return <div className="p-2 bg-slate-700 rounded flex gap-4 justify-center">{block.content.items.map(i => <span key={i.id} className="text-sm">{i.label}</span>)}</div>
+        default: return <div className="p-4 bg-red-800 rounded">Bloco desconhecido</div>;
+    }
+});
+BlockRenderer.displayName = "BlockRenderer";
+
+// --- EDITOR SUB-COMPONENTS ---
+
+const InspectorPanel: React.FC<{
+    selectedElement: any;
+    pageSettings: SiteSettings;
+    onUpdateBlock: (updatedBlock: PageBlock) => void;
+    onUpdateSection: (updatedSection: SectionBlock) => void;
+    onUpdatePageSettings: (field: keyof SiteSettings, value: string) => void;
+}> = ({ selectedElement, pageSettings, onUpdateBlock, onUpdateSection, onUpdatePageSettings }) => {
+    
+    // FIX: Replaced a single, non-type-safe handler with specific handlers inside each switch case
+    // to correctly handle the discriminated union 'PageBlock' and ensure type safety.
+    const renderBlockInspector = () => {
+        const block = selectedElement.element as PageBlock;
+
         switch (block.type) {
-            case 'hero':
-                onUpdate({ ...block, content: { ...block.content, [field as keyof HeroBlockContent]: value } });
-                break;
-            case 'text':
-                onUpdate({ ...block, content: { ...block.content, [field as keyof TextBlockContent]: value } });
-                break;
-            case 'image':
-                onUpdate({ ...block, content: { ...block.content, [field as keyof ImageBlockContent]: value } });
-                break;
-            case 'button':
-                onUpdate({ ...block, content: { ...block.content, [field as keyof ButtonBlockContent]: value } });
-                break;
+            case 'hero': {
+                const handleContentChange = (field: keyof HeroBlockContent, value: string) => {
+                    onUpdateBlock({ ...block, content: { ...block.content, [field]: value } });
+                };
+                return <>
+                    <InputField label="Título" value={block.content.title} onChange={v => handleContentChange('title', v)} />
+                    <InputField label="Subtítulo" value={block.content.subtitle} onChange={v => handleContentChange('subtitle', v)} />
+                    <InputField label="Texto do Botão" value={block.content.ctaText} onChange={v => handleContentChange('ctaText', v)} />
+                </>;
+            }
+            case 'text': {
+                const handleContentChange = (field: keyof TextBlockContent, value: string) => {
+                    onUpdateBlock({ ...block, content: { ...block.content, [field]: value } });
+                };
+                return <>
+                    <InputField label="Cabeçalho" value={block.content.heading} onChange={v => handleContentChange('heading', v)} />
+                    <TextareaField label="Corpo do Texto" value={block.content.body} onChange={v => handleContentChange('body', v)} />
+                </>;
+            }
+            case 'image': {
+                const handleContentChange = (field: keyof ImageBlockContent, value: string) => {
+                    onUpdateBlock({ ...block, content: { ...block.content, [field]: value } });
+                };
+                return <>
+                    <InputField label="URL da Imagem" value={block.content.imageUrl} onChange={v => handleContentChange('imageUrl', v)} />
+                    <InputField label="Texto Alternativo" value={block.content.altText} onChange={v => handleContentChange('altText', v)} />
+                </>;
+            }
+            case 'button': {
+                const handleContentChange = (field: keyof ButtonBlockContent, value: string) => {
+                    onUpdateBlock({ ...block, content: { ...block.content, [field]: value } });
+                };
+                return <>
+                    <InputField label="Texto do Botão" value={block.content.text} onChange={v => handleContentChange('text', v)} />
+                    <InputField label="Link" value={block.content.link} onChange={v => handleContentChange('link', v)} />
+                </>;
+            }
+            case 'menu': {
+                const menuContent = block.content;
+                const handleItemChange = (itemId: string, field: 'label' | 'link', value: string) => {
+                    const newItems = menuContent.items.map(item => item.id === itemId ? { ...item, [field]: value } : item);
+                    onUpdateBlock({ ...block, content: { ...menuContent, items: newItems }});
+                };
+                return <>
+                    <h4 className="text-md font-semibold text-slate-300 mb-2">Itens do Menu</h4>
+                    {menuContent.items.map(item => (
+                        <div key={item.id} className="p-2 border border-slate-700 rounded mb-2 space-y-2">
+                             <InputField label="Rótulo" value={item.label} onChange={v => handleItemChange(item.id, 'label', v)} />
+                             <InputField label="Link" value={item.link} onChange={v => handleItemChange(item.id, 'link', v)} />
+                        </div>
+                    ))}
+                </>;
+            }
+            default: return <p>Inspetor não disponível para este bloco.</p>;
         }
     };
 
-    const renderField = (label: string, field: string, value: string, isTextArea = false) => (
-        <div>
-            <label className="block text-sm font-medium text-slate-400 mb-1">{label}</label>
-            {isTextArea ? (
-                 <textarea value={value} onChange={e => handleContentChange(field, e.target.value)} rows={5} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2" />
-            ) : (
-                <input value={value} onChange={e => handleContentChange(field, e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2" />
-            )}
-        </div>
+    const renderSectionInspector = () => {
+        const section = selectedElement.element as SectionBlock;
+        const handleStyleChange = (field: keyof SectionBlock['style'], value: string) => {
+            onUpdateSection({ ...section, style: { ...section.style, [field]: value } });
+        };
+        return <>
+            <ColorField label="Cor de Fundo" value={section.style.backgroundColor} onChange={v => handleStyleChange('backgroundColor', v)} />
+            <InputField label="Imagem de Fundo (URL)" value={section.style.backgroundImage} onChange={v => handleStyleChange('backgroundImage', v)} />
+            <InputField label="Espaçamento Superior" value={section.style.paddingTop} onChange={v => handleStyleChange('paddingTop', v)} placeholder="ex: 4rem"/>
+            <InputField label="Espaçamento Inferior" value={section.style.paddingBottom} onChange={v => handleStyleChange('paddingBottom', v)} placeholder="ex: 4rem"/>
+        </>;
+    };
+
+    const renderPageInspector = () => (
+        <>
+            <InputField label="Nome da Marca (Cabeçalho/Rodapé)" value={pageSettings.brandName} onChange={v => onUpdatePageSettings('brandName', v)} />
+            <InputField label="Texto do Botão de Login" value={pageSettings.loginButtonText} onChange={v => onUpdatePageSettings('loginButtonText', v)} />
+            <ColorField label="Cor de Fundo da Página" value={pageSettings.backgroundColor} onChange={v => onUpdatePageSettings('backgroundColor', v)} />
+        </>
     );
-    
-    const renderFields = () => {
-        switch (block.type) {
-            case 'hero':
-                return <>
-                    {renderField('Title', 'title', (block.content as HeroBlockContent).title)}
-                    {renderField('Subtitle', 'subtitle', (block.content as HeroBlockContent).subtitle)}
-                    {renderField('Button Text', 'ctaText', (block.content as HeroBlockContent).ctaText)}
-                </>;
-            case 'text':
-                return <>
-                    {renderField('Heading', 'heading', (block.content as TextBlockContent).heading)}
-                    {renderField('Body Text', 'body', (block.content as TextBlockContent).body, true)}
-                </>;
-            case 'image':
-                return <>
-                    {renderField('Image URL', 'imageUrl', (block.content as ImageBlockContent).imageUrl)}
-                    {renderField('Alt Text', 'altText', (block.content as ImageBlockContent).altText)}
-                </>;
-            case 'button':
-                return <>
-                    {renderField('Button Text', 'text', (block.content as ButtonBlockContent).text)}
-                    {renderField('Link URL', 'link', (block.content as ButtonBlockContent).link)}
-                </>;
-            default:
-                return <p>Unknown block type</p>;
+
+    const getTitle = () => {
+        if (!selectedElement) return "Configurações da Página";
+        switch (selectedElement.type) {
+            case 'block': return `Editando Bloco: ${(selectedElement.element as PageBlock).type}`;
+            case 'section': return "Editando Seção";
+            default: return "Configurações da Página";
         }
     };
-    
+
     return (
         <div className="p-4 space-y-4">
-            <div className="flex items-center gap-2">
-                <button onClick={onBack} className="text-slate-400 hover:text-white"><ArrowLeftIcon className="w-5 h-5"/></button>
-                <h3 className="text-lg font-bold text-cyan-400 capitalize">Editing: {block.type}</h3>
-            </div>
+            <h3 className="text-lg font-bold text-cyan-400 capitalize flex items-center gap-2"><SettingsIcon className="w-5 h-5"/> {getTitle()}</h3>
             <div className="space-y-4">
-                {renderFields()}
+                {!selectedElement && renderPageInspector()}
+                {selectedElement?.type === 'block' && renderBlockInspector()}
+                {selectedElement?.type === 'section' && renderSectionInspector()}
             </div>
         </div>
     );
 };
 
+const InputField: React.FC<{ label: string, value: string, onChange: (value: string) => void, placeholder?: string }> = ({ label, value, onChange, placeholder }) => (
+    <div>
+        <label className="block text-sm font-medium text-slate-400 mb-1">{label}</label>
+        <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2" />
+    </div>
+);
+const TextareaField: React.FC<{ label: string, value: string, onChange: (value: string) => void }> = ({ label, value, onChange }) => (
+    <div>
+        <label className="block text-sm font-medium text-slate-400 mb-1">{label}</label>
+        <textarea value={value} onChange={e => onChange(e.target.value)} rows={5} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2" />
+    </div>
+);
+const ColorField: React.FC<{ label: string, value: string, onChange: (value: string) => void }> = ({ label, value, onChange }) => (
+    <div>
+        <label className="block text-sm font-medium text-slate-400 mb-1">{label}</label>
+        <div className="flex items-center gap-2">
+            <input type="color" value={value} onChange={e => onChange(e.target.value)} className="w-8 h-8 p-0 border-none rounded bg-slate-900" />
+            <input value={value} onChange={e => onChange(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2" />
+        </div>
+    </div>
+);
 
-const defaultPageContent: SiteData = {
-  settings: { brandName: 'Nova Marca', loginButtonText: 'Login' },
-  blocks: [],
-};
 
+// --- PAGE BUILDER ---
 
-// --- Componente Principal ---
 const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboard }) => {
-  type View = 'list' | 'editor' | 'create';
-  const [view, setView] = useState<View>('list');
+  // Global State
+  const [view, setView] = useState<'list' | 'editor' | 'create'>('list');
   const [pages, setPages] = useState<Page[]>([]);
-  const [editingPage, setEditingPage] = useState<Page | null>(null);
-  const [savedPage, setSavedPage] = useState<Page | null>(null);
-  
-  const [newPageData, setNewPageData] = useState({ title: '', slug: '' });
+  const [status, setStatus] = useState<'idle' | 'loading' | 'saving' | 'error' | 'deleting'>('loading');
   const [feedback, setFeedback] = useState<{ type: 'error' | 'success', message: string } | null>(null);
-
-  // FIX: Added 'success' to the status type.
-  const [status, setStatus] = useState<'idle' | 'loading' | 'saving' | 'error' | 'deleting' | 'success'>('loading');
-  const [isPanelOpen, setIsPanelOpen] = useState(true);
   const { token } = useAuth();
   
+  // Page-specific State
+  const [editingPage, setEditingPage] = useState<Page | null>(null);
+  const [savedPage, setSavedPage] = useState<Page | null>(null);
+  const [newPageData, setNewPageData] = useState({ title: '', slug: '' });
+  
+  // Editor UI State
+  const [isPanelOpen, setIsPanelOpen] = useState(true);
+  const [activeTab, setActiveTab] = useState<'structure' | 'components' | 'inspector'>('inspector');
+  const [selectedElement, setSelectedElement] = useState<{ type: 'section' | 'column' | 'block', element: any} | null>(null);
+  
+  // Handlers
   const handleFeedback = (type: 'error' | 'success', message: string) => {
     setFeedback({ type, message });
     setTimeout(() => setFeedback(null), 4000);
   };
 
-  const fetchPages = useCallback(async () => {
+  const fetchPages = useCallback(async () => { /* ... (implementation is same as before) ... */
     setStatus('loading');
     try {
       const response = await fetch('/api/site/pages', { headers: { 'Authorization': `Bearer ${token}` } });
@@ -179,42 +228,36 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
       console.error(error);
       setStatus('error');
     }
-  }, [token]);
+   }, [token]);
 
-  useEffect(() => {
-    if (view === 'list') {
-      fetchPages();
-    }
-  }, [view, fetchPages]);
-  
-  const handleEditPage = async (page: Page) => {
+  useEffect(() => { if (view === 'list') fetchPages(); }, [view, fetchPages]);
+
+  // --- API Functions ---
+  const handleEditPage = async (page: Page) => { /* ... (implementation is same as before) ... */
     setStatus('loading');
     try {
         const response = await fetch(`/api/site/pages/${page.id}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        if (!response.ok) {
-            throw new Error('Falha ao carregar os dados completos da página.');
-        }
+        if (!response.ok) throw new Error('Falha ao carregar os dados completos da página.');
         const fullPageData: Page = await response.json();
 
-        // Garante que o conteúdo exista, se não, fornece uma estrutura padrão
-        if (!fullPageData.content) {
-            fullPageData.content = defaultPageContent;
-        }
-
+        if (!fullPageData.content) fullPageData.content = defaultPageContent;
+        if (!fullPageData.content.sections) fullPageData.content.sections = []; // Ensure sections array exists
+        
         setEditingPage(fullPageData);
-        setSavedPage(fullPageData);
+        setSavedPage(JSON.parse(JSON.stringify(fullPageData))); // Deep copy for comparison
         setView('editor');
+        setActiveTab('inspector');
+        setSelectedElement(null);
     } catch (error: any) {
-        console.error(error);
         handleFeedback('error', error.message || 'Não foi possível carregar a página para edição.');
     } finally {
         setStatus('idle');
     }
   };
-  
-  const handleSaveChanges = async () => {
+
+  const handleSaveChanges = async () => { /* ... (implementation is same as before) ... */
     if (!editingPage) return;
     setStatus('saving');
     try {
@@ -230,38 +273,36 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
       });
       if (!response.ok) throw new Error((await response.json()).message || 'Falha ao salvar');
       const updatedPage = await response.json();
-      setSavedPage(updatedPage);
+      setSavedPage(JSON.parse(JSON.stringify(updatedPage))); // Deep copy for comparison
       setEditingPage(updatedPage);
-      setStatus('success');
       handleFeedback('success', 'Salvo com sucesso!');
-      setTimeout(() => setStatus('idle'), 2000);
+      setStatus('idle');
     } catch (error: any) {
-      console.error(error);
       handleFeedback('error', error.message || 'Falha ao salvar!');
       setStatus('error');
     }
   };
 
-  const handleCreatePage = async (e: React.FormEvent) => {
+  const handleCreatePage = async (e: React.FormEvent) => { /* ... (implementation is same as before) ... */
     e.preventDefault();
     setStatus('saving');
     try {
         const response = await fetch('/api/site/pages', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ title: newPageData.title, slug: newPageData.slug, content: defaultPageContent })
+            body: JSON.stringify({ title: newPageData.title, slug: newPageData.slug })
         });
         if (!response.ok) throw new Error((await response.json()).message || 'Falha ao criar página');
         const newPage = await response.json();
         setNewPageData({ title: '', slug: '' });
-        await handleEditPage(newPage); // Troca para a edição da nova página (já busca os dados completos)
-    } catch (error) {
-        console.error(error);
+        await handleEditPage(newPage);
+    } catch (error: any) {
+        handleFeedback('error', error.message || 'Erro ao criar página');
         setStatus('error');
     }
   };
-
-  const handleDeletePage = async (pageId: string) => {
+  
+  const handleDeletePage = async (pageId: string) => { /* ... (implementation is same as before) ... */
     if (!window.confirm("Você tem certeza que quer excluir esta página? Esta ação é irreversível.")) return;
     setStatus('deleting');
     try {
@@ -270,69 +311,157 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
             headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!response.ok) throw new Error((await response.json()).message || 'Falha ao excluir');
-        fetchPages(); // Refreshes the list
-    } catch (error) {
+        fetchPages();
+    } catch (error: any) {
         console.error(error);
+        handleFeedback('error', error.message || 'Falha ao excluir');
         setStatus('error');
     }
   };
 
-  // ----- Funções de Edição de Página (dentro da view do editor) -----
-  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  // --- Editor Content Handlers ---
+  const updateEditingPageContent = (newContent: SiteData) => {
+    setEditingPage(prev => prev ? { ...prev, content: newContent } : null);
+  };
+  
+  const handleAddSection = (columnsLayout: string[]) => {
+    if (!editingPage) return;
+    const newSection: SectionBlock = {
+        id: generateId('section'),
+        columns: columnsLayout.map(width => ({
+            id: generateId('col'),
+            blocks: [],
+            style: { width }
+        })),
+        style: { backgroundColor: 'transparent', paddingTop: '4rem', paddingBottom: '4rem', backgroundImage: '' }
+    };
+    const newContent = { ...editingPage.content, sections: [...editingPage.content.sections, newSection] };
+    updateEditingPageContent(newContent);
+  };
 
-  const handleUpdateEditingPage = (field: keyof Page, value: any) => {
-    setEditingPage(prev => prev ? { ...prev, [field]: value } : null);
+  const handleUpdateSection = (updatedSection: SectionBlock) => {
+      if (!editingPage) return;
+      const newSections = editingPage.content.sections.map(s => s.id === updatedSection.id ? updatedSection : s);
+      updateEditingPageContent({ ...editingPage.content, sections: newSections });
   };
   
-  const handleSettingsChange = (field: keyof SiteSettings, value: string) => {
-    if (!editingPage) return;
-    const newContent = { ...editingPage.content, settings: { ...editingPage.content.settings, [field]: value }};
-    handleUpdateEditingPage('content', newContent);
-  };
-  
-  const handleAddBlock = (type: PageBlock['type']) => {
-    if (!editingPage) return;
-    let newBlock: PageBlock;
-    const id = generateId();
-    switch (type) {
-      case 'hero': newBlock = { id, type, content: { title: 'Novo Título de Herói', subtitle: 'Um subtítulo atraente.', ctaText: 'Saiba Mais' } }; break;
-      case 'text': newBlock = { id, type, content: { heading: 'Nova Seção', body: 'Texto padrão.' } }; break;
-      case 'image': newBlock = { id, type, content: { imageUrl: 'https://via.placeholder.com/1200x600.png/1e293b/94a3b8?text=Imagem+Espa%C3%A7o+Reservado', altText: 'Imagem de Exemplo' } }; break;
-      case 'button': newBlock = { id, type, content: { text: 'Clique Aqui', link: '#' } }; break;
-    }
-    const newBlocks = [...editingPage.content.blocks, newBlock];
-    handleUpdateEditingPage('content', { ...editingPage.content, blocks: newBlocks });
-    setSelectedBlockId(id);
+  const handleDeleteElement = () => {
+      if (!editingPage || !selectedElement) return;
+      let newSections = [...editingPage.content.sections];
+      
+      if (selectedElement.type === 'section') {
+          newSections = newSections.filter(s => s.id !== selectedElement.element.id);
+      } else if (selectedElement.type === 'block') {
+          newSections = newSections.map(section => ({
+              ...section,
+              columns: section.columns.map(col => ({
+                  ...col,
+                  blocks: col.blocks.filter(b => b.id !== selectedElement.element.id)
+              }))
+          }));
+      }
+      
+      updateEditingPageContent({ ...editingPage.content, sections: newSections });
+      setSelectedElement(null);
   };
 
   const handleUpdateBlock = (updatedBlock: PageBlock) => {
-    if (!editingPage) return;
-    const newBlocks = editingPage.content.blocks.map(b => b.id === updatedBlock.id ? updatedBlock : b);
-    handleUpdateEditingPage('content', { ...editingPage.content, blocks: newBlocks });
+      if (!editingPage) return;
+      const newSections = editingPage.content.sections.map(section => ({
+          ...section,
+          columns: section.columns.map(col => ({
+              ...col,
+              blocks: col.blocks.map(b => b.id === updatedBlock.id ? updatedBlock : b)
+          }))
+      }));
+      updateEditingPageContent({ ...editingPage.content, sections: newSections });
+      setSelectedElement(prev => prev ? { ...prev, element: updatedBlock } : null);
   };
-  
-  const handleDeleteBlock = (idToDelete: string) => { 
-    if (!editingPage) return;
-    if (selectedBlockId === idToDelete) setSelectedBlockId(null); 
-    const newBlocks = editingPage.content.blocks.filter(b => b.id !== idToDelete);
-    handleUpdateEditingPage('content', { ...editingPage.content, blocks: newBlocks });
+
+  const handleUpdatePageSettings = (field: keyof SiteSettings, value: string) => {
+      if (!editingPage) return;
+      const newSettings = { ...editingPage.content.settings, [field]: value };
+      updateEditingPageContent({ ...editingPage.content, settings: newSettings });
   };
+
 
   const onDragEnd: OnDragEndResponder = (result) => {
-    if (!result.destination || !editingPage) return;
-    const items = Array.from(editingPage.content.blocks);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
-    handleUpdateEditingPage('content', { ...editingPage.content, blocks: items });
+    const { source, destination, type } = result;
+    if (!destination || !editingPage) return;
+
+    if (type === 'SECTION') {
+        const items = Array.from(editingPage.content.sections);
+        const [reorderedItem] = items.splice(source.index, 1);
+        items.splice(destination.index, 0, reorderedItem);
+        updateEditingPageContent({ ...editingPage.content, sections: items });
+    }
+
+    if (type === 'BLOCK') {
+        const sourceColId = source.droppableId;
+        const destColId = destination.droppableId;
+        
+        let sourceColBlocks: PageBlock[] = [];
+        let destColBlocks: PageBlock[] = [];
+        let sourceSectionIdx = -1;
+        let sourceColIdx = -1;
+
+        editingPage.content.sections.forEach((s, sIdx) => {
+            s.columns.forEach((c, cIdx) => {
+                if (c.id === sourceColId) {
+                    sourceColBlocks = [...c.blocks];
+                    sourceSectionIdx = sIdx;
+                    sourceColIdx = cIdx;
+                }
+            });
+        });
+
+        const newSections = JSON.parse(JSON.stringify(editingPage.content.sections));
+
+        if (sourceColId === destColId) {
+            // Reordering in the same column
+            const colBlocks = newSections[sourceSectionIdx].columns[sourceColIdx].blocks;
+            const [movedBlock] = colBlocks.splice(source.index, 1);
+            colBlocks.splice(destination.index, 0, movedBlock);
+        } else {
+            // Moving between columns
+            let destSectionIdx = -1, destColIdx = -1;
+             editingPage.content.sections.forEach((s, sIdx) => {
+                s.columns.forEach((c, cIdx) => {
+                    if (c.id === destColId) {
+                        destSectionIdx = sIdx;
+                        destColIdx = cIdx;
+                    }
+                });
+            });
+
+            const [movedBlock] = newSections[sourceSectionIdx].columns[sourceColIdx].blocks.splice(source.index, 1);
+            newSections[destSectionIdx].columns[destColIdx].blocks.splice(destination.index, 0, movedBlock);
+        }
+        updateEditingPageContent({ ...editingPage.content, sections: newSections });
+    }
+  };
+
+  const onAddComponent = (type: PageBlock['type'], colId: string) => {
+    if (!editingPage) return;
+    const newBlock = createNewBlock(type);
+    const newSections = editingPage.content.sections.map(section => ({
+        ...section,
+        columns: section.columns.map(col => {
+            if (col.id === colId) {
+                return { ...col, blocks: [...col.blocks, newBlock] };
+            }
+            return col;
+        })
+    }));
+    updateEditingPageContent({ ...editingPage.content, sections: newSections });
   };
   
-  const selectedBlock = editingPage?.content.blocks.find(b => b.id === selectedBlockId);
-  const hasUnsavedChanges = JSON.stringify(editingPage) !== JSON.stringify(savedPage);
+  const hasUnsavedChanges = useMemo(() => JSON.stringify(editingPage) !== JSON.stringify(savedPage), [editingPage, savedPage]);
 
-  // ----- RENDERIZADORES DE VIEW -----
-
-  const renderListView = () => (
-    <div className="p-6">
+  // ----- RENDERERS -----
+  
+  const renderListView = () => ( /* ... (same as before) ... */ 
+      <div className="p-6">
         <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-slate-100">Gerenciador de Páginas</h2>
             <button onClick={() => setView('create')} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2"><FilePlusIcon className="w-5 h-5"/> Criar Nova Página</button>
@@ -342,14 +471,7 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
         {status !== 'loading' && (
             <div className="overflow-x-auto bg-slate-800/50 rounded-lg border border-slate-800">
                 <table className="min-w-full">
-                    <thead>
-                        <tr className="border-b border-slate-700">
-                            <th className="p-3 text-left text-sm font-semibold text-slate-400">Título da Página</th>
-                            <th className="p-3 text-left text-sm font-semibold text-slate-400">URL (Slug)</th>
-                            <th className="p-3 text-left text-sm font-semibold text-slate-400">Status</th>
-                            <th className="p-3 text-left text-sm font-semibold text-slate-400">Ações</th>
-                        </tr>
-                    </thead>
+                    <thead><tr className="border-b border-slate-700"><th className="p-3 text-left text-sm font-semibold text-slate-400">Título</th><th className="p-3 text-left text-sm font-semibold text-slate-400">URL</th><th className="p-3 text-left text-sm font-semibold text-slate-400">Status</th><th className="p-3 text-left text-sm font-semibold text-slate-400">Ações</th></tr></thead>
                     <tbody>
                         {pages.map(page => (
                             <tr key={page.id} className="border-b border-slate-800 hover:bg-slate-800/50">
@@ -369,124 +491,106 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
     </div>
   );
   
-  const renderCreateView = () => (
-    <div className="p-6">
+  const renderCreateView = () => ( /* ... (same as before) ... */ 
+     <div className="p-6">
         <button onClick={() => setView('list')} className="flex items-center gap-2 mb-4 text-slate-400 hover:text-white"><ArrowLeftIcon className="w-4 h-4" /> Voltar para a Lista</button>
         <h2 className="text-2xl font-bold text-slate-100 mb-6">Criar Nova Página</h2>
         <form onSubmit={handleCreatePage} className="max-w-md space-y-4">
-            <div>
-                <label className="block text-sm font-medium text-slate-400 mb-1">Título da Página</label>
-                <input type="text" value={newPageData.title} onChange={e => setNewPageData({...newPageData, title: e.target.value})} required className="w-full bg-slate-900 border border-slate-700 rounded-md p-2" placeholder="Ex: Sobre Nós"/>
-            </div>
-            <div>
-                <label className="block text-sm font-medium text-slate-400 mb-1">URL (Slug)</label>
-                <input type="text" value={newPageData.slug} onChange={e => setNewPageData({...newPageData, slug: e.target.value.toLowerCase().replace(/\s+/g, '-')})} required className="w-full bg-slate-900 border border-slate-700 rounded-md p-2" placeholder="ex: sobre-nos"/>
-                <p className="text-xs text-slate-500 mt-1">Isso definirá a URL da sua página. Use apenas letras, números e hifens.</p>
-            </div>
-            <div className="pt-2">
-                <button type="submit" disabled={status === 'saving'} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg">
-                    {status === 'saving' ? 'Criando...' : 'Criar e Editar Página'}
-                </button>
-            </div>
+            <div><label className="block text-sm font-medium text-slate-400 mb-1">Título</label><input type="text" value={newPageData.title} onChange={e => setNewPageData({...newPageData, title: e.target.value})} required className="w-full bg-slate-900 border border-slate-700 rounded-md p-2" /></div>
+            <div><label className="block text-sm font-medium text-slate-400 mb-1">URL (Slug)</label><input type="text" value={newPageData.slug} onChange={e => setNewPageData({...newPageData, slug: e.target.value.toLowerCase().replace(/\s+/g, '-')})} required className="w-full bg-slate-900 border border-slate-700 rounded-md p-2" /><p className="text-xs text-slate-500 mt-1">Use apenas letras, números e hifens.</p></div>
+            <div className="pt-2"><button type="submit" disabled={status === 'saving'} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg">{status === 'saving' ? 'Criando...' : 'Criar e Editar'}</button></div>
         </form>
     </div>
   );
 
   const renderEditorView = () => {
-    if (status === 'loading') return <div className="text-center p-8">Carregando editor...</div>;
-    if (!editingPage) return <div className="text-center p-8 text-red-400">Não foi possível carregar a página. Tente voltar para a lista.</div>;
+    if (status === 'loading' || !editingPage) return <div className="text-center p-8">Carregando editor...</div>;
+    
+    const pageStyle = { backgroundColor: editingPage.content.settings.backgroundColor || '#0f172a' };
     
     return (
-      <div className="flex flex-row h-full w-full overflow-hidden">
-        {/* Painel Lateral */}
+     <DragDropContext onDragEnd={onDragEnd}>
+      <div className="flex flex-row h-full w-full overflow-hidden bg-slate-900">
         <aside className={`flex-shrink-0 bg-slate-800/80 backdrop-blur-sm border-r border-slate-700 transition-all duration-300 ease-in-out overflow-hidden ${isPanelOpen ? 'w-full max-w-sm' : 'w-0'}`}>
           <div className="h-full flex flex-col">
-              <div className="flex-grow overflow-y-auto">
-                  {selectedBlock ? (
-                      <MemoizedInspector block={selectedBlock} onUpdate={handleUpdateBlock} onBack={() => setSelectedBlockId(null)} />
-                  ) : (
-                      <div className="p-4">
-                          <h3 className="text-lg font-bold text-cyan-400 mb-4 flex items-center gap-2"><SettingsIcon className="w-5 h-5"/> Configurações da Página</h3>
-                           <div className="space-y-4 mb-6">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-400 mb-1">Título da Página</label>
-                                    <input value={editingPage.title} onChange={e => handleUpdateEditingPage('title', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2" />
-                                </div>
-                               <div>
-                                    <label className="block text-sm font-medium text-slate-400 mb-1">URL (Slug)</label>
-                                    <input value={editingPage.slug} onChange={e => handleUpdateEditingPage('slug', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2" />
-                                </div>
-                            </div>
-
-                          <div className="border-t border-slate-700 my-6"></div>
-
-                          <h3 className="text-lg font-bold text-cyan-400 mb-4 flex items-center gap-2"><PlusCircleIcon className="w-5 h-5"/> Adicionar Componente</h3>
-                          <div className="space-y-2">
-                              <button onClick={() => handleAddBlock('hero')} className="w-full flex items-center gap-3 p-3 bg-slate-700 hover:bg-slate-600 rounded-md text-left"><MotorcycleIcon className="w-5 h-5 text-cyan-400"/> Seção de Herói</button>
-                              <button onClick={() => handleAddBlock('text')} className="w-full flex items-center gap-3 p-3 bg-slate-700 hover:bg-slate-600 rounded-md text-left"><TypeIcon className="w-5 h-5 text-cyan-400"/> Bloco de Texto</button>
-                              <button onClick={() => handleAddBlock('image')} className="w-full flex items-center gap-3 p-3 bg-slate-700 hover:bg-slate-600 rounded-md text-left"><ImageIcon className="w-5 h-5 text-cyan-400"/> Imagem</button>
-                              <button onClick={() => handleAddBlock('button')} className="w-full flex items-center gap-3 p-3 bg-slate-700 hover:bg-slate-600 rounded-md text-left"><CodeIcon className="w-5 h-5 text-cyan-400"/> Botão</button>
-                          </div>
-                      </div>
-                  )}
+              <div className="flex-shrink-0 border-b border-slate-700 flex">
+                {(['inspector', 'structure', 'components'] as const).map(tab => (
+                    <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 p-3 text-sm font-semibold capitalize ${activeTab === tab ? 'bg-slate-900 text-cyan-400' : 'text-slate-400 hover:bg-slate-700'}`}>{tab}</button>
+                ))}
               </div>
-              {/* Rodapé fixo do painel lateral */}
-              {!selectedBlock && (
-                <div className="flex-shrink-0 p-4 border-t border-slate-700 bg-slate-800 space-y-3">
-                   <div className="h-5">
-                      {feedback && (
-                        <div className={`text-sm font-semibold ${feedback.type === 'error' ? 'text-red-400' : 'text-green-400'}`}>
-                            {feedback.message}
-                        </div>
-                      )}
-                      {hasUnsavedChanges && !feedback && status !== 'error' && <div className="text-yellow-400 text-sm font-semibold">Alterações não salvas</div>}
-                      {status === 'success' && !hasUnsavedChanges && <div className="text-green-400 text-sm font-semibold">Salvo com sucesso!</div>}
-                  </div>
-                  {status === 'error' ? (
-                      <div className="flex items-center justify-between gap-4 text-red-400 text-sm font-semibold">
-                          <p>Falha ao salvar!</p>
-                          <button onClick={handleSaveChanges} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg">Tentar Novamente</button>
-                      </div>
-                  ) : (
-                      <button onClick={handleSaveChanges} disabled={!hasUnsavedChanges || status === 'saving'} className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg disabled:bg-slate-600 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                          <SaveIcon className="w-5 h-5"/>
-                          {status === 'saving' ? 'Salvando...' : 'Salvar Alterações'}
-                      </button>
-                  )}
-                </div>
-              )}
+              <div className="flex-grow overflow-y-auto">
+                 {activeTab === 'inspector' && <InspectorPanel selectedElement={selectedElement} pageSettings={editingPage.content.settings} onUpdateBlock={handleUpdateBlock} onUpdateSection={handleUpdateSection} onUpdatePageSettings={handleUpdatePageSettings}/>}
+                 {activeTab === 'structure' && <div className="p-4 space-y-2">
+                    <h3 className="text-lg font-bold text-cyan-400 mb-2">Estrutura</h3>
+                    <button onClick={() => handleAddSection(['100%'])} className="w-full p-2 bg-slate-700 hover:bg-slate-600 rounded">1 Coluna</button>
+                    <button onClick={() => handleAddSection(['50%', '50%'])} className="w-full p-2 bg-slate-700 hover:bg-slate-600 rounded">2 Colunas (50/50)</button>
+                    <button onClick={() => handleAddSection(['33.33%', '66.67%'])} className="w-full p-2 bg-slate-700 hover:bg-slate-600 rounded">2 Colunas (33/67)</button>
+                    <button onClick={() => handleAddSection(['33.33%', '33.33%', '33.33%'])} className="w-full p-2 bg-slate-700 hover:bg-slate-600 rounded">3 Colunas</button>
+                  </div>}
+                 {activeTab === 'components' && <div className="p-4 space-y-2">
+                    <h3 className="text-lg font-bold text-cyan-400 mb-2">Componentes</h3>
+                     <p className="text-xs text-slate-500 mb-4">Arraste um componente para uma coluna na página.</p>
+                    {/* Placeholder for draggable components */}
+                     <div className="w-full flex items-center gap-3 p-3 bg-slate-700 rounded-md text-left"><MotorcycleIcon className="w-5 h-5 text-cyan-400"/> Seção de Herói</div>
+                     <div className="w-full flex items-center gap-3 p-3 bg-slate-700 rounded-md text-left"><TypeIcon className="w-5 h-5 text-cyan-400"/> Bloco de Texto</div>
+                     <div className="w-full flex items-center gap-3 p-3 bg-slate-700 rounded-md text-left"><ImageIcon className="w-5 h-5 text-cyan-400"/> Imagem</div>
+                     <div className="w-full flex items-center gap-3 p-3 bg-slate-700 rounded-md text-left"><CodeIcon className="w-5 h-5 text-cyan-400"/> Botão</div>
+                     <div className="w-full flex items-center gap-3 p-3 bg-slate-700 rounded-md text-left"><MenuIcon className="w-5 h-5 text-cyan-400"/> Menu</div>
+                 </div>}
+              </div>
+              <div className="flex-shrink-0 p-4 border-t border-slate-700 bg-slate-800 space-y-3">
+                 <div className="h-5 text-sm font-semibold">{hasUnsavedChanges ? <span className="text-yellow-400">Alterações não salvas</span> : <span className="text-green-400/80">Sincronizado</span>}</div>
+                  <button onClick={handleSaveChanges} disabled={!hasUnsavedChanges || status === 'saving'} className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg disabled:bg-slate-600 disabled:cursor-not-allowed flex items-center justify-center gap-2"><SaveIcon className="w-5 h-5"/>{status === 'saving' ? 'Salvando...' : 'Salvar Alterações'}</button>
+                  {selectedElement && <button onClick={handleDeleteElement} className="w-full bg-red-800 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2"><Trash2Icon className="w-5 h-5"/> Excluir {selectedElement.type}</button>}
+              </div>
           </div>
         </aside>
 
-        {/* Área de Conteúdo Principal */}
         <div className="flex-1 relative">
-           <button onClick={() => setIsPanelOpen(!isPanelOpen)} className="absolute top-4 left-4 bg-slate-800 hover:bg-cyan-600 text-white p-2 rounded-lg z-30 transition-all duration-300 ease-in-out">
-              {isPanelOpen ? <ChevronLeftIcon className="w-5 h-5"/> : <ChevronRightIcon className="w-5 h-5"/>}
-            </button>
-            <main className="h-full overflow-y-auto bg-slate-900 p-8">
-              <DragDropContext onDragEnd={onDragEnd}>
-                <StrictModeDroppable droppableId="canvas">
-                    {(provided) => (
-                        <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-4 max-w-5xl mx-auto">
-                            {editingPage.content.blocks.map((block, index) => (
-                                <Draggable key={block.id} draggableId={block.id} index={index}>
-                                    {(provided, snapshot) => (
-                                        <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} onClick={() => { setSelectedBlockId(block.id); setIsPanelOpen(true); }} className={`relative rounded-lg ring-2 transition-all cursor-pointer ${selectedBlockId === block.id ? 'ring-cyan-500' : 'ring-transparent hover:ring-slate-600'} ${snapshot.isDragging ? 'shadow-2xl shadow-cyan-900/50 opacity-80' : ''}`}>
-                                            <div className="absolute top-2 right-2 z-10 flex gap-1 opacity-0 hover:opacity-100 transition-opacity"><button onClick={(e) => { e.stopPropagation(); handleDeleteBlock(block.id); }} className="p-1.5 bg-red-800/80 hover:bg-red-700 rounded-md text-white"><Trash2Icon className="w-4 h-4" /></button></div>
-                                            <div className="pointer-events-none"><MemoizedPreviewBlock {...block} /></div>
+           <button onClick={() => setIsPanelOpen(!isPanelOpen)} className="absolute top-4 -left-0.5 bg-slate-800 hover:bg-cyan-600 text-white p-2 rounded-r-lg z-30"><ChevronRightIcon className="w-5 h-5"/></button>
+            <main className="h-full overflow-y-auto p-4" style={pageStyle}>
+              <StrictModeDroppable droppableId="canvas" type="SECTION">
+                  {(provided) => (
+                      <div {...provided.droppableProps} ref={provided.innerRef} className="max-w-7xl mx-auto space-y-2">
+                          {editingPage.content.sections.map((section, index) => (
+                              <Draggable key={section.id} draggableId={section.id} index={index}>
+                                {(provided) => (
+                                    <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} onClick={() => setSelectedElement({type: 'section', element: section})} style={{...provided.draggableProps.style, backgroundColor: section.style.backgroundColor}} className={`p-4 rounded-lg ring-2 ${selectedElement?.element.id === section.id ? 'ring-cyan-500' : 'ring-transparent hover:ring-slate-600'} cursor-pointer`}>
+                                        <div className="flex flex-wrap -m-1">
+                                            {section.columns.map(col => (
+                                                <StrictModeDroppable key={col.id} droppableId={col.id} type="BLOCK">
+                                                    {(provided, snapshot) => (
+                                                        <div ref={provided.innerRef} {...provided.droppableProps} style={{width: col.style.width}} className={`p-1 min-h-[100px] rounded ${snapshot.isDraggingOver ? 'bg-cyan-900/50' : 'bg-slate-800/20'}`}>
+                                                            {col.blocks.map((block, index) => (
+                                                                <Draggable key={block.id} draggableId={block.id} index={index}>
+                                                                    {(provided) => (
+                                                                        <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} onClick={(e) => { e.stopPropagation(); setSelectedElement({type: 'block', element: block}); }} style={provided.draggableProps.style} className={`p-1 rounded ring-2 mb-2 ${selectedElement?.element.id === block.id ? 'ring-cyan-400' : 'ring-transparent'}`}>
+                                                                            <BlockRenderer block={block} />
+                                                                        </div>
+                                                                    )}
+                                                                </Draggable>
+                                                            ))}
+                                                            {provided.placeholder}
+                                                             {col.blocks.length === 0 && <div className="text-center text-xs text-slate-500 p-4 border-2 border-dashed border-slate-700 rounded-lg">Arraste um componente aqui ou clique em +</div>}
+                                                              <button onClick={() => onAddComponent('text', col.id)} className="w-full mt-2 text-slate-500 hover:text-cyan-400 p-1 rounded bg-slate-800/50 hover:bg-slate-700/50 text-sm">+</button>
+                                                        </div>
+                                                    )}
+                                                </StrictModeDroppable>
+                                            ))}
                                         </div>
-                                    )}
-                                </Draggable>
-                            ))}
-                            {provided.placeholder}
-                        </div>
-                    )}
-                </StrictModeDroppable>
-              </DragDropContext>
-              {editingPage.content.blocks.length === 0 && <div className="text-center py-20 text-slate-500"><p>Sua página está vazia.</p><p>Use o painel lateral para adicionar seu primeiro componente.</p></div>}
+                                    </div>
+                                )}
+                              </Draggable>
+                          ))}
+                          {provided.placeholder}
+                      </div>
+                  )}
+              </StrictModeDroppable>
+              {editingPage.content.sections.length === 0 && <div className="text-center py-20 text-slate-500"><p>Use a aba 'Estrutura' no painel para adicionar sua primeira seção.</p></div>}
             </main>
         </div>
       </div>
+     </DragDropContext>
     );
   };
   
@@ -494,21 +598,11 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
     <div className="flex flex-col h-screen bg-slate-900 text-slate-300 font-sans">
       <header className="bg-slate-900/80 backdrop-blur-sm z-40 border-b border-slate-800 flex items-center justify-between h-16 px-6 flex-shrink-0">
           <div className="flex items-center gap-4">
-              <button
-                onClick={view === 'editor' || view === 'create' ? () => setView('list') : onBackToDashboard}
-                className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold py-2 px-4 rounded-lg inline-flex items-center transition-colors duration-200 border border-slate-700"
-              >
-                <ArrowLeftIcon className="w-5 h-5 mr-2" />
-                <span>{view === 'editor' || view === 'create' ? 'Lista de Páginas' : 'Painel'}</span>
-              </button>
+              <button onClick={view === 'editor' || view === 'create' ? () => setView('list') : onBackToDashboard} className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold py-2 px-4 rounded-lg inline-flex items-center"><ArrowLeftIcon className="w-5 h-5 mr-2" /><span>{view === 'editor' || view === 'create' ? 'Páginas' : 'Painel'}</span></button>
               <h2 className="text-xl font-bold text-slate-100">{view === 'editor' && editingPage ? `Editando: ${editingPage.title}` : 'Gerenciador de Site'}</h2>
           </div>
+           {feedback && <div className={`text-sm font-semibold ${feedback.type === 'error' ? 'text-red-400' : 'text-green-400'}`}>{feedback.message}</div>}
       </header>
-       {feedback && view !== 'editor' && (
-            <div className={`p-3 rounded-lg m-4 text-center ${feedback.type === 'error' ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>
-                {feedback.message}
-            </div>
-        )}
       <div className="flex-1 relative overflow-hidden">
         {view === 'list' && renderListView()}
         {view === 'create' && renderCreateView()}
@@ -517,16 +611,5 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
     </div>
   );
 };
-
-// --- Subcomponentes estáticos para evitar re-renderizações desnecessárias ---
-Inspector.displayName = "Inspector";
-const MemoizedInspector = React.memo(Inspector);
-
-// Componente memoizado para renderização do bloco
-const MemoizedPreviewBlock: React.FC<PageBlock> = React.memo((block) => {
-    return renderPreviewBlock(block);
-});
-MemoizedPreviewBlock.displayName = "MemoizedPreviewBlock";
-
 
 export default SiteEditor;

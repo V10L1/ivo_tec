@@ -13,7 +13,6 @@ import SupportTickets from './modules/suporte/SupportTickets';
 import UserManagement from './modules/usuario/UserManagement';
 import PublicSite from './modules/site/PublicSite';
 import Login from './modules/usuario/Login';
-import PreviewSite from './modules/site/PreviewSite';
 import InitialSetup from './modules/usuario/InitialSetup';
 import ForgotPassword from './modules/usuario/ForgotPassword';
 import Register from './modules/usuario/Register';
@@ -145,11 +144,7 @@ const AppContent: React.FC = () => {
     } else {
       content = isAuthenticated ? <AdminPanel /> : <Login />;
     }
-  } else if (path.startsWith('/preview')) {
-    const pageId = path.split('/')[1]; // Assumindo /preview/:pageId
-    content = <PreviewSite pageId={pageId} />;
-  }
-  else {
+  } else {
     // Roteamento dinâmico para páginas públicas
     const slug = path === '/' ? 'home' : path.substring(1);
     content = <PublicSite slug={slug} />;

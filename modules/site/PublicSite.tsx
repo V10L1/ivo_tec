@@ -1,50 +1,84 @@
 import React, { useState, useEffect } from 'react';
 import { MotorcycleIcon } from '../../components/icons/Icons';
 import { useRouter } from '../../App';
-import { PageBlock, Page } from '../../types';
+import { Page, PageBlock, SectionBlock, MenuBlockContent } from '../../types';
 
 // --- Renderizadores de Bloco Dinâmicos ---
 const renderBlock = (block: PageBlock) => {
     switch (block.type) {
         case 'hero':
             return (
-                <main key={block.id} className="container mx-auto px-6 py-16 text-center">
+                <div key={block.id} className="text-center py-10">
                     <h1 className="text-5xl font-extrabold text-white mb-4">{block.content.title}</h1>
                     <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-8">{block.content.subtitle}</p>
                     <button className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-8 rounded-full text-lg transition-transform transform hover:scale-105">
                         {block.content.ctaText}
                     </button>
-                </main>
+                </div>
             );
         case 'text':
             return (
-                 <section key={block.id} className="py-12">
-                    <div className="container mx-auto px-6 max-w-3xl text-left">
+                 <div key={block.id} className="py-6">
+                    <div className="max-w-3xl mx-auto text-left">
                         <h2 className="text-3xl font-bold text-center mb-6 text-white">{block.content.heading}</h2>
                         <p className="text-slate-400 whitespace-pre-wrap leading-relaxed">{block.content.body}</p>
                     </div>
-                </section>
+                </div>
             );
         case 'image':
             return (
-                <section key={block.id} className="py-12">
-                    <div className="container mx-auto px-6">
-                        <img src={block.content.imageUrl} alt={block.content.altText} className="rounded-lg max-w-4xl h-auto mx-auto shadow-lg" />
-                    </div>
-                </section>
+                <div key={block.id} className="py-6">
+                    <img src={block.content.imageUrl} alt={block.content.altText} className="rounded-lg max-w-full h-auto mx-auto shadow-lg" />
+                </div>
             );
         case 'button':
             return (
-                 <section key={block.id} className="py-8 text-center">
+                 <div key={block.id} className="py-8 text-center">
                     <a href={block.content.link} className="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-8 rounded-lg inline-block transition-colors">
                         {block.content.text}
                     </a>
-                </section>
+                </div>
+            );
+        case 'menu':
+            const content = block.content as MenuBlockContent;
+            return (
+                 <nav key={block.id} className="flex items-center justify-center gap-6 py-4">
+                    {content.items.map(item => (
+                        <a key={item.id} href={item.link} className="text-slate-300 hover:text-cyan-400 font-medium transition-colors">
+                            {item.label}
+                        </a>
+                    ))}
+                </nav>
             );
         default:
             return null;
     }
 };
+
+const renderSection = (section: SectionBlock) => {
+    const sectionStyle = {
+        backgroundColor: section.style.backgroundColor || 'transparent',
+        paddingTop: section.style.paddingTop,
+        paddingBottom: section.style.paddingBottom,
+        backgroundImage: section.style.backgroundImage ? `url(${section.style.backgroundImage})` : 'none',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+    };
+    return (
+        <section key={section.id} style={sectionStyle}>
+            <div className="container mx-auto px-6">
+                <div className="flex flex-wrap -mx-4">
+                    {section.columns.map(column => (
+                        <div key={column.id} className="px-4" style={{ width: column.style.width }}>
+                            {column.blocks.map(block => renderBlock(block))}
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </section>
+    );
+};
+
 
 interface PublicSiteProps {
   slug: string;
@@ -95,13 +129,16 @@ const PublicSite: React.FC<PublicSiteProps> = ({ slug }) => {
     if (status === 'error' || !page) {
        return <div className="text-center py-20 text-red-400">Ocorreu um erro ao carregar o conteúdo.</div>;
     }
-    return page.content.blocks?.map(block => renderBlock(block));
+    return page.content.sections?.map(section => renderSection(section));
   };
   
   const siteSettings = page?.content?.settings;
+  const pageStyle = {
+    backgroundColor: siteSettings?.backgroundColor || '#0f172a' // slate-900
+  };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 font-sans">
+    <div className="min-h-screen text-slate-100 font-sans" style={pageStyle}>
       <header className="bg-slate-800/50 backdrop-blur-sm sticky top-0 z-10 border-b border-slate-800">
         <nav className="container mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">

@@ -1,15 +1,20 @@
 // api/site/site.routes.ts
 // FIX: Removed aliasing for Request and Response types from express to resolve type conflicts.
-import express, { Request, Response } from 'express';
+import express from 'express';
 import { pool } from '../../core/db';
 import { verifyToken, checkModulePermission } from '../../core/auth.middleware';
 
 const router = express.Router();
 
+const defaultNewPageContent = {
+  settings: { brandName: 'Nova Marca', loginButtonText: 'Login', backgroundColor: '#0f172a' },
+  sections: [],
+};
+
 // --- Rotas Públicas (sem autenticação) ---
 
 // Obter página pela Home
-router.get('/pages/public/home', async (req: Request, res: Response) => {
+router.get('/pages/public/home', async (req: express.Request, res: express.Response) => {
     try {
         res.setHeader('Cache-Control', 'no-store');
         const result = await pool.query('SELECT * FROM pages WHERE is_homepage = TRUE AND is_published = TRUE LIMIT 1');
@@ -24,7 +29,7 @@ router.get('/pages/public/home', async (req: Request, res: Response) => {
 });
 
 // Obter página pelo slug
-router.get('/pages/public/slug/:slug', async (req: Request, res: Response) => {
+router.get('/pages/public/slug/:slug', async (req: express.Request, res: express.Response) => {
     try {
         res.setHeader('Cache-Control', 'no-store');
         const { slug } = req.params;
@@ -43,7 +48,7 @@ router.get('/pages/public/slug/:slug', async (req: Request, res: Response) => {
 // --- Rotas de Administração (requerem autenticação e permissão) ---
 
 // Listar todas as páginas
-router.get('/pages', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
+router.get('/pages', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     try {
         const result = await pool.query('SELECT id, title, slug, is_homepage, is_published, updated_at FROM pages ORDER BY title');
         res.json(result.rows);
@@ -54,15 +59,15 @@ router.get('/pages', verifyToken, checkModulePermission('SITE'), async (req: Req
 });
 
 // Criar uma nova página
-router.post('/pages', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
-    const { title, slug, content } = req.body;
+router.post('/pages', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
+    const { title, slug } = req.body;
     if (!title || !slug) {
         return res.status(400).json({ message: 'Título e slug são obrigatórios.' });
     }
     try {
         const result = await pool.query(
             'INSERT INTO pages (title, slug, content) VALUES ($1, $2, $3) RETURNING *',
-            [title, slug, content || {}]
+            [title, slug, defaultNewPageContent]
         );
         res.status(201).json(result.rows[0]);
     } catch (error: any) {
@@ -75,7 +80,7 @@ router.post('/pages', verifyToken, checkModulePermission('SITE'), async (req: Re
 });
 
 // Obter dados de uma página específica para edição
-router.get('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
+router.get('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     try {
         const { id } = req.params;
         const result = await pool.query('SELECT * FROM pages WHERE id = $1', [id]);
@@ -90,7 +95,7 @@ router.get('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req:
 });
 
 // Atualizar uma página
-router.put('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
+router.put('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     const { id } = req.params;
     const { title, slug, is_published, content } = req.body;
 
@@ -117,7 +122,7 @@ router.put('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req:
 });
 
 // Excluir uma página
-router.delete('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
+router.delete('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     const { id } = req.params;
     try {
         const pageCheck = await pool.query('SELECT is_homepage FROM pages WHERE id = $1', [id]);
