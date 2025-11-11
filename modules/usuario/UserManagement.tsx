@@ -3,22 +3,28 @@ import { UserRole, AppKey } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { User } from '../../database/schema';
 import { APP_MODULES } from '../../constants';
-import { ArrowLeftIcon, UsersIcon, ShieldIcon, Trash2Icon, SaveIcon } from '../../components/icons/Icons';
+import { ArrowLeftIcon, UsersIcon, ShieldIcon, Trash2Icon, SaveIcon, PlusCircleIcon } from '../../components/icons/Icons';
 
 type DisplayUser = Omit<User, 'passwordHash' | 'createdAt'>;
-type View = 'main' | 'users' | 'groups' | 'userDetails' | 'groupDetails';
+type View = 'main' | 'users' | 'groups' | 'userDetails' | 'groupDetails' | 'createUser' | 'createGroup';
 
 const UserManagement: React.FC = () => {
   const [view, setView] = useState<View>('main');
   const [selectedUser, setSelectedUser] = useState<DisplayUser | null>(null);
-  const [selectedGroup, setSelectedGroup] = useState<UserRole | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const [users, setUsers] = useState<DisplayUser[]>([]);
   const [status, setStatus] = useState<'loading' | 'idle' | 'error' | 'submitting'>('loading');
   const [feedback, setFeedback] = useState<{ type: 'error' | 'success', message: string } | null>(null);
   const [editedRole, setEditedRole] = useState<UserRole | null>(null);
   
+  // State for new user
+  const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: UserRole.OPERATOR });
+  
+  // State for new group
+  const [newGroupName, setNewGroupName] = useState('');
+
   // State for group permissions editing
-  const [allPermissions, setAllPermissions] = useState<Record<UserRole, AppKey[]>>({} as Record<UserRole, AppKey[]>);
+  const [allPermissions, setAllPermissions] = useState<Record<string, AppKey[]>>({} as Record<UserRole, AppKey[]>);
   const [tempPermissions, setTempPermissions] = useState<AppKey[]>([]);
 
   const { token, currentUser } = useAuth();
@@ -72,7 +78,7 @@ const UserManagement: React.FC = () => {
     setView('userDetails');
   };
 
-  const handleSelectGroup = (role: UserRole) => {
+  const handleSelectGroup = (role: string) => {
     setSelectedGroup(role);
     // Initialize tempPermissions from the fetched permissions for the selected group
     setTempPermissions(allPermissions[role] ? [...allPermissions[role]] : []);
@@ -155,6 +161,58 @@ const UserManagement: React.FC = () => {
     }
   };
 
+    const handleCreateUser = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setStatus('submitting');
+        try {
+            const response = await fetch('/api/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(newUser)
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Falha ao criar o usuário.');
+            }
+            handleFeedback('success', 'Usuário criado com sucesso!');
+            await fetchUsers();
+            setView('users');
+            setNewUser({ name: '', email: '', password: '', role: UserRole.OPERATOR });
+        } catch (error: any) {
+            handleFeedback('error', error.message);
+        } finally {
+            setStatus('idle');
+        }
+    };
+
+    const handleCreateGroup = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newGroupName.trim()) {
+            handleFeedback('error', 'O nome do grupo não pode estar vazio.');
+            return;
+        }
+        setStatus('submitting');
+        try {
+            const response = await fetch('/api/permissions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ role: newGroupName, permissions: [] })
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Falha ao criar o grupo.');
+            }
+            handleFeedback('success', `Grupo '${newGroupName}' criado com sucesso.`);
+            await fetchPermissions();
+            setView('groups');
+            setNewGroupName('');
+        } catch (error: any) {
+            handleFeedback('error', error.message);
+        } finally {
+            setStatus('idle');
+        }
+    };
+
   const renderMain = () => (
     <>
       <h3 className="text-xl font-semibold text-white mb-4">Gerenciamento de Usuários e Grupos</h3>
@@ -181,6 +239,10 @@ const UserManagement: React.FC = () => {
       {status === 'loading' && <p>Carregando...</p>}
       {status === 'error' && <p className="text-red-400">Não foi possível carregar os usuários.</p>}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+        <div onClick={() => setView('createUser')} className="group relative aspect-square bg-slate-800 rounded-lg p-4 flex flex-col items-center justify-center gap-2 cursor-pointer border-2 border-dashed border-slate-700 hover:border-cyan-400 transition-all duration-300 text-center">
+            <PlusCircleIcon className="w-12 h-12 text-slate-500 group-hover:text-cyan-400 transition-colors" />
+            <h4 className="font-bold text-md text-slate-400 group-hover:text-white">Criar Novo Usuário</h4>
+        </div>
         {users.map(user => (
           <div key={user.id} onClick={() => handleSelectUser(user)} className="group relative aspect-square bg-slate-800 rounded-lg p-4 flex flex-col items-center justify-center gap-2 cursor-pointer border border-slate-700 hover:border-cyan-400 transition-all duration-300 text-center">
             <div className="w-20 h-20 rounded-full bg-slate-700 flex items-center justify-center mb-2">
@@ -202,7 +264,11 @@ const UserManagement: React.FC = () => {
        {status === 'loading' && <p>Carregando...</p>}
        {status === 'error' && <p className="text-red-400">Não foi possível carregar os grupos.</p>}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-        {Object.values(UserRole).map(role => (
+        <div onClick={() => setView('createGroup')} className="group relative aspect-square bg-slate-800 rounded-lg p-4 flex flex-col items-center justify-center gap-2 cursor-pointer border-2 border-dashed border-slate-700 hover:border-cyan-400 transition-all duration-300 text-center">
+            <PlusCircleIcon className="w-12 h-12 text-slate-500 group-hover:text-cyan-400 transition-colors" />
+            <h4 className="font-bold text-md text-slate-400 group-hover:text-white">Criar Novo Grupo</h4>
+        </div>
+        {Object.keys(allPermissions).sort().map(role => (
           <div key={role} onClick={() => handleSelectGroup(role)} className="group relative aspect-square bg-slate-800 rounded-lg p-4 flex flex-col items-center justify-center gap-2 cursor-pointer border border-slate-700 hover:border-cyan-400 transition-all duration-300">
              <ShieldIcon className="w-12 h-12 text-cyan-400 mx-auto"/>
              <h4 className="font-bold text-lg text-slate-100 mt-3">{role}</h4>
@@ -225,7 +291,7 @@ const UserManagement: React.FC = () => {
             <div className="max-w-sm">
                 <label htmlFor="userRole" className="block text-sm font-medium text-slate-400 mb-2">Função do Usuário</label>
                 <select id="userRole" value={editedRole} onChange={(e) => setEditedRole(e.target.value as UserRole)} disabled={isCurrentUser} className="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg focus:ring-cyan-500 focus:border-cyan-500 block w-full p-2.5 disabled:opacity-50">
-                    {Object.values(UserRole).map(r => <option key={r} value={r}>{r}</option>)}
+                    {Object.keys(allPermissions).sort().map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
                 {isCurrentUser && <p className="text-xs text-slate-500 mt-1">Você não pode alterar sua própria função.</p>}
             </div>
@@ -281,6 +347,58 @@ const UserManagement: React.FC = () => {
     );
   };
 
+  const renderCreateUserForm = () => (
+    <>
+      <button onClick={() => setView('users')} className="flex items-center gap-2 mb-4 text-slate-400 hover:text-white"><ArrowLeftIcon className="w-4 h-4" /> Voltar para Usuários</button>
+      <h3 className="text-2xl font-bold text-white mb-6">Criar Novo Usuário</h3>
+      <form onSubmit={handleCreateUser} className="max-w-md space-y-4">
+         <div>
+            <label className="block text-sm font-medium text-slate-400 mb-1">Nome Completo</label>
+            <input type="text" value={newUser.name} onChange={e => setNewUser({...newUser, name: e.target.value})} required className="w-full bg-slate-900 border border-slate-700 rounded-md p-2" />
+         </div>
+         <div>
+            <label className="block text-sm font-medium text-slate-400 mb-1">E-mail</label>
+            <input type="email" value={newUser.email} onChange={e => setNewUser({...newUser, email: e.target.value})} required className="w-full bg-slate-900 border border-slate-700 rounded-md p-2" />
+         </div>
+         <div>
+            <label className="block text-sm font-medium text-slate-400 mb-1">Senha</label>
+            <input type="password" value={newUser.password} onChange={e => setNewUser({...newUser, password: e.target.value})} required className="w-full bg-slate-900 border border-slate-700 rounded-md p-2" />
+         </div>
+         <div>
+            <label className="block text-sm font-medium text-slate-400 mb-1">Função</label>
+             <select value={newUser.role} onChange={e => setNewUser({...newUser, role: e.target.value as UserRole})} className="bg-slate-900 border border-slate-700 text-slate-200 text-sm rounded-lg focus:ring-cyan-500 focus:border-cyan-500 block w-full p-2.5">
+                {Object.keys(allPermissions).sort().map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+         </div>
+         <div className="pt-2">
+            <button type="submit" disabled={status === 'submitting'} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg disabled:bg-slate-600 disabled:cursor-not-allowed">
+                {status === 'submitting' ? 'Criando...' : 'Criar Usuário'}
+            </button>
+         </div>
+      </form>
+    </>
+  );
+
+  const renderCreateGroupForm = () => (
+    <>
+        <button onClick={() => setView('groups')} className="flex items-center gap-2 mb-4 text-slate-400 hover:text-white"><ArrowLeftIcon className="w-4 h-4" /> Voltar para Grupos</button>
+        <h3 className="text-2xl font-bold text-white mb-6">Criar Novo Grupo de Permissão</h3>
+         <form onSubmit={handleCreateGroup} className="max-w-md space-y-4">
+            <div>
+                <label className="block text-sm font-medium text-slate-400 mb-1">Nome do Grupo</label>
+                <input type="text" value={newGroupName} onChange={e => setNewGroupName(e.target.value)} required className="w-full bg-slate-900 border border-slate-700 rounded-md p-2" placeholder="Ex: Moderador" />
+                <p className="text-xs text-slate-500 mt-1">O nome deve ser único e não pode ser alterado depois.</p>
+            </div>
+             <div className="pt-2">
+                <button type="submit" disabled={status === 'submitting'} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg disabled:bg-slate-600 disabled:cursor-not-allowed">
+                    {status === 'submitting' ? 'Criando...' : 'Criar Grupo'}
+                </button>
+            </div>
+         </form>
+    </>
+  );
+
+
   const renderContent = () => {
     switch(view) {
       case 'main': return renderMain();
@@ -288,6 +406,8 @@ const UserManagement: React.FC = () => {
       case 'groups': return renderGroups();
       case 'userDetails': return renderUserDetails();
       case 'groupDetails': return renderGroupDetails();
+      case 'createUser': return renderCreateUserForm();
+      case 'createGroup': return renderCreateGroupForm();
       default: return renderMain();
     }
   };
