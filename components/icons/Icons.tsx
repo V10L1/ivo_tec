@@ -225,3 +225,17 @@ export const SparklesIcon: React.FC<IconProps> = ({ className }) => (
         <path d="M9.938 2.009a.5.5 0 0 0-.876 0l-1.833 4.14a.5.5 0 0 1-.448.275l-4.56.39a.5.5 0 0 0-.28.852l3.414 3.08a.5.5 0 0 1-.15.485l-.907 4.42a.5.5 0 0 0 .713.528l3.953-2.31a.5.5 0 0 1 .49 0l3.953 2.31a.5.5 0 0 0 .713-.528l-.907-4.42a.5.5 0 0 1-.15-.485l3.414-3.08a.5.5 0 0 0-.28-.852l-4.56-.39a.5.5 0 0 1-.448-.275L9.938 2.01zM18 14l1.5 3 3-1.5-1.5-3-3 1.5zM14 6l1.5-3 3 1.5-1.5 3-3-1.5z"></path>
     </svg>
 );
+
+export const BringToFrontIcon: React.FC<IconProps> = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <rect x="8" y="8" width="12" height="12" rx="2" ry="2"></rect>
+    <path d="M4 16V4a2 2 0 0 1 2-2h12"></path>
+  </svg>
+);
+
+export const SendToBackIcon: React.FC<IconProps> = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <rect x="4" y="4" width="12" height="12" rx="2" ry="2"></rect>
+    <path d="M8 20V8a2 2 0 0 1 2-2h12"></path>
+  </svg>
+);

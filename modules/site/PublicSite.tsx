@@ -1,14 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { Page, PageBlock, SiteData } from '../../types';
 
-const getYouTubeEmbedUrl = (url: string) => {
+const getYouTubeEmbedUrl = (url: string, autoplay?: boolean, controls?: boolean) => {
     let videoId;
-    if (url.includes('youtube.com/watch?v=')) {
-        videoId = new URL(url).searchParams.get('v');
-    } else if (url.includes('youtu.be/')) {
-        videoId = new URL(url).pathname.split('/').pop();
+    try {
+        if (url.includes('youtube.com/watch')) {
+            videoId = new URL(url).searchParams.get('v');
+        } else if (url.includes('youtu.be/')) {
+            videoId = new URL(url).pathname.split('/').pop();
+        }
+        if (!videoId) return null;
+
+        const embedUrl = new URL(`https://www.youtube.com/embed/${videoId}`);
+        if (autoplay) {
+            embedUrl.searchParams.set('autoplay', '1');
+            embedUrl.searchParams.set('mute', '1'); // Autoplay requires mute
+        }
+        if (controls === false) {
+            embedUrl.searchParams.set('controls', '0');
+        }
+        return embedUrl.toString();
+    } catch (error) {
+        console.error("Invalid video URL:", url, error);
+        return null;
     }
-    return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
 };
 
 // --- Renderizadores de Bloco Dinâmicos ---
@@ -64,7 +79,7 @@ const BlockRenderer: React.FC<{ block: PageBlock }> = ({ block }) => {
                 </nav>
             );
         case 'video':
-            const embedUrl = getYouTubeEmbedUrl(block.content.videoUrl);
+            const embedUrl = getYouTubeEmbedUrl(block.content.videoUrl, block.content.autoplay, block.content.controls);
             return embedUrl ? (
                 <div className="w-full h-full rounded-lg overflow-hidden">
                     <iframe
@@ -111,6 +126,8 @@ const GridCanvas: React.FC<GridCanvasProps> = ({ blocks = [], gridSettings }) =>
                     gridRow: `${layout.rowStart} / ${layout.rowEnd}`,
                     alignSelf: layout.alignSelf,
                     justifySelf: layout.justifySelf,
+                    zIndex: block.styles?.zIndex || 'auto',
+                    position: 'relative' as const,
                 };
                 return (
                     <div key={block.id} style={blockStyle}>
@@ -152,6 +169,17 @@ const PublicSite: React.FC<PublicSiteProps> = ({ slug }) => {
     };
     fetchContent();
   }, [slug]);
+
+  useEffect(() => {
+    if (page?.content?.settings.brandName) {
+      document.title = page.content.settings.brandName;
+    }
+    // Cleanup function to reset title when component unmounts
+    return () => {
+      document.title = 'Painel de Administração Modular';
+    };
+  }, [page]);
+
 
   const siteSettings = page?.content?.settings;
   const pageStyle = {

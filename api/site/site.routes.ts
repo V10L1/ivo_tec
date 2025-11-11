@@ -1,6 +1,6 @@
 // api/site/site.routes.ts
-// FIX: Aliased Request and Response to avoid conflicts with global types.
-import express, { Request as ExpressRequest, Response as ExpressResponse } from 'express';
+// FIX: Directly import Request and Response from express to avoid type conflicts with global DOM types.
+import express, { Request, Response } from 'express';
 import { pool } from '../../core/db';
 import { verifyToken, checkModulePermission } from '../../core/auth.middleware';
 import { SiteData } from '../../types';
@@ -8,7 +8,7 @@ import { SiteData } from '../../types';
 const router = express.Router();
 
 const defaultNewPageContent: SiteData = {
-  settings: { brandName: 'Nova Página', loginButtonText: 'Login', backgroundColor: '#0f172a' },
+  settings: { brandName: 'Nova Página', backgroundColor: '#0f172a' },
   gridSettings: {
     desktop: { columns: 48, rowHeight: 10, gap: 8 }
   },
@@ -20,8 +20,8 @@ const defaultNewPageContent: SiteData = {
 // --- Rotas Públicas (sem autenticação) ---
 
 // Obter página pela Home
-// FIX: Use aliased express types to avoid conflicts.
-router.get('/pages/public/home', async (req: ExpressRequest, res: ExpressResponse) => {
+// FIX: Use direct Request and Response types from express.
+router.get('/pages/public/home', async (req: Request, res: Response) => {
     try {
         res.setHeader('Cache-Control', 'no-store');
         const result = await pool.query('SELECT * FROM pages WHERE is_homepage = TRUE AND is_published = TRUE LIMIT 1');
@@ -36,8 +36,8 @@ router.get('/pages/public/home', async (req: ExpressRequest, res: ExpressRespons
 });
 
 // Obter página pelo slug
-// FIX: Use aliased express types to avoid conflicts.
-router.get('/pages/public/slug/:slug', async (req: ExpressRequest, res: ExpressResponse) => {
+// FIX: Use direct Request and Response types from express.
+router.get('/pages/public/slug/:slug', async (req: Request, res: Response) => {
     try {
         res.setHeader('Cache-Control', 'no-store');
         const { slug } = req.params;
@@ -56,8 +56,8 @@ router.get('/pages/public/slug/:slug', async (req: ExpressRequest, res: ExpressR
 // --- Rotas de Administração (requerem autenticação e permissão) ---
 
 // Listar todas as páginas
-// FIX: Use aliased express types to avoid conflicts.
-router.get('/pages', verifyToken, checkModulePermission('SITE'), async (req: ExpressRequest, res: ExpressResponse) => {
+// FIX: Use direct Request and Response types from express.
+router.get('/pages', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
     try {
         const result = await pool.query('SELECT id, title, slug, is_homepage, is_published, updated_at FROM pages ORDER BY title');
         res.json(result.rows);
@@ -68,8 +68,8 @@ router.get('/pages', verifyToken, checkModulePermission('SITE'), async (req: Exp
 });
 
 // Criar uma nova página
-// FIX: Use aliased express types to avoid conflicts.
-router.post('/pages', verifyToken, checkModulePermission('SITE'), async (req: ExpressRequest, res: ExpressResponse) => {
+// FIX: Use direct Request and Response types from express.
+router.post('/pages', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
     const { title, slug } = req.body;
     if (!title || !slug) {
         return res.status(400).json({ message: 'Título e slug são obrigatórios.' });
@@ -90,8 +90,8 @@ router.post('/pages', verifyToken, checkModulePermission('SITE'), async (req: Ex
 });
 
 // Obter dados de uma página específica para edição
-// FIX: Use aliased express types to avoid conflicts.
-router.get('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: ExpressRequest, res: ExpressResponse) => {
+// FIX: Use direct Request and Response types from express.
+router.get('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const result = await pool.query('SELECT * FROM pages WHERE id = $1', [id]);
@@ -106,8 +106,8 @@ router.get('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req:
 });
 
 // Atualizar uma página
-// FIX: Use aliased express types to avoid conflicts.
-router.put('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: ExpressRequest, res: ExpressResponse) => {
+// FIX: Use direct Request and Response types from express.
+router.put('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
     const { id } = req.params;
     const { title, slug, is_published, content } = req.body;
 
@@ -134,8 +134,8 @@ router.put('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req:
 });
 
 // Excluir uma página
-// FIX: Use aliased express types to avoid conflicts.
-router.delete('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: ExpressRequest, res: ExpressResponse) => {
+// FIX: Use direct Request and Response types from express.
+router.delete('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
     const { id } = req.params;
     try {
         const pageCheck = await pool.query('SELECT is_homepage FROM pages WHERE id = $1', [id]);
