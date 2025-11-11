@@ -1,6 +1,6 @@
 // api/usuario/usuario.routes.ts
-// FIX: Use standard ES module import for Express, with named type imports.
-import express, { Request, Response } from 'express';
+// FIX: Use require-style import for Express to ensure correct type resolution for CommonJS modules.
+import express = require('express');
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { pool } from '../../core/db';
@@ -12,8 +12,8 @@ const JWT_SECRET = process.env.JWT_SECRET!;
 
 // --- Rotas de Setup e Saúde (parte do núcleo de usuário) ---
 
-// FIX: Use imported Request and Response types.
-router.get('/setup/status', async (req: Request, res: Response) => {
+// FIX: Use express.Request and express.Response types.
+router.get('/setup/status', async (req: express.Request, res: express.Response) => {
     try {
         const result = await pool.query('SELECT COUNT(*) FROM users');
         const userCount = parseInt(result.rows[0].count, 10);
@@ -24,8 +24,8 @@ router.get('/setup/status', async (req: Request, res: Response) => {
     }
 });
 
-// FIX: Use imported Request and Response types.
-router.post('/setup/initialize', async (req: Request, res: Response) => {
+// FIX: Use express.Request and express.Response types.
+router.post('/setup/initialize', async (req: express.Request, res: express.Response) => {
     try {
         const userCheck = await pool.query('SELECT COUNT(*) FROM users');
         if (parseInt(userCheck.rows[0].count, 10) > 0) {
@@ -54,8 +54,8 @@ router.post('/setup/initialize', async (req: Request, res: Response) => {
 });
 
 // --- Rotas de Autenticação ---
-// FIX: Use imported Request and Response types.
-router.post('/auth/login', async (req: Request, res: Response) => {
+// FIX: Use express.Request and express.Response types.
+router.post('/auth/login', async (req: express.Request, res: express.Response) => {
     const { email, password } = req.body;
     if (!email || !password) {
         return res.status(400).json({ message: 'E-mail e senha são obrigatórios' });
@@ -106,8 +106,8 @@ router.post('/auth/login', async (req: Request, res: Response) => {
 });
 
 // Rota para verificar um token e obter dados do usuário atual
-// FIX: Use imported Request and Response types.
-router.get('/auth/me', verifyToken, async (req: Request, res: Response) => {
+// FIX: Use express.Request and express.Response types.
+router.get('/auth/me', verifyToken, async (req: express.Request, res: express.Response) => {
     if (!req.user) {
         return res.status(401).json({ message: 'Não autenticado' });
     }
@@ -133,8 +133,8 @@ router.get('/auth/me', verifyToken, async (req: Request, res: Response) => {
 });
 
 
-// FIX: Use imported Request and Response types.
-router.post('/auth/register', async (req: Request, res: Response) => {
+// FIX: Use express.Request and express.Response types.
+router.post('/auth/register', async (req: express.Request, res: express.Response) => {
     const { name, email, password } = req.body;
     if (!name || !email || !password) {
         return res.status(400).json({ message: 'Nome, e-mail e senha são obrigatórios.' });
@@ -160,8 +160,8 @@ router.post('/auth/register', async (req: Request, res: Response) => {
     }
 });
 
-// FIX: Use imported Request and Response types.
-router.post('/auth/reset-password', async (req: Request, res: Response) => {
+// FIX: Use express.Request and express.Response types.
+router.post('/auth/reset-password', async (req: express.Request, res: express.Response) => {
     const { email, password } = req.body;
     if (!email || !password) {
         return res.status(400).json({ message: 'E-mail e nova senha são obrigatórios.' });
@@ -190,8 +190,8 @@ router.post('/auth/reset-password', async (req: Request, res: Response) => {
 
 // --- Rotas de Gerenciamento de Usuários (Protegidas) ---
 
-// FIX: Use imported Request and Response types.
-router.get('/users', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
+// FIX: Use express.Request and express.Response types.
+router.get('/users', verifyToken, checkModulePermission('USERS'), async (req: express.Request, res: express.Response) => {
     try {
         const result = await pool.query('SELECT id, name, email, role FROM users ORDER BY name');
         res.json(result.rows);
@@ -201,8 +201,8 @@ router.get('/users', verifyToken, checkModulePermission('USERS'), async (req: Re
     }
 });
 
-// FIX: Use imported Request and Response types.
-router.post('/users', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
+// FIX: Use express.Request and express.Response types.
+router.post('/users', verifyToken, checkModulePermission('USERS'), async (req: express.Request, res: express.Response) => {
     const { name, email, password, role } = req.body;
     if (!name || !email || !password || !role) {
         return res.status(400).json({ message: 'Todos os campos são obrigatórios' });
@@ -227,8 +227,8 @@ router.post('/users', verifyToken, checkModulePermission('USERS'), async (req: R
     }
 });
 
-// FIX: Use imported Request and Response types.
-router.put('/users/:id', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
+// FIX: Use express.Request and express.Response types.
+router.put('/users/:id', verifyToken, checkModulePermission('USERS'), async (req: express.Request, res: express.Response) => {
     const { id } = req.params;
     const { role } = req.body;
 
@@ -255,8 +255,8 @@ router.put('/users/:id', verifyToken, checkModulePermission('USERS'), async (req
     }
 });
 
-// FIX: Use imported Request and Response types.
-router.delete('/users/:id', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
+// FIX: Use express.Request and express.Response types.
+router.delete('/users/:id', verifyToken, checkModulePermission('USERS'), async (req: express.Request, res: express.Response) => {
     const { id } = req.params;
 
     if (req.user?.id === id) {
@@ -277,8 +277,8 @@ router.delete('/users/:id', verifyToken, checkModulePermission('USERS'), async (
 
 // --- Rotas de Gerenciamento de Permissões (Protegidas) ---
 
-// FIX: Use imported Request and Response types.
-router.get('/permissions', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
+// FIX: Use express.Request and express.Response types.
+router.get('/permissions', verifyToken, checkModulePermission('USERS'), async (req: express.Request, res: express.Response) => {
     try {
         const result = await pool.query('SELECT role, permissions FROM role_permissions');
         const permissionsByRole = result.rows.reduce((acc, row) => {
@@ -292,8 +292,8 @@ router.get('/permissions', verifyToken, checkModulePermission('USERS'), async (r
     }
 });
 
-// FIX: Use imported Request and Response types.
-router.post('/permissions', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
+// FIX: Use express.Request and express.Response types.
+router.post('/permissions', verifyToken, checkModulePermission('USERS'), async (req: express.Request, res: express.Response) => {
     const { role, permissions = [] } = req.body;
 
     if (!role || typeof role !== 'string' || role.trim() === '') {
@@ -319,8 +319,8 @@ router.post('/permissions', verifyToken, checkModulePermission('USERS'), async (
 });
 
 
-// FIX: Use imported Request and Response types.
-router.put('/permissions/:role', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
+// FIX: Use express.Request and express.Response types.
+router.put('/permissions/:role', verifyToken, checkModulePermission('USERS'), async (req: express.Request, res: express.Response) => {
     const { role } = req.params;
     const { permissions } = req.body;
 
@@ -336,6 +336,37 @@ router.put('/permissions/:role', verifyToken, checkModulePermission('USERS'), as
         res.status(200).json({ message: `Permissões para '${role}' atualizadas com sucesso.` });
     } catch (error) {
         console.error('Erro ao atualizar permissões:', error);
+        res.status(500).json({ message: 'Erro interno do servidor' });
+    }
+});
+
+// FIX: Use express.Request and express.Response types.
+router.delete('/permissions/:role', verifyToken, checkModulePermission('USERS'), async (req: express.Request, res: express.Response) => {
+    const { role } = req.params;
+
+    // Prevenir a exclusão de grupos de sistema essenciais
+    if (role === UserRole.DEVELOPER || role === UserRole.ADMIN) {
+        return res.status(403).json({ message: 'Não é permitido remover grupos de sistema essenciais.' });
+    }
+    
+    try {
+        // Verificar se algum usuário está atribuído a este grupo
+        const userCheckResult = await pool.query('SELECT COUNT(*) FROM users WHERE role = $1', [role]);
+        const userCount = parseInt(userCheckResult.rows[0].count, 10);
+
+        if (userCount > 0) {
+            return res.status(409).json({ message: `Não é possível remover o grupo, pois ${userCount} usuário(s) estão atribuídos a ele. Reatribua os usuários antes de remover o grupo.` });
+        }
+
+        // Excluir o grupo
+        const deleteResult = await pool.query('DELETE FROM role_permissions WHERE role = $1', [role]);
+        if (deleteResult.rowCount === 0) {
+            return res.status(404).json({ message: 'Grupo não encontrado.' });
+        }
+
+        res.status(204).send(); // Sucesso, sem conteúdo
+    } catch (error) {
+        console.error(`Erro ao remover o grupo '${role}':`, error);
         res.status(500).json({ message: 'Erro interno do servidor' });
     }
 });
