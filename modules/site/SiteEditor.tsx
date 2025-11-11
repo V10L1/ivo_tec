@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { DragDropContext, Droppable, Draggable, OnDragEndResponder, DroppableProps } from 'react-beautiful-dnd';
-import { PageBlock } from '../../types';
+import { PageBlock, SiteData, SiteSettings } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { PlusCircleIcon, SettingsIcon, Trash2Icon, MotorcycleIcon, TypeIcon, ImageIcon, CodeIcon, ChevronLeftIcon, ChevronRightIcon, XIcon, SaveIcon, ArrowLeftIcon } from '../../components/icons/Icons';
 
@@ -132,10 +132,15 @@ const Inspector: React.FC<{ block: PageBlock; onUpdate: (updatedBlock: PageBlock
     );
 };
 
+const defaultSiteData: SiteData = {
+  settings: { brandName: '', loginButtonText: '' },
+  blocks: []
+};
+
 // --- Componente Principal ---
 const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack }) => {
-  const [blocks, setBlocks] = useState<PageBlock[]>([]);
-  const [savedBlocks, setSavedBlocks] = useState<PageBlock[]>([]);
+  const [siteData, setSiteData] = useState<SiteData>(defaultSiteData);
+  const [savedSiteData, setSavedSiteData] = useState<SiteData>(defaultSiteData);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [status, setStatus] = useState<'idle' | 'loading' | 'saving' | 'error' | 'success'>('loading');
   const [isPanelOpen, setIsPanelOpen] = useState(true);
@@ -147,9 +152,9 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         const response = await fetch('/api/site/content');
         if (!response.ok) throw new Error('Falha na resposta da rede');
         const data = await response.json();
-        const initialContent = data.content || [];
-        setBlocks(initialContent);
-        setSavedBlocks(initialContent);
+        const initialContent = data.content || defaultSiteData;
+        setSiteData(initialContent);
+        setSavedSiteData(initialContent);
         setStatus('idle');
       } catch (error) {
         console.error("Falha ao buscar conteúdo:", error);
@@ -170,19 +175,32 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         case 'image': newBlock = { id, type, content: { imageUrl: 'https://via.placeholder.com/1200x600.png/1e293b/94a3b8?text=Imagem+Espa%C3%A7o+Reservado', altText: 'Imagem de Exemplo' } }; break;
         case 'button': newBlock = { id, type, content: { text: 'Clique Aqui', link: '#' } }; break;
     }
-    setBlocks([...blocks, newBlock]);
+    setSiteData(prev => ({ ...prev, blocks: [...prev.blocks, newBlock] }));
     setSelectedId(newBlock.id);
   };
   
-  const handleUpdateBlock = (updatedBlock: PageBlock) => setBlocks(blocks.map(b => b.id === updatedBlock.id ? updatedBlock : b));
-  const handleDeleteBlock = (idToDelete: string) => { if (selectedId === idToDelete) setSelectedId(null); setBlocks(blocks.filter(b => b.id !== idToDelete)); };
+  const handleUpdateBlock = (updatedBlock: PageBlock) => {
+    setSiteData(prev => ({
+        ...prev,
+        blocks: prev.blocks.map(b => b.id === updatedBlock.id ? updatedBlock : b)
+    }));
+  };
+
+  const handleDeleteBlock = (idToDelete: string) => { 
+    if (selectedId === idToDelete) setSelectedId(null); 
+    setSiteData(prev => ({ ...prev, blocks: prev.blocks.filter(b => b.id !== idToDelete) }));
+  };
+
+  const handleSettingsChange = (field: keyof SiteSettings, value: string) => {
+    setSiteData(prev => ({ ...prev, settings: { ...prev.settings, [field]: value } }));
+  };
 
   const onDragEnd: OnDragEndResponder = (result) => {
     if (!result.destination) return;
-    const items = Array.from(blocks);
+    const items = Array.from(siteData.blocks);
     const [reorderedItem] = items.splice(result.source.index, 1);
     items.splice(result.destination.index, 0, reorderedItem);
-    setBlocks(items);
+    setSiteData(prev => ({ ...prev, blocks: items }));
   };
   
   const handleSaveChanges = async () => {
@@ -191,10 +209,10 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         const response = await fetch('/api/site/content', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ content: blocks })
+            body: JSON.stringify({ content: siteData })
         });
         if (!response.ok) throw new Error((await response.json()).message || 'Falha ao salvar');
-        setSavedBlocks(blocks);
+        setSavedSiteData(siteData);
         setStatus('success');
         setTimeout(() => setStatus('idle'), 2000);
     } catch (error) {
@@ -203,8 +221,8 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     }
   };
 
-  const selectedBlock = blocks.find(b => b.id === selectedId);
-  const hasUnsavedChanges = JSON.stringify(blocks) !== JSON.stringify(savedBlocks);
+  const selectedBlock = siteData.blocks.find(b => b.id === selectedId);
+  const hasUnsavedChanges = JSON.stringify(siteData) !== JSON.stringify(savedSiteData);
 
   return (
     <div className="flex flex-col h-screen bg-slate-900 text-slate-300 font-sans">
@@ -234,6 +252,20 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                       <Inspector block={selectedBlock} onUpdate={handleUpdateBlock} onBack={() => setSelectedId(null)} />
                   ) : (
                       <div className="p-4">
+                          <h3 className="text-lg font-bold text-cyan-400 mb-4 flex items-center gap-2"><SettingsIcon className="w-5 h-5"/> Configurações Gerais</h3>
+                           <div className="space-y-4 mb-6">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-400 mb-1">Nome da Marca</label>
+                                    <input value={siteData.settings.brandName} onChange={e => handleSettingsChange('brandName', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-400 mb-1">Texto do Botão de Login</label>
+                                    <input value={siteData.settings.loginButtonText} onChange={e => handleSettingsChange('loginButtonText', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2" />
+                                </div>
+                            </div>
+
+                          <div className="border-t border-slate-700 my-6"></div>
+
                           <h3 className="text-lg font-bold text-cyan-400 mb-4 flex items-center gap-2"><PlusCircleIcon className="w-5 h-5"/> Adicionar Componente</h3>
                           <div className="space-y-2">
                               <button onClick={() => handleAddBlock('hero')} className="w-full flex items-center gap-3 p-3 bg-slate-700 hover:bg-slate-600 rounded-md text-left"><MotorcycleIcon className="w-5 h-5 text-cyan-400"/> Seção de Herói</button>
@@ -261,7 +293,7 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack }) => {
               <StrictModeDroppable droppableId="canvas">
                   {(provided) => (
                       <div {...provided.droppableProps} ref={provided.innerRef} className="py-8 space-y-4">
-                          {blocks.map((block, index) => (
+                          {siteData.blocks.map((block, index) => (
                               <Draggable key={block.id} draggableId={block.id} index={index}>
                                   {(provided, snapshot) => (
                                       <div 
@@ -284,7 +316,7 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                   )}
               </StrictModeDroppable>
           </DragDropContext>
-          {blocks.length === 0 && status === 'idle' && (
+          {siteData.blocks.length === 0 && status === 'idle' && (
               <div className="text-center py-20 text-slate-500">
                   <p>Sua página está vazia.</p>
                   <p>Use o painel lateral para adicionar seu primeiro componente.</p>

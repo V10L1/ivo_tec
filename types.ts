@@ -47,3 +47,15 @@ export type PageBlock = {
   | { type: 'image'; content: ImageBlockContent }
   | { type: 'button'; content: ButtonBlockContent }
 );
+
+// --- Tipos de Dados do Site ---
+
+export interface SiteSettings {
+  brandName: string;
+  loginButtonText: string;
+}
+
+export interface SiteData {
+  settings: SiteSettings;
+  blocks: PageBlock[];
+}

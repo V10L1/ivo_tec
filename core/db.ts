@@ -73,9 +73,36 @@ export const initializeDatabase = async () => {
         
         const siteContentResult = await client.query('SELECT id FROM site_content WHERE id = 1');
         if (siteContentResult.rowCount === 0) {
-             await client.query(`
-                INSERT INTO site_content (id, content) VALUES (1, '[{"id": "block_1", "type": "hero", "content": { "title": "Bem-vindo ao Mundo Moto", "subtitle": "Sua parada única para as melhores motos do planeta. Comece sua aventura hoje.", "ctaText": "Explorar Coleção" }}, {"id": "block_2", "type": "text", "content": { "heading": "Sobre Nossa Paixão", "body": "Nós vivemos e respiramos motocicletas. Nossa missão é fornecer aos entusiastas máquinas de alta qualidade e serviço incomparável. Cada moto em nossa coleção é escolhida a dedo e inspecionada para garantir que atenda aos nossos altos padrões de desempenho e confiabilidade." }}]');
-             `);
+             const initialContent = {
+                settings: {
+                    brandName: "Mundo Moto",
+                    loginButtonText: "Login do Admin"
+                },
+                blocks: [
+                    {
+                        id: "block_1",
+                        type: "hero",
+                        content: {
+                            title: "Bem-vindo ao Mundo Moto",
+                            subtitle: "Sua parada única para as melhores motos do planeta. Comece sua aventura hoje.",
+                            ctaText: "Explorar Coleção"
+                        }
+                    },
+                    {
+                        id: "block_2",
+                        type: "text",
+                        content: {
+                            heading: "Sobre Nossa Paixão",
+                            // FIX: Corrected syntax error (extra quote after "body").
+                            "body": "Nós vivemos e respiramos motocicletas. Nossa missão é fornecer aos entusiastas máquinas de alta qualidade e serviço incomparável. Cada moto em nossa coleção é escolhida a dedo e inspecionada para garantir que atenda aos nossos altos padrões de desempenho e confiabilidade."
+                        }
+                    }
+                ]
+             };
+             await client.query(
+                'INSERT INTO site_content (id, content) VALUES (1, $1)',
+                [JSON.stringify(initialContent)]
+             );
              console.log("Conteúdo inicial do site inserido.");
         }
 

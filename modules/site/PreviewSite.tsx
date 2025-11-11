@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MotorcycleIcon } from '../../components/icons/Icons';
-import { PageBlock } from '../../types';
+import { PageBlock, SiteData } from '../../types';
 
 // --- Renderizadores de Bloco Dinâmicos para Visualização ---
 
@@ -48,13 +48,13 @@ const renderPreviewBlock = (block: PageBlock) => {
 
 
 const PreviewSite: React.FC = () => {
-  const [pageBlocks, setPageBlocks] = useState<PageBlock[]>([]);
+  const [siteData, setSiteData] = useState<SiteData | null>(null);
 
   useEffect(() => {
     try {
       const storedContent = localStorage.getItem('sitePreviewContent');
       if (storedContent) {
-        setPageBlocks(JSON.parse(storedContent));
+        setSiteData(JSON.parse(storedContent));
       }
     } catch (error) {
       console.error("Falha ao carregar conteúdo de visualização do localStorage:", error);
@@ -68,7 +68,7 @@ const PreviewSite: React.FC = () => {
         <nav className="container mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <MotorcycleIcon className="w-8 h-8 text-cyan-400" />
-            <span className="text-xl font-bold">Mundo Moto</span>
+            <span className="text-xl font-bold">{siteData?.settings.brandName || 'Marca'}</span>
           </div>
           <div className="bg-yellow-500/20 text-yellow-300 text-sm font-bold px-4 py-2 rounded-lg">
             MODO DE VISUALIZAÇÃO
@@ -77,8 +77,8 @@ const PreviewSite: React.FC = () => {
       </header>
 
       {/* Área de Conteúdo Dinâmico */}
-      {pageBlocks.length > 0 ? (
-        pageBlocks.map(block => renderPreviewBlock(block))
+      {siteData && siteData.blocks.length > 0 ? (
+        siteData.blocks.map(block => renderPreviewBlock(block))
       ) : (
         <div className="text-center py-20 text-slate-500">Nenhum conteúdo para visualizar.</div>
       )}
@@ -86,7 +86,7 @@ const PreviewSite: React.FC = () => {
       {/* Rodapé */}
       <footer className="border-t border-slate-800 mt-20 py-8">
         <div className="container mx-auto px-6 text-center text-slate-500">
-          <p>&copy; {new Date().getFullYear()} Mundo Moto. Todos os Direitos Reservados.</p>
+          <p>&copy; {new Date().getFullYear()} {siteData?.settings.brandName || 'Marca'}. Todos os Direitos Reservados.</p>
         </div>
       </footer>
     </div>

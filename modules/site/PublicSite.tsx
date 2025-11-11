@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MotorcycleIcon } from '../../components/icons/Icons';
 import { useRouter } from '../../App';
-import { PageBlock } from '../../types';
+import { PageBlock, SiteData } from '../../types';
 
 // --- Renderizadores de Bloco Dinâmicos ---
 
@@ -50,7 +50,7 @@ const renderBlock = (block: PageBlock) => {
 
 const PublicSite: React.FC = () => {
   const { navigate } = useRouter();
-  const [pageBlocks, setPageBlocks] = useState<PageBlock[]>([]);
+  const [siteData, setSiteData] = useState<SiteData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -59,7 +59,7 @@ const PublicSite: React.FC = () => {
             const response = await fetch('/api/site/content');
             if (!response.ok) throw new Error('A resposta da rede não foi ok');
             const data = await response.json();
-            setPageBlocks(data.content || []);
+            setSiteData(data.content || { settings: { brandName: 'Marca Padrão', loginButtonText: 'Login' }, blocks: [] });
         } catch (error) {
             console.error("Falha ao buscar o conteúdo da página:", error);
         } finally {
@@ -81,10 +81,10 @@ const PublicSite: React.FC = () => {
         <nav className="container mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <MotorcycleIcon className="w-8 h-8 text-cyan-400" />
-            <span className="text-xl font-bold">Mundo Moto</span>
+            <span className="text-xl font-bold">{siteData?.settings.brandName || ''}</span>
           </div>
           <a href="#/administrator" onClick={handleNavigate} className="bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-            Login do Admin
+            {siteData?.settings.loginButtonText || ''}
           </a>
         </nav>
       </header>
@@ -93,13 +93,13 @@ const PublicSite: React.FC = () => {
       {isLoading ? (
         <div className="text-center py-20">Carregando...</div>
       ) : (
-        pageBlocks.map(block => renderBlock(block))
+        siteData?.blocks.map(block => renderBlock(block))
       )}
       
       {/* Rodapé */}
       <footer className="border-t border-slate-800 mt-20 py-8">
         <div className="container mx-auto px-6 text-center text-slate-500">
-          <p>&copy; {new Date().getFullYear()} Mundo Moto. Todos os Direitos Reservados.</p>
+          <p>&copy; {new Date().getFullYear()} {siteData?.settings.brandName || ''}. Todos os Direitos Reservados.</p>
         </div>
       </footer>
     </div>
