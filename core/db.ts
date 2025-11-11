@@ -1,4 +1,7 @@
 // core/db.ts - Gerenciador de Conexão com o Banco de Dados
+// FIX: Add Node.js type reference to resolve globals like 'process'.
+/// <reference types="node" />
+
 import { Pool } from 'pg';
 import dotenv from 'dotenv';
 

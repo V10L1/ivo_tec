@@ -1,4 +1,7 @@
 // server.ts - O Orquestrador Principal
+// FIX: Add Node.js type reference to resolve globals like 'process' and '__dirname'.
+/// <reference types="node" />
+
 // FIX: Use explicit type imports for express Request and Response
 import express from 'express';
 import type { Request, Response } from 'express';
@@ -21,18 +24,24 @@ app.use(express.json());
 
 // --- Carregador de Módulos Dinâmico ---
 const loadApiModules = async () => {
-    const apiDir = path.join(__dirname, 'api');
+    // O diretório 'api' de origem onde os arquivos manifest.json residem.
+    const sourceApiDir = path.join(process.cwd(), 'api');
+    // O diretório 'api' compilado onde os arquivos de rota .js residem.
+    const compiledApiDir = path.join(__dirname, 'api');
     try {
-        const moduleFolders = await fs.readdir(apiDir, { withFileTypes: true });
+        // Lemos o diretório de origem para encontrar as pastas dos módulos.
+        const moduleFolders = await fs.readdir(sourceApiDir, { withFileTypes: true });
 
         for (const folder of moduleFolders) {
             if (folder.isDirectory()) {
-                const manifestPath = path.join(apiDir, folder.name, 'manifest.json');
+                // Lemos o manifest do diretório de origem.
+                const manifestPath = path.join(sourceApiDir, folder.name, 'manifest.json');
                 try {
                     const manifestContent = await fs.readFile(manifestPath, 'utf-8');
                     const manifest = JSON.parse(manifestContent);
-
-                    const routesPath = path.join(apiDir, folder.name, manifest.routesFile);
+                    
+                    // Importamos as rotas do diretório COMPILADO.
+                    const routesPath = path.join(compiledApiDir, folder.name, manifest.routesFile);
                     const { default: router } = await import(routesPath);
                     
                     if (router) {

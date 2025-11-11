@@ -1,4 +1,7 @@
 // core/auth.middleware.ts - Middlewares de Autenticação e Autorização
+// FIX: Add Node.js type reference to resolve globals like 'process'.
+/// <reference types="node" />
+
 // FIX: Use explicit type-only imports for express types
 import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
