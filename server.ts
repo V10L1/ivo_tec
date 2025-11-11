@@ -4,7 +4,8 @@
 
 // FIX: Use standard ES module import for Express.
 // FIX: Changed import to default to resolve type issues.
-import express from 'express';
+// FIX: import Request and Response types from express
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -26,7 +27,8 @@ app.use(express.json());
 // --- Rota de Verificação de Saúde ---
 // FIX: Use Request and Response types from Express.
 // FIX: Use fully qualified express types to fix missing properties on req/res.
-app.get('/api/health', async (req: express.Request, res: express.Response) => {
+// FIX: Use imported Request and Response types
+app.get('/api/health', async (req: Request, res: Response) => {
     try {
         const client = await pool.connect();
         await client.query('SELECT 1');
@@ -86,7 +88,8 @@ const serveFrontend = () => {
 
     // FIX: Use Request and Response types from Express.
     // FIX: Use fully qualified express types to fix missing properties on req/res.
-    app.get('*', (req: express.Request, res: express.Response) => {
+    // FIX: Use imported Request and Response types
+    app.get('*', (req: Request, res: Response) => {
         if (req.path.startsWith('/api/')) {
             return res.status(404).json({ message: 'Endpoint da API não encontrado.' });
         }

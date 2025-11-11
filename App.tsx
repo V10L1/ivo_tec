@@ -55,6 +55,11 @@ const AdminPanel = () => {
     setActiveModule(null);
   };
 
+  // Tratamento especial para o SiteEditor em tela cheia
+  if (activeModule === 'SITE') {
+    return <SiteEditor onBack={handleGoToDashboard} />;
+  }
+
   const ActiveModuleComponent = activeModule ? ModuleViews[activeModule] : null;
   const moduleInfo = activeModule ? APP_MODULES.find(m => m.key === activeModule) : null;
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { DragDropContext, Droppable, Draggable, OnDragEndResponder } from 'react-beautiful-dnd';
 import { PageBlock } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
-import { PlusCircleIcon, SettingsIcon, Trash2Icon, MotorcycleIcon, TypeIcon, ImageIcon, CodeIcon, ChevronLeftIcon, ChevronRightIcon, XIcon, SaveIcon } from '../../components/icons/Icons';
+import { PlusCircleIcon, SettingsIcon, Trash2Icon, MotorcycleIcon, TypeIcon, ImageIcon, CodeIcon, ChevronLeftIcon, ChevronRightIcon, XIcon, SaveIcon, ArrowLeftIcon } from '../../components/icons/Icons';
 
 // --- Gerador de ID ---
 const generateId = () => `block_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -115,7 +115,7 @@ const Inspector: React.FC<{ block: PageBlock; onUpdate: (updatedBlock: PageBlock
 };
 
 // --- Componente Principal ---
-const SiteEditor: React.FC = () => {
+const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const [blocks, setBlocks] = useState<PageBlock[]>([]);
   const [savedBlocks, setSavedBlocks] = useState<PageBlock[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -189,96 +189,114 @@ const SiteEditor: React.FC = () => {
   const hasUnsavedChanges = JSON.stringify(blocks) !== JSON.stringify(savedBlocks);
 
   return (
-    <div className="flex h-[calc(100vh-150px)] bg-slate-900 text-slate-300 rounded-lg border border-slate-700 overflow-hidden relative font-sans">
-      
-      {/* PAINEL LATERAL DE EDIÇÃO */}
-      <aside className={`absolute top-0 left-0 h-full bg-slate-800/80 backdrop-blur-sm border-r border-slate-700 z-20 transition-transform duration-300 ease-in-out ${isPanelOpen ? 'translate-x-0' : '-translate-x-full'} w-full max-w-sm`}>
-        <div className="h-full flex flex-col">
-            <div className="flex-grow overflow-y-auto">
-                {selectedBlock ? (
-                    <Inspector block={selectedBlock} onUpdate={handleUpdateBlock} onBack={() => setSelectedId(null)} />
-                ) : (
-                    <div className="p-4">
-                        <h3 className="text-lg font-bold text-cyan-400 mb-4 flex items-center gap-2"><PlusCircleIcon className="w-5 h-5"/> Adicionar Componente</h3>
-                        <div className="space-y-2">
-                            <button onClick={() => handleAddBlock('hero')} className="w-full flex items-center gap-3 p-3 bg-slate-700 hover:bg-slate-600 rounded-md text-left"><MotorcycleIcon className="w-5 h-5 text-cyan-400"/> Seção de Herói</button>
-                            <button onClick={() => handleAddBlock('text')} className="w-full flex items-center gap-3 p-3 bg-slate-700 hover:bg-slate-600 rounded-md text-left"><TypeIcon className="w-5 h-5 text-cyan-400"/> Bloco de Texto</button>
-                            <button onClick={() => handleAddBlock('image')} className="w-full flex items-center gap-3 p-3 bg-slate-700 hover:bg-slate-600 rounded-md text-left"><ImageIcon className="w-5 h-5 text-cyan-400"/> Imagem</button>
-                            <button onClick={() => handleAddBlock('button')} className="w-full flex items-center gap-3 p-3 bg-slate-700 hover:bg-slate-600 rounded-md text-left"><CodeIcon className="w-5 h-5 text-cyan-400"/> Botão</button>
-                        </div>
-                    </div>
-                )}
-            </div>
-        </div>
-      </aside>
-       {/* BOTÃO PARA MINIMIZAR/EXPANDIR O PAINEL */}
-       <button onClick={() => setIsPanelOpen(!isPanelOpen)} className="absolute top-1/2 -translate-y-1/2 bg-slate-800 hover:bg-cyan-600 text-white p-2 rounded-r-lg z-20 transition-transform duration-300 ease-in-out" style={{ left: isPanelOpen ? '24rem' : '0' }}>
-            {isPanelOpen ? <ChevronLeftIcon className="w-5 h-5"/> : <ChevronRightIcon className="w-5 h-5"/>}
-       </button>
+    <div className="flex flex-col h-screen bg-slate-900 text-slate-300 font-sans">
+      {/* HEADER DEDICADO */}
+      <header className="bg-slate-900/80 backdrop-blur-sm z-40 border-b border-slate-800 flex items-center justify-between h-16 px-6 flex-shrink-0">
+          <div className="flex items-center gap-4">
+              <button
+                onClick={onBack}
+                className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white
+                           font-bold py-2 px-4 rounded-lg inline-flex items-center
+                           transition-colors duration-200 border border-slate-700"
+              >
+                <ArrowLeftIcon className="w-5 h-5 mr-2" />
+                <span>Painel</span>
+              </button>
+              <h2 className="text-xl font-bold text-slate-100">Editor de Site</h2>
+          </div>
+      </header>
+
+      {/* CORPO DO EDITOR */}
+      <div className="flex-1 relative overflow-hidden">
+        {/* PAINEL LATERAL DE EDIÇÃO */}
+        <aside className={`absolute top-0 left-0 h-full bg-slate-800/80 backdrop-blur-sm border-r border-slate-700 z-20 transition-transform duration-300 ease-in-out ${isPanelOpen ? 'translate-x-0' : '-translate-x-full'} w-full max-w-sm`}>
+          <div className="h-full flex flex-col">
+              <div className="flex-grow overflow-y-auto">
+                  {selectedBlock ? (
+                      <Inspector block={selectedBlock} onUpdate={handleUpdateBlock} onBack={() => setSelectedId(null)} />
+                  ) : (
+                      <div className="p-4">
+                          <h3 className="text-lg font-bold text-cyan-400 mb-4 flex items-center gap-2"><PlusCircleIcon className="w-5 h-5"/> Adicionar Componente</h3>
+                          <div className="space-y-2">
+                              <button onClick={() => handleAddBlock('hero')} className="w-full flex items-center gap-3 p-3 bg-slate-700 hover:bg-slate-600 rounded-md text-left"><MotorcycleIcon className="w-5 h-5 text-cyan-400"/> Seção de Herói</button>
+                              <button onClick={() => handleAddBlock('text')} className="w-full flex items-center gap-3 p-3 bg-slate-700 hover:bg-slate-600 rounded-md text-left"><TypeIcon className="w-5 h-5 text-cyan-400"/> Bloco de Texto</button>
+                              <button onClick={() => handleAddBlock('image')} className="w-full flex items-center gap-3 p-3 bg-slate-700 hover:bg-slate-600 rounded-md text-left"><ImageIcon className="w-5 h-5 text-cyan-400"/> Imagem</button>
+                              <button onClick={() => handleAddBlock('button')} className="w-full flex items-center gap-3 p-3 bg-slate-700 hover:bg-slate-600 rounded-md text-left"><CodeIcon className="w-5 h-5 text-cyan-400"/> Botão</button>
+                          </div>
+                      </div>
+                  )}
+              </div>
+          </div>
+        </aside>
+        {/* BOTÃO PARA MINIMIZAR/EXPANDIR O PAINEL */}
+        <button onClick={() => setIsPanelOpen(!isPanelOpen)} className="absolute top-1/2 -translate-y-1/2 bg-slate-800 hover:bg-cyan-600 text-white p-2 rounded-r-lg z-20 transition-transform duration-300 ease-in-out" style={{ left: isPanelOpen ? '24rem' : '0' }}>
+              {isPanelOpen ? <ChevronLeftIcon className="w-5 h-5"/> : <ChevronRightIcon className="w-5 h-5"/>}
+        </button>
 
 
-      {/* CANVAS PRINCIPAL (VISUALIZAÇÃO) */}
-      <main className="flex-1 overflow-y-auto bg-slate-900 transition-all duration-300 ease-in-out" style={{ paddingLeft: isPanelOpen ? '25rem' : '3rem', paddingRight: '1rem' }}>
-        {status === 'loading' && <p className="text-center py-20">Carregando conteúdo...</p>}
-        {status === 'error' && !hasUnsavedChanges && <p className="text-red-400 text-center py-20">Erro ao carregar. Por favor, recarregue.</p>}
-        
-        <DragDropContext onDragEnd={onDragEnd}>
-            <Droppable droppableId="canvas">
-                {(provided) => (
-                    <div {...provided.droppableProps} ref={provided.innerRef} className="py-8 space-y-4">
-                        {blocks.map((block, index) => (
-                            <Draggable key={block.id} draggableId={block.id} index={index}>
-                                {(provided, snapshot) => (
-                                    <div 
-                                        ref={provided.innerRef} 
-                                        {...provided.draggableProps} 
-                                        {...provided.dragHandleProps}
-                                        onClick={() => { setSelectedId(block.id); setIsPanelOpen(true); }}
-                                        className={`relative rounded-lg ring-2 transition-all cursor-pointer ${selectedId === block.id ? 'ring-cyan-500' : 'ring-transparent hover:ring-slate-600'} ${snapshot.isDragging ? 'shadow-2xl shadow-cyan-900/50 opacity-80' : ''}`}
-                                    >
-                                        <div className="absolute top-2 right-2 z-10 flex gap-1 opacity-0 hover:opacity-100 transition-opacity">
-                                            <button onClick={(e) => { e.stopPropagation(); handleDeleteBlock(block.id); }} className="p-1.5 bg-red-800/80 hover:bg-red-700 rounded-md text-white"><Trash2Icon className="w-4 h-4" /></button>
-                                        </div>
-                                        <div className="pointer-events-none">{renderPreviewBlock(block)}</div>
-                                    </div>
-                                )}
-                            </Draggable>
-                        ))}
-                        {provided.placeholder}
-                    </div>
-                )}
-            </Droppable>
-        </DragDropContext>
-         {blocks.length === 0 && status === 'idle' && (
-            <div className="text-center py-20 text-slate-500">
-                <p>Sua página está vazia.</p>
-                <p>Use o painel lateral para adicionar seu primeiro componente.</p>
-            </div>
-        )}
-      </main>
+        {/* CANVAS PRINCIPAL (VISUALIZAÇÃO) */}
+        <main className="flex-1 overflow-y-auto bg-slate-900 transition-all duration-300 ease-in-out" style={{ paddingLeft: isPanelOpen ? '25rem' : '3rem', paddingRight: '1rem' }}>
+          {status === 'loading' && <p className="text-center py-20">Carregando conteúdo...</p>}
+          {status === 'error' && !hasUnsavedChanges && <p className="text-red-400 text-center py-20">Erro ao carregar. Por favor, recarregue.</p>}
+          
+          <DragDropContext onDragEnd={onDragEnd}>
+              <Droppable droppableId="canvas">
+                  {(provided) => (
+                      <div {...provided.droppableProps} ref={provided.innerRef} className="py-8 space-y-4">
+                          {blocks.map((block, index) => (
+                              <Draggable key={block.id} draggableId={block.id} index={index}>
+                                  {(provided, snapshot) => (
+                                      <div 
+                                          ref={provided.innerRef} 
+                                          {...provided.draggableProps} 
+                                          {...provided.dragHandleProps}
+                                          onClick={() => { setSelectedId(block.id); setIsPanelOpen(true); }}
+                                          className={`relative rounded-lg ring-2 transition-all cursor-pointer ${selectedId === block.id ? 'ring-cyan-500' : 'ring-transparent hover:ring-slate-600'} ${snapshot.isDragging ? 'shadow-2xl shadow-cyan-900/50 opacity-80' : ''}`}
+                                      >
+                                          <div className="absolute top-2 right-2 z-10 flex gap-1 opacity-0 hover:opacity-100 transition-opacity">
+                                              <button onClick={(e) => { e.stopPropagation(); handleDeleteBlock(block.id); }} className="p-1.5 bg-red-800/80 hover:bg-red-700 rounded-md text-white"><Trash2Icon className="w-4 h-4" /></button>
+                                          </div>
+                                          <div className="pointer-events-none">{renderPreviewBlock(block)}</div>
+                                      </div>
+                                  )}
+                              </Draggable>
+                          ))}
+                          {provided.placeholder}
+                      </div>
+                  )}
+              </Droppable>
+          </DragDropContext>
+          {blocks.length === 0 && status === 'idle' && (
+              <div className="text-center py-20 text-slate-500">
+                  <p>Sua página está vazia.</p>
+                  <p>Use o painel lateral para adicionar seu primeiro componente.</p>
+              </div>
+          )}
+        </main>
 
-      {/* BARRA DE AÇÕES INFERIOR */}
-       <div className="absolute bottom-0 left-0 right-0 p-4 bg-slate-900/80 backdrop-blur-sm border-t border-slate-700 z-30 flex justify-between items-center">
-            <div>
-                {hasUnsavedChanges && status !== 'error' && (
-                    <div className="text-yellow-400 text-sm font-semibold">Alterações não salvas</div>
-                )}
-                 {status === 'success' && (
-                    <div className="text-green-400 text-sm font-semibold">Salvo com sucesso!</div>
-                )}
-            </div>
-            {status === 'error' ? (
-                 <div className="flex items-center gap-4 text-red-400 text-sm font-semibold">
-                    <p>Falha ao salvar!</p>
-                    <button onClick={handleSaveChanges} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg">Tentar Novamente</button>
-                </div>
-            ) : (
-                <button onClick={handleSaveChanges} disabled={!hasUnsavedChanges || status === 'saving'} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg disabled:bg-slate-600 disabled:cursor-not-allowed flex items-center gap-2">
-                    <SaveIcon className="w-5 h-5"/>
-                    {status === 'saving' ? 'Salvando...' : 'Salvar Alterações'}
-                </button>
-            )}
-        </div>
+        {/* BARRA DE AÇÕES INFERIOR */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 bg-slate-900/80 backdrop-blur-sm border-t border-slate-700 z-30 flex justify-between items-center">
+              <div>
+                  {hasUnsavedChanges && status !== 'error' && (
+                      <div className="text-yellow-400 text-sm font-semibold">Alterações não salvas</div>
+                  )}
+                  {status === 'success' && (
+                      <div className="text-green-400 text-sm font-semibold">Salvo com sucesso!</div>
+                  )}
+              </div>
+              {status === 'error' ? (
+                  <div className="flex items-center gap-4 text-red-400 text-sm font-semibold">
+                      <p>Falha ao salvar!</p>
+                      <button onClick={handleSaveChanges} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg">Tentar Novamente</button>
+                  </div>
+              ) : (
+                  <button onClick={handleSaveChanges} disabled={!hasUnsavedChanges || status === 'saving'} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg disabled:bg-slate-600 disabled:cursor-not-allowed flex items-center gap-2">
+                      <SaveIcon className="w-5 h-5"/>
+                      {status === 'saving' ? 'Salvando...' : 'Salvar Alterações'}
+                  </button>
+              )}
+          </div>
+      </div>
     </div>
   );
 };
