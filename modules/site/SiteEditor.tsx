@@ -1,8 +1,26 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { DragDropContext, Droppable, Draggable, OnDragEndResponder } from 'react-beautiful-dnd';
+import { DragDropContext, Droppable, Draggable, OnDragEndResponder, DroppableProps } from 'react-beautiful-dnd';
 import { PageBlock } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { PlusCircleIcon, SettingsIcon, Trash2Icon, MotorcycleIcon, TypeIcon, ImageIcon, CodeIcon, ChevronLeftIcon, ChevronRightIcon, XIcon, SaveIcon, ArrowLeftIcon } from '../../components/icons/Icons';
+
+// FIX: Wrapper para react-beautiful-dnd para garantir compatibilidade com React 18 StrictMode.
+// Isso impede que o componente quebre devido ao comportamento de renderização dupla do StrictMode em desenvolvimento.
+const StrictModeDroppable: React.FC<DroppableProps> = ({ children, ...props }) => {
+  const [enabled, setEnabled] = useState(false);
+  useEffect(() => {
+    const animation = requestAnimationFrame(() => setEnabled(true));
+    return () => {
+      cancelAnimationFrame(animation);
+      setEnabled(false);
+    };
+  }, []);
+  if (!enabled) {
+    return null;
+  }
+  return <Droppable {...props}>{children}</Droppable>;
+};
+
 
 // --- Gerador de ID ---
 const generateId = () => `block_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -240,7 +258,7 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack }) => {
           {status === 'error' && !hasUnsavedChanges && <p className="text-red-400 text-center py-20">Erro ao carregar. Por favor, recarregue.</p>}
           
           <DragDropContext onDragEnd={onDragEnd}>
-              <Droppable droppableId="canvas">
+              <StrictModeDroppable droppableId="canvas">
                   {(provided) => (
                       <div {...provided.droppableProps} ref={provided.innerRef} className="py-8 space-y-4">
                           {blocks.map((block, index) => (
@@ -264,7 +282,7 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                           {provided.placeholder}
                       </div>
                   )}
-              </Droppable>
+              </StrictModeDroppable>
           </DragDropContext>
           {blocks.length === 0 && status === 'idle' && (
               <div className="text-center py-20 text-slate-500">

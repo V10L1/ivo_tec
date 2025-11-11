@@ -2,10 +2,8 @@
 // FIX: Add Node.js type reference to resolve globals like 'process' and '__dirname'.
 /// <reference types="node" />
 
-// FIX: Use standard ES module import for Express.
-// FIX: Changed import to default to resolve type issues.
-// FIX: import Request and Response types from express
-import express, { Request, Response } from 'express';
+// FIX: Switched to default express import to use fully qualified types, resolving type conflicts.
+import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -17,7 +15,6 @@ import { initializeDatabase, pool } from './core/db';
 // Carrega as variáveis de ambiente antes de qualquer outra coisa
 dotenv.config();
 
-// FIX: Use express() to create the app. Type inference is sufficient.
 const app = express();
 const PORT = process.env.PORT || 8069;
 
@@ -25,10 +22,8 @@ app.use(cors());
 app.use(express.json());
 
 // --- Rota de Verificação de Saúde ---
-// FIX: Use Request and Response types from Express.
 // FIX: Use fully qualified express types to fix missing properties on req/res.
-// FIX: Use imported Request and Response types
-app.get('/api/health', async (req: Request, res: Response) => {
+app.get('/api/health', async (req: express.Request, res: express.Response) => {
     try {
         const client = await pool.connect();
         await client.query('SELECT 1');
@@ -86,10 +81,8 @@ const serveFrontend = () => {
     app.use('/dist/client', express.static(clientDistPath));
     app.use(express.static(staticRootPath));
 
-    // FIX: Use Request and Response types from Express.
     // FIX: Use fully qualified express types to fix missing properties on req/res.
-    // FIX: Use imported Request and Response types
-    app.get('*', (req: Request, res: Response) => {
+    app.get('*', (req: express.Request, res: express.Response) => {
         if (req.path.startsWith('/api/')) {
             return res.status(404).json({ message: 'Endpoint da API não encontrado.' });
         }
