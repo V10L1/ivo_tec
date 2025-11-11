@@ -1,6 +1,7 @@
 // api/usuario/usuario.routes.ts
 // FIX: Use ES module import syntax for Express to ensure correct type resolution.
-import express, { Request, Response } from 'express';
+// FIX: Import the entire express module to avoid type conflicts with global DOM types.
+import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { pool } from '../../core/db';
@@ -12,8 +13,8 @@ const JWT_SECRET = process.env.JWT_SECRET!;
 
 // --- Rotas de Setup e Saúde (parte do núcleo de usuário) ---
 
-// FIX: Use imported Request and Response types from Express.
-router.get('/health', async (req: Request, res: Response) => {
+// FIX: Use express.Request and express.Response to ensure correct type inference.
+router.get('/health', async (req: express.Request, res: express.Response) => {
     try {
         const client = await pool.connect();
         await client.query('SELECT 1');
@@ -24,8 +25,8 @@ router.get('/health', async (req: Request, res: Response) => {
     }
 });
 
-// FIX: Use imported Request and Response types from Express.
-router.get('/setup/status', async (req: Request, res: Response) => {
+// FIX: Use express.Request and express.Response to ensure correct type inference.
+router.get('/setup/status', async (req: express.Request, res: express.Response) => {
     try {
         const result = await pool.query('SELECT COUNT(*) FROM users');
         const userCount = parseInt(result.rows[0].count, 10);
@@ -36,8 +37,8 @@ router.get('/setup/status', async (req: Request, res: Response) => {
     }
 });
 
-// FIX: Use imported Request and Response types from Express.
-router.post('/setup/initialize', async (req: Request, res: Response) => {
+// FIX: Use express.Request and express.Response to ensure correct type inference.
+router.post('/setup/initialize', async (req: express.Request, res: express.Response) => {
     try {
         const userCheck = await pool.query('SELECT COUNT(*) FROM users');
         if (parseInt(userCheck.rows[0].count, 10) > 0) {
@@ -66,16 +67,16 @@ router.post('/setup/initialize', async (req: Request, res: Response) => {
 });
 
 // --- Rotas de Autenticação ---
-// FIX: Use imported Request and Response types from Express.
-router.post('/auth/login', async (req: Request, res: Response) => {
+// FIX: Use express.Request and express.Response to ensure correct type inference.
+router.post('/auth/login', async (req: express.Request, res: express.Response) => {
     const { email, password } = req.body;
     if (!email || !password) {
         return res.status(400).json({ message: 'E-mail e senha são obrigatórios' });
     }
 
     try {
-        const result = await pool.query('SELECT * FROM users WHERE email = $1', [email.toLowerCase()]);
-        const user = result.rows[0];
+        const userResult = await pool.query('SELECT * FROM users WHERE email = $1', [email.toLowerCase()]);
+        const user = userResult.rows[0];
 
         if (!user) {
             return res.status(401).json({ message: 'Credenciais inválidas' });
@@ -86,6 +87,9 @@ router.post('/auth/login', async (req: Request, res: Response) => {
         if (!isPasswordValid) {
             return res.status(401).json({ message: 'Credenciais inválidas' });
         }
+
+        const permissionsResult = await pool.query('SELECT permissions FROM role_permissions WHERE role = $1', [user.role]);
+        const permissions = permissionsResult.rows.length > 0 ? permissionsResult.rows[0].permissions : [];
         
         const userPayload = {
             id: user.id,
@@ -96,7 +100,7 @@ router.post('/auth/login', async (req: Request, res: Response) => {
 
         const token = jwt.sign({ user: userPayload }, JWT_SECRET, { expiresIn: '24h' });
         
-        res.json({ token, user: userPayload });
+        res.json({ token, user: userPayload, permissions });
 
     } catch (error) {
         console.error('Erro de login:', error);
@@ -104,8 +108,24 @@ router.post('/auth/login', async (req: Request, res: Response) => {
     }
 });
 
-// FIX: Use imported Request and Response types from Express.
-router.post('/auth/register', async (req: Request, res: Response) => {
+// Rota para verificar um token e obter dados do usuário atual
+router.get('/auth/me', verifyToken, async (req: express.Request, res: express.Response) => {
+    if (!req.user) {
+        return res.status(401).json({ message: 'Não autenticado' });
+    }
+    try {
+        const permissionsResult = await pool.query('SELECT permissions FROM role_permissions WHERE role = $1', [req.user.role]);
+        const permissions = permissionsResult.rows.length > 0 ? permissionsResult.rows[0].permissions : [];
+        res.json({ user: req.user, permissions });
+    } catch (error) {
+        console.error('Erro ao buscar permissões do usuário:', error);
+        res.status(500).json({ message: 'Erro interno do servidor' });
+    }
+});
+
+
+// FIX: Use express.Request and express.Response to ensure correct type inference.
+router.post('/auth/register', async (req: express.Request, res: express.Response) => {
     const { name, email, password } = req.body;
     if (!name || !email || !password) {
         return res.status(400).json({ message: 'Nome, e-mail e senha são obrigatórios.' });
@@ -131,8 +151,8 @@ router.post('/auth/register', async (req: Request, res: Response) => {
     }
 });
 
-// FIX: Use imported Request and Response types from Express.
-router.post('/auth/reset-password', async (req: Request, res: Response) => {
+// FIX: Use express.Request and express.Response to ensure correct type inference.
+router.post('/auth/reset-password', async (req: express.Request, res: express.Response) => {
     const { email, password } = req.body;
     if (!email || !password) {
         return res.status(400).json({ message: 'E-mail e nova senha são obrigatórios.' });
@@ -161,8 +181,8 @@ router.post('/auth/reset-password', async (req: Request, res: Response) => {
 
 // --- Rotas de Gerenciamento de Usuários (Protegidas) ---
 
-// FIX: Use imported Request and Response types from Express.
-router.get('/users', verifyToken, isDeveloper, async (req: Request, res: Response) => {
+// FIX: Use express.Request and express.Response to ensure correct type inference.
+router.get('/users', verifyToken, isDeveloper, async (req: express.Request, res: express.Response) => {
     try {
         const result = await pool.query('SELECT id, name, email, role FROM users ORDER BY name');
         res.json(result.rows);
@@ -172,8 +192,8 @@ router.get('/users', verifyToken, isDeveloper, async (req: Request, res: Respons
     }
 });
 
-// FIX: Use imported Request and Response types from Express.
-router.post('/users', verifyToken, isDeveloper, async (req: Request, res: Response) => {
+// FIX: Use express.Request and express.Response to ensure correct type inference.
+router.post('/users', verifyToken, isDeveloper, async (req: express.Request, res: express.Response) => {
     const { name, email, password, role } = req.body;
     if (!name || !email || !password || !role) {
         return res.status(400).json({ message: 'Todos os campos são obrigatórios' });
@@ -198,8 +218,8 @@ router.post('/users', verifyToken, isDeveloper, async (req: Request, res: Respon
     }
 });
 
-// FIX: Use imported Request and Response types from Express.
-router.put('/users/:id', verifyToken, isDeveloper, async (req: Request, res: Response) => {
+// FIX: Use express.Request and express.Response to ensure correct type inference.
+router.put('/users/:id', verifyToken, isDeveloper, async (req: express.Request, res: express.Response) => {
     const { id } = req.params;
     const { role } = req.body;
 
@@ -226,8 +246,8 @@ router.put('/users/:id', verifyToken, isDeveloper, async (req: Request, res: Res
     }
 });
 
-// FIX: Use imported Request and Response types from Express.
-router.delete('/users/:id', verifyToken, isDeveloper, async (req: Request, res: Response) => {
+// FIX: Use express.Request and express.Response to ensure correct type inference.
+router.delete('/users/:id', verifyToken, isDeveloper, async (req: express.Request, res: express.Response) => {
     const { id } = req.params;
 
     if (req.user?.id === id) {
@@ -242,6 +262,42 @@ router.delete('/users/:id', verifyToken, isDeveloper, async (req: Request, res: 
         res.status(204).send();
     } catch (error) {
         console.error('Erro ao remover usuário:', error);
+        res.status(500).json({ message: 'Erro interno do servidor' });
+    }
+});
+
+// --- Rotas de Gerenciamento de Permissões (Protegidas) ---
+
+router.get('/permissions', verifyToken, isDeveloper, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT role, permissions FROM role_permissions');
+        const permissionsByRole = result.rows.reduce((acc, row) => {
+            acc[row.role] = row.permissions;
+            return acc;
+        }, {});
+        res.json(permissionsByRole);
+    } catch (error) {
+        console.error('Erro ao buscar permissões:', error);
+        res.status(500).json({ message: 'Erro interno do servidor' });
+    }
+});
+
+router.put('/permissions/:role', verifyToken, isDeveloper, async (req, res) => {
+    const { role } = req.params;
+    const { permissions } = req.body;
+
+    if (!role || !Object.values(UserRole).includes(role as UserRole)) {
+        return res.status(400).json({ message: 'Função inválida.' });
+    }
+    if (!Array.isArray(permissions)) {
+        return res.status(400).json({ message: 'As permissões devem ser um array.' });
+    }
+
+    try {
+        await pool.query('UPDATE role_permissions SET permissions = $1 WHERE role = $2', [JSON.stringify(permissions), role]);
+        res.status(200).json({ message: `Permissões para '${role}' atualizadas com sucesso.` });
+    } catch (error) {
+        console.error('Erro ao atualizar permissões:', error);
         res.status(500).json({ message: 'Erro interno do servidor' });
     }
 });

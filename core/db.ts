@@ -4,6 +4,8 @@
 
 import { Pool } from 'pg';
 import dotenv from 'dotenv';
+import { ROLE_PERMISSIONS, APP_MODULES } from '../constants';
+import { UserRole } from '../types';
 
 dotenv.config();
 
@@ -39,6 +41,27 @@ export const initializeDatabase = async () => {
                 created_at TIMESTAMPTZ DEFAULT NOW()
             );
         `);
+        
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS role_permissions (
+                role VARCHAR(50) PRIMARY KEY,
+                permissions JSONB NOT NULL
+            );
+        `);
+
+        const permissionsCheck = await client.query('SELECT COUNT(*) FROM role_permissions');
+        if (parseInt(permissionsCheck.rows[0].count, 10) === 0) {
+            console.log("Tabela de permissões está vazia. Populando com os padrões...");
+            for (const role in ROLE_PERMISSIONS) {
+                const permissions = ROLE_PERMISSIONS[role as UserRole];
+                await client.query(
+                    'INSERT INTO role_permissions (role, permissions) VALUES ($1, $2)',
+                    [role, JSON.stringify(permissions)]
+                );
+            }
+            console.log("Permissões padrão inseridas com sucesso.");
+        }
+
 
         await client.query(`
             CREATE TABLE IF NOT EXISTS site_content (

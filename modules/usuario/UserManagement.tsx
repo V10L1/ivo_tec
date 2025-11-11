@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { UserRole, AppKey } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { User } from '../../database/schema';
-import { ROLE_PERMISSIONS, APP_MODULES } from '../../constants';
+import { APP_MODULES } from '../../constants';
 import { ArrowLeftIcon, UsersIcon, ShieldIcon, Trash2Icon, SaveIcon } from '../../components/icons/Icons';
 
 type DisplayUser = Omit<User, 'passwordHash' | 'createdAt'>;
@@ -18,9 +18,7 @@ const UserManagement: React.FC = () => {
   const [editedRole, setEditedRole] = useState<UserRole | null>(null);
   
   // State for group permissions editing
-  const [editedPermissions, setEditedPermissions] = useState<Record<UserRole, AppKey[]>>(
-    () => JSON.parse(JSON.stringify(ROLE_PERMISSIONS)) // Deep copy to make it mutable
-  );
+  const [allPermissions, setAllPermissions] = useState<Record<UserRole, AppKey[]>>({} as Record<UserRole, AppKey[]>);
   const [tempPermissions, setTempPermissions] = useState<AppKey[]>([]);
 
   const { token, currentUser } = useAuth();
@@ -39,11 +37,29 @@ const UserManagement: React.FC = () => {
     }
   }, [token]);
 
+  const fetchPermissions = useCallback(async () => {
+    setStatus('loading');
+    try {
+        const response = await fetch('/api/permissions', { headers: { 'Authorization': `Bearer ${token}` } });
+        if (!response.ok) throw new Error('Falha ao buscar permissões.');
+        const data = await response.json();
+        setAllPermissions(data);
+        setStatus('idle');
+    } catch (error) {
+        console.error(error);
+        setStatus('error');
+    }
+  }, [token]);
+
+
   useEffect(() => {
     if (view === 'users' || view === 'main') {
         fetchUsers();
     }
-  }, [view, fetchUsers]);
+    if (view === 'groups' || view === 'main' || view === 'groupDetails') {
+        fetchPermissions();
+    }
+  }, [view, fetchUsers, fetchPermissions]);
 
   const handleFeedback = (type: 'error' | 'success', message: string) => {
     setFeedback({ type, message });
@@ -58,7 +74,8 @@ const UserManagement: React.FC = () => {
 
   const handleSelectGroup = (role: UserRole) => {
     setSelectedGroup(role);
-    setTempPermissions([...editedPermissions[role]]);
+    // Initialize tempPermissions from the fetched permissions for the selected group
+    setTempPermissions(allPermissions[role] ? [...allPermissions[role]] : []);
     setView('groupDetails');
   };
 
@@ -115,15 +132,27 @@ const UserManagement: React.FC = () => {
     );
   };
 
-  const handleSaveGroupPermissions = () => {
+  const handleSaveGroupPermissions = async () => {
     if (!selectedGroup) return;
-    setEditedPermissions(prev => ({
-        ...prev,
-        [selectedGroup]: tempPermissions
-    }));
-    handleFeedback('success', `Permissões para o grupo '${selectedGroup}' foram salvas nesta sessão.`);
-    // NOTE: In a real application, this would be an API call to persist the changes.
-    setView('groups');
+    setStatus('submitting');
+    try {
+        const response = await fetch(`/api/permissions/${selectedGroup}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
+            body: JSON.stringify({ permissions: tempPermissions })
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Falha ao salvar permissões.');
+        }
+        handleFeedback('success', `Permissões para '${selectedGroup}' foram salvas permanentemente.`);
+        await fetchPermissions();
+        setView('groups');
+    } catch (error: any) {
+        handleFeedback('error', error.message);
+    } finally {
+        setStatus('idle');
+    }
   };
 
   const renderMain = () => (
@@ -170,6 +199,8 @@ const UserManagement: React.FC = () => {
       <button onClick={() => setView('main')} className="flex items-center gap-2 mb-4 text-slate-400 hover:text-white"><ArrowLeftIcon className="w-4 h-4" /> Voltar</button>
       <h3 className="text-xl font-semibold text-white mb-4">Grupos de Permissão</h3>
       <p className="mb-6 text-slate-400 max-w-xl">Selecione um grupo para editar suas permissões de módulo.</p>
+       {status === 'loading' && <p>Carregando...</p>}
+       {status === 'error' && <p className="text-red-400">Não foi possível carregar os grupos.</p>}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
         {Object.values(UserRole).map(role => (
           <div key={role} onClick={() => handleSelectGroup(role)} className="group relative aspect-square bg-slate-800 rounded-lg p-4 flex flex-col items-center justify-center gap-2 cursor-pointer border border-slate-700 hover:border-cyan-400 transition-all duration-300">
@@ -241,9 +272,9 @@ const UserManagement: React.FC = () => {
             </div>
 
             <div className="mt-8 pt-6 border-t border-slate-700 flex justify-end">
-                <button onClick={handleSaveGroupPermissions} disabled={isDeveloperRole} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg disabled:bg-slate-600 disabled:cursor-not-allowed flex items-center gap-2">
+                <button onClick={handleSaveGroupPermissions} disabled={isDeveloperRole || status === 'submitting'} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg disabled:bg-slate-600 disabled:cursor-not-allowed flex items-center gap-2">
                     <SaveIcon className="w-4 h-4" />
-                    Salvar Permissões do Grupo
+                    {status === 'submitting' ? 'Salvando...' : 'Salvar Permissões'}
                 </button>
             </div>
         </>

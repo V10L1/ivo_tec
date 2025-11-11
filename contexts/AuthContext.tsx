@@ -1,6 +1,5 @@
-import React, { createContext, useState, useContext, useMemo, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
 import { UserRole, AppKey } from '../types';
-import { ROLE_PERMISSIONS } from '../constants';
 import { User } from '../database/schema';
 
 interface AuthContextType {
@@ -18,46 +17,39 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('authToken'));
+  const [permissions, setPermissions] = useState<AppKey[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Este efeito é executado no carregamento inicial para verificar o token
-    const verifyToken = async () => {
+    const verifyTokenAndFetchUser = async () => {
       const storedToken = localStorage.getItem('authToken');
       if (storedToken) {
-        // Para esta demonstração, decodificamos o token para obter informações do usuário.
         try {
-            const payload = JSON.parse(atob(storedToken.split('.')[1]));
-            const userFromToken = payload.user;
-            if (userFromToken && userFromToken.id && userFromToken.role) {
-                setCurrentUser({
-                    ...userFromToken,
-                    passwordHash: '', // Não disponível/necessário no cliente
-                    createdAt: new Date().toISOString(), // Valor fictício
-                });
-                setToken(storedToken);
-            } else {
-                throw new Error("Dados de usuário inválidos no token");
-            }
+          const response = await fetch('/api/auth/me', {
+            headers: { 'Authorization': `Bearer ${storedToken}` }
+          });
+          if (!response.ok) {
+            throw new Error("Token inválido ou sessão expirada");
+          }
+          const { user, permissions: userPermissions } = await response.json();
+          setCurrentUser(user);
+          setPermissions(userPermissions);
+          setToken(storedToken);
         } catch (error) {
-            console.error("Token inválido:", error);
-            localStorage.removeItem('authToken');
-            setToken(null);
-            setCurrentUser(null);
+          console.error("Falha ao verificar token:", error);
+          localStorage.removeItem('authToken');
+          setToken(null);
+          setCurrentUser(null);
+          setPermissions([]);
         }
       }
       setIsLoading(false);
     };
-    verifyToken();
+    verifyTokenAndFetchUser();
   }, []);
 
 
   const isAuthenticated = !!token && !!currentUser;
-
-  const permissions = useMemo(() => {
-    if (!currentUser) return [];
-    return ROLE_PERMISSIONS[currentUser.role];
-  }, [currentUser]);
 
   const login = async (email: string, pass: string) => {
       const response = await fetch('/api/auth/login', {
@@ -70,19 +62,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('Falha no login');
       }
 
-      const { token: receivedToken, user } = await response.json();
+      const { token: receivedToken, user, permissions: receivedPermissions } = await response.json();
       localStorage.setItem('authToken', receivedToken);
       setToken(receivedToken);
-      setCurrentUser({
-          ...user,
-          passwordHash: '', // Não é necessário no cliente
-          createdAt: new Date().toISOString(), // valor fictício
-      });
+      setCurrentUser(user);
+      setPermissions(receivedPermissions);
   };
 
   const logout = () => {
     setCurrentUser(null);
     setToken(null);
+    setPermissions([]);
     localStorage.removeItem('authToken');
   };
   

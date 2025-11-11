@@ -3,7 +3,8 @@
 /// <reference types="node" />
 
 // FIX: Use ES module import syntax for Express types to ensure correct type resolution.
-import { Request, Response, NextFunction } from 'express';
+// FIX: Import the entire express module to avoid type conflicts with global DOM types.
+import express from 'express';
 import jwt from 'jsonwebtoken';
 import { UserRole } from '../types';
 
@@ -28,8 +29,8 @@ declare global {
     }
 }
 
-// FIX: Use imported Request, Response, and NextFunction types from Express.
-export const verifyToken = (req: Request, res: Response, next: NextFunction) => {
+// FIX: Use express.Request, express.Response, and express.NextFunction to ensure correct type inference.
+export const verifyToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
@@ -46,8 +47,8 @@ export const verifyToken = (req: Request, res: Response, next: NextFunction) => 
     });
 };
 
-// FIX: Use imported Request, Response, and NextFunction types from Express.
-export const isDeveloper = (req: Request, res: Response, next: NextFunction) => {
+// FIX: Use express.Request, express.Response, and express.NextFunction to ensure correct type inference.
+export const isDeveloper = (req: express.Request, res: express.Response, next: express.NextFunction) => {
     if (req.user?.role !== UserRole.DEVELOPER) {
         return res.status(403).json({ message: 'Acesso negado. Apenas desenvolvedores.' });
     }
