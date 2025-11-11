@@ -106,84 +106,55 @@ export const initializeDatabase = async () => {
                     loginButtonText: "Login do Admin",
                     backgroundColor: "#0f172a"
                 },
-                headerSections: [{
-                    id: "header_section_1",
-                    style: { backgroundColor: '#1e293b80', paddingTop: '1rem', paddingBottom: '1rem', backgroundImage: '' },
-                    columns: [{
-                        id: "header_col_1",
-                        style: { width: '100%' },
-                        blocks: [{
-                            id: "header_block_1",
-                            type: "menu",
-                            content: {
-                                items: [
-                                    { id: "item1", label: "Home", link: "#/home" },
-                                    { id: "item2", label: "Sobre", link: "#/sobre" },
-                                    { id: "item3", label: "Contato", link: "#/contato" }
-                                ]
-                            }
-                        }]
-                    }]
-                }],
-                sections: [
+                gridSettings: {
+                    desktop: { columns: 12, rowHeight: 20, gap: 10 }
+                },
+                headerBlocks: [
                     {
-                        id: "section_1",
-                        style: { backgroundColor: 'transparent', paddingTop: '4rem', paddingBottom: '4rem', backgroundImage: '' },
-                        columns: [
-                            {
-                                id: "col_1",
-                                style: { width: '100%' },
-                                blocks: [
-                                    {
-                                        id: "block_1",
-                                        type: "hero",
-                                        content: {
-                                            title: "Bem-vindo ao Mundo Moto",
-                                            subtitle: "Sua parada única para as melhores motos do planeta. Comece sua aventura hoje.",
-                                            ctaText: "Explorar Coleção"
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-                     {
-                        id: "section_2",
-                        style: { backgroundColor: '#1e293b', paddingTop: '4rem', paddingBottom: '4rem', backgroundImage: '' },
-                        columns: [
-                             {
-                                id: "col_2",
-                                style: { width: '100%' },
-                                blocks: [
-                                     {
-                                        id: "block_2",
-                                        type: "text",
-                                        content: {
-                                            heading: "Sobre Nossa Paixão",
-                                            body: "Nós vivemos e respiramos motocicletas. Nossa missão é fornecer aos entusiastas máquinas de alta qualidade e serviço incomparável. Cada moto em nossa coleção é escolhida a dedo e inspecionada para garantir que atenda aos nossos altos padrões de desempenho e confiabilidade."
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
+                        id: "header_block_1",
+                        type: "menu",
+                        layout: { desktop: { colStart: 1, colEnd: 13, rowStart: 1, rowEnd: 4, alignSelf: 'center', justifySelf: 'center' } },
+                        content: {
+                            items: [
+                                { id: "item1", label: "Home", link: "#/home" },
+                                { id: "item2", label: "Sobre", link: "#/sobre" },
+                                { id: "item3", label: "Contato", link: "#/contato" }
+                            ]
+                        }
                     }
                 ],
-                footerSections: [{
-                    id: "footer_section_1",
-                    style: { backgroundColor: 'transparent', paddingTop: '2rem', paddingBottom: '2rem', backgroundImage: '' },
-                    columns: [{
-                        id: "footer_col_1",
-                        style: { width: '100%' },
-                        blocks: [{
-                            id: "footer_block_1",
-                            type: "text",
-                            content: {
-                                heading: "",
-                                body: "© 2024 Mundo Moto. Todos os direitos reservados."
-                            }
-                        }]
-                    }]
-                }]
+                contentBlocks: [
+                    {
+                        id: "block_1",
+                        type: "hero",
+                        layout: { desktop: { colStart: 2, colEnd: 12, rowStart: 2, rowEnd: 18, alignSelf: 'stretch', justifySelf: 'stretch' } },
+                        content: {
+                            title: "Bem-vindo ao Mundo Moto",
+                            subtitle: "Sua parada única para as melhores motos do planeta. Comece sua aventura hoje.",
+                            ctaText: "Explorar Coleção"
+                        }
+                    },
+                    {
+                        id: "block_2",
+                        type: "text",
+                        layout: { desktop: { colStart: 3, colEnd: 11, rowStart: 20, rowEnd: 30, alignSelf: 'start', justifySelf: 'stretch' } },
+                        content: {
+                            heading: "Sobre Nossa Paixão",
+                            body: "Nós vivemos e respiramos motocicletas. Nossa missão é fornecer aos entusiastas máquinas de alta qualidade e serviço incomparável. Cada moto em nossa coleção é escolhida a dedo e inspecionada para garantir que atenda aos nossos altos padrões de desempenho e confiabilidade."
+                        }
+                    }
+                ],
+                footerBlocks: [
+                    {
+                        id: "footer_block_1",
+                        type: "text",
+                        layout: { desktop: { colStart: 1, colEnd: 13, rowStart: 1, rowEnd: 4, alignSelf: 'center', justifySelf: 'center' } },
+                        content: {
+                            heading: "",
+                            body: "© 2024 Mundo Moto. Todos os direitos reservados."
+                        }
+                    }
+                ]
              };
              await client.query(
                 'INSERT INTO pages (title, slug, is_homepage, content) VALUES ($1, $2, $3, $4)',

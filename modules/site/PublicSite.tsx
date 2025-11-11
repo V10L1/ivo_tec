@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { useRouter } from '../../App';
-import { Page, PageBlock, SectionBlock, MenuBlockContent } from '../../types';
+import { Page, PageBlock, SiteData } from '../../types';
 
 // --- Renderizadores de Bloco Dinâmicos ---
-const renderBlock = (block: PageBlock) => {
+const BlockRenderer: React.FC<{ block: PageBlock }> = ({ block }) => {
+    const commonClasses = "w-full h-full flex flex-col p-4";
     switch (block.type) {
         case 'hero':
             return (
-                <div key={block.id} className="text-center py-10">
-                    <h1 className="text-5xl font-extrabold text-white mb-4">{block.content.title}</h1>
-                    <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-8">{block.content.subtitle}</p>
+                <div className={`${commonClasses} text-center items-center justify-center bg-slate-800/50 rounded-lg`}>
+                    <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-4">{block.content.title}</h1>
+                    <p className="text-md md:text-lg text-slate-300 max-w-2xl mx-auto mb-6">{block.content.subtitle}</p>
                     <button className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-8 rounded-full text-lg transition-transform transform hover:scale-105">
                         {block.content.ctaText}
                     </button>
@@ -17,32 +17,27 @@ const renderBlock = (block: PageBlock) => {
             );
         case 'text':
             return (
-                 <div key={block.id} className="py-6">
-                    <div className="max-w-3xl mx-auto text-left">
-                        <h2 className="text-3xl font-bold text-center mb-6 text-white">{block.content.heading}</h2>
-                        <p className="text-slate-400 whitespace-pre-wrap leading-relaxed">{block.content.body}</p>
-                    </div>
+                 <div className={`${commonClasses} text-left`}>
+                    <h2 className="text-3xl font-bold mb-4 text-white">{block.content.heading}</h2>
+                    <p className="text-slate-400 whitespace-pre-wrap leading-relaxed">{block.content.body}</p>
                 </div>
             );
         case 'image':
             return (
-                <div key={block.id} className="py-6">
-                    <img src={block.content.imageUrl} alt={block.content.altText} className="rounded-lg max-w-full h-auto mx-auto shadow-lg" />
-                </div>
+                <img src={block.content.imageUrl} alt={block.content.altText} className="w-full h-full object-cover rounded-lg shadow-lg" />
             );
         case 'button':
             return (
-                 <div key={block.id} className="py-8 text-center">
+                 <div className={`${commonClasses} items-center justify-center`}>
                     <a href={block.content.link} className="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-8 rounded-lg inline-block transition-colors">
                         {block.content.text}
                     </a>
                 </div>
             );
         case 'menu':
-            const content = block.content as MenuBlockContent;
             return (
-                 <nav key={block.id} className="flex items-center justify-center gap-6 py-4">
-                    {content.items.map(item => (
+                 <nav className={`${commonClasses} flex-row items-center justify-center gap-6`}>
+                    {block.content.items.map(item => (
                         <a key={item.id} href={item.link} className="text-slate-300 hover:text-cyan-400 font-medium transition-colors">
                             {item.label}
                         </a>
@@ -50,31 +45,42 @@ const renderBlock = (block: PageBlock) => {
                 </nav>
             );
         default:
-            return null;
+            return <div className="p-4 bg-red-900 rounded-lg">Bloco desconhecido</div>;
     }
 };
 
-const renderSection = (section: SectionBlock) => {
-    const sectionStyle = {
-        backgroundColor: section.style.backgroundColor || 'transparent',
-        paddingTop: section.style.paddingTop,
-        paddingBottom: section.style.paddingBottom,
-        backgroundImage: section.style.backgroundImage ? `url(${section.style.backgroundImage})` : 'none',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
+interface GridCanvasProps {
+    blocks: PageBlock[] | undefined;
+    gridSettings: SiteData['gridSettings']['desktop'] | undefined;
+}
+
+const GridCanvas: React.FC<GridCanvasProps> = ({ blocks = [], gridSettings }) => {
+    if (!gridSettings) return null;
+
+    const gridStyle = {
+        display: 'grid',
+        gridTemplateColumns: `repeat(${gridSettings.columns}, 1fr)`,
+        gridAutoRows: `${gridSettings.rowHeight}px`,
+        gap: `${gridSettings.gap}px`,
     };
+
     return (
-        <section key={section.id} style={sectionStyle}>
-            <div className="container mx-auto px-6">
-                <div className="flex flex-wrap -mx-4">
-                    {section.columns.map(column => (
-                        <div key={column.id} className="px-4" style={{ width: column.style.width }}>
-                            {column.blocks.map(block => renderBlock(block))}
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </section>
+        <div className="container mx-auto px-4 py-8" style={gridStyle}>
+            {blocks.map(block => {
+                const { desktop: layout } = block.layout;
+                const blockStyle = {
+                    gridColumn: `${layout.colStart} / ${layout.colEnd}`,
+                    gridRow: `${layout.rowStart} / ${layout.rowEnd}`,
+                    alignSelf: layout.alignSelf,
+                    justifySelf: layout.justifySelf,
+                };
+                return (
+                    <div key={block.id} style={blockStyle}>
+                        <BlockRenderer block={block} />
+                    </div>
+                );
+            })}
+        </div>
     );
 };
 
@@ -84,7 +90,6 @@ interface PublicSiteProps {
 }
 
 const PublicSite: React.FC<PublicSiteProps> = ({ slug }) => {
-  const { navigate } = useRouter();
   const [page, setPage] = useState<Page | null>(null);
   const [status, setStatus] = useState<'loading' | 'success' | 'not_found' | 'error'>('loading');
 
@@ -110,11 +115,6 @@ const PublicSite: React.FC<PublicSiteProps> = ({ slug }) => {
     fetchContent();
   }, [slug]);
 
-  const renderPageSections = (sections: SectionBlock[] | undefined) => {
-    if (!sections) return null;
-    return sections.map(section => renderSection(section));
-  }
-
   const siteSettings = page?.content?.settings;
   const pageStyle = {
     backgroundColor: siteSettings?.backgroundColor || '#0f172a' // slate-900
@@ -133,7 +133,7 @@ const PublicSite: React.FC<PublicSiteProps> = ({ slug }) => {
         </div>
     );
   }
-  if (status === 'error' || !page) {
+  if (status === 'error' || !page?.content) {
      return (
         <div className="min-h-screen flex items-center justify-center bg-slate-900 text-red-400 text-center">
             Ocorreu um erro ao carregar o conteúdo.
@@ -143,18 +143,15 @@ const PublicSite: React.FC<PublicSiteProps> = ({ slug }) => {
 
   return (
     <div className="min-h-screen text-slate-100 font-sans" style={pageStyle}>
-      <header>
-        {/* FIX: Use optional chaining to prevent crash if content is null */}
-        {renderPageSections(page.content?.headerSections)}
-      </header>
-      <main>
-        {/* FIX: Use optional chaining to prevent crash if content is null */}
-        {renderPageSections(page.content?.sections)}
-      </main>
-      <footer>
-        {/* FIX: Use optional chaining to prevent crash if content is null */}
-        {renderPageSections(page.content?.footerSections)}
-      </footer>
+        <header>
+            <GridCanvas blocks={page.content.headerBlocks} gridSettings={page.content.gridSettings.desktop} />
+        </header>
+        <main>
+            <GridCanvas blocks={page.content.contentBlocks} gridSettings={page.content.gridSettings.desktop} />
+        </main>
+        <footer>
+            <GridCanvas blocks={page.content.footerBlocks} gridSettings={page.content.gridSettings.desktop} />
+        </footer>
     </div>
   );
 };

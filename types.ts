@@ -49,8 +49,24 @@ export interface MenuBlockContent {
   items: MenuItem[];
 }
 
+
+// --- Estrutura do Construtor de Layout (Grade CSS) ---
+
+export interface BlockLayout {
+  colStart: number;
+  colEnd: number;
+  rowStart: number;
+  rowEnd: number;
+  alignSelf: 'start' | 'center' | 'end' | 'stretch';
+  justifySelf: 'start' | 'center' | 'end' | 'stretch';
+}
+
 export type PageBlock = {
   id: string;
+  layout: {
+    desktop: BlockLayout;
+    // Futuramente: tablet: BlockLayout; mobile: BlockLayout;
+  };
 } & (
   | { type: 'hero'; content: HeroBlockContent }
   | { type: 'text'; content: TextBlockContent }
@@ -59,26 +75,14 @@ export type PageBlock = {
   | { type: 'menu'; content: MenuBlockContent }
 );
 
-export interface Column {
-    id: string;
-    blocks: PageBlock[];
-    style: {
-        width: string; // ex., '50%'
-    };
-}
-
-export interface SectionBlock {
-    id: string;
-    columns: Column[];
-    style: {
-        backgroundColor: string;
-        paddingTop: string;
-        paddingBottom: string;
-        backgroundImage: string;
-    };
-}
 
 // --- Tipos de Dados do Site ---
+
+export interface GridSettings {
+    columns: number;
+    rowHeight: number;
+    gap: number;
+}
 
 export interface SiteSettings {
   brandName: string;
@@ -89,9 +93,13 @@ export interface SiteSettings {
 // Representa o objeto de conteúdo JSONB dentro de cada página
 export interface SiteData {
   settings: SiteSettings;
-  headerSections: SectionBlock[];
-  sections: SectionBlock[]; // Conteúdo principal da página
-  footerSections: SectionBlock[];
+  gridSettings: {
+    desktop: GridSettings;
+    // Futuramente: tablet: GridSettings; mobile: GridSettings;
+  };
+  headerBlocks: PageBlock[];
+  contentBlocks: PageBlock[];
+  footerBlocks: PageBlock[];
 }
 
 // Representa uma página individual no banco de dados
@@ -101,7 +109,6 @@ export interface Page {
   slug: string; // URL part
   is_homepage: boolean;
   is_published: boolean;
-  // FIX: Allow content to be null to reflect database reality and prevent type errors.
   content: SiteData | null;
   created_at: string;
   updated_at: string;
