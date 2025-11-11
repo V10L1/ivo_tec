@@ -1,10 +1,6 @@
 // api/usuario/usuario.routes.ts
-// FIX: Use ES module import syntax for Express to ensure correct type resolution.
-// FIX: Import the entire express module to avoid type conflicts with global DOM types.
-// FIX: Explicitly import Request and Response types from express.
-// FIX: Import Request and Response types from express to avoid conflicts with DOM types.
-// FIX: Change to namespace import to prevent type conflicts with DOM types.
-import * as express from 'express';
+// FIX: Use standard ES module import for Express instead of require().
+import express, { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { pool } from '../../core/db';
@@ -16,11 +12,8 @@ const JWT_SECRET = process.env.JWT_SECRET!;
 
 // --- Rotas de Setup e Saúde (parte do núcleo de usuário) ---
 
-// FIX: Use express.Request and express.Response to ensure correct type inference.
-// FIX: Use Request and Response types directly from the express import to avoid type conflicts.
-// FIX: Use Request and Response types from express import to resolve type errors.
-// FIX: Use namespaced express types to avoid conflicts.
-router.get('/health', async (req: express.Request, res: express.Response) => {
+// FIX: Add explicit types for req and res.
+router.get('/health', async (req: Request, res: Response) => {
     try {
         const client = await pool.connect();
         await client.query('SELECT 1');
@@ -31,11 +24,8 @@ router.get('/health', async (req: express.Request, res: express.Response) => {
     }
 });
 
-// FIX: Use express.Request and express.Response to ensure correct type inference.
-// FIX: Use Request and Response types directly from the express import to avoid type conflicts.
-// FIX: Use Request and Response types from express import to resolve type errors.
-// FIX: Use namespaced express types to avoid conflicts.
-router.get('/setup/status', async (req: express.Request, res: express.Response) => {
+// FIX: Add explicit types for req and res.
+router.get('/setup/status', async (req: Request, res: Response) => {
     try {
         const result = await pool.query('SELECT COUNT(*) FROM users');
         const userCount = parseInt(result.rows[0].count, 10);
@@ -46,11 +36,8 @@ router.get('/setup/status', async (req: express.Request, res: express.Response) 
     }
 });
 
-// FIX: Use express.Request and express.Response to ensure correct type inference.
-// FIX: Use Request and Response types directly from the express import to avoid type conflicts.
-// FIX: Use Request and Response types from express import to resolve type errors.
-// FIX: Use namespaced express types to avoid conflicts.
-router.post('/setup/initialize', async (req: express.Request, res: express.Response) => {
+// FIX: Add explicit types for req and res.
+router.post('/setup/initialize', async (req: Request, res: Response) => {
     try {
         const userCheck = await pool.query('SELECT COUNT(*) FROM users');
         if (parseInt(userCheck.rows[0].count, 10) > 0) {
@@ -79,11 +66,8 @@ router.post('/setup/initialize', async (req: express.Request, res: express.Respo
 });
 
 // --- Rotas de Autenticação ---
-// FIX: Use express.Request and express.Response to ensure correct type inference.
-// FIX: Use Request and Response types directly from the express import to avoid type conflicts.
-// FIX: Use Request and Response types from express import to resolve type errors.
-// FIX: Use namespaced express types to avoid conflicts.
-router.post('/auth/login', async (req: express.Request, res: express.Response) => {
+// FIX: Add explicit types for req and res.
+router.post('/auth/login', async (req: Request, res: Response) => {
     const { email, password } = req.body;
     if (!email || !password) {
         return res.status(400).json({ message: 'E-mail e senha são obrigatórios' });
@@ -134,10 +118,8 @@ router.post('/auth/login', async (req: express.Request, res: express.Response) =
 });
 
 // Rota para verificar um token e obter dados do usuário atual
-// FIX: Use Request and Response types directly from the express import to avoid type conflicts.
-// FIX: Use Request and Response types from express import to resolve type errors.
-// FIX: Use namespaced express types to avoid conflicts.
-router.get('/auth/me', verifyToken, async (req: express.Request, res: express.Response) => {
+// FIX: Add explicit types for req and res.
+router.get('/auth/me', verifyToken, async (req: Request, res: Response) => {
     if (!req.user) {
         return res.status(401).json({ message: 'Não autenticado' });
     }
@@ -163,11 +145,8 @@ router.get('/auth/me', verifyToken, async (req: express.Request, res: express.Re
 });
 
 
-// FIX: Use express.Request and express.Response to ensure correct type inference.
-// FIX: Use Request and Response types directly from the express import to avoid type conflicts.
-// FIX: Use Request and Response types from express import to resolve type errors.
-// FIX: Use namespaced express types to avoid conflicts.
-router.post('/auth/register', async (req: express.Request, res: express.Response) => {
+// FIX: Add explicit types for req and res.
+router.post('/auth/register', async (req: Request, res: Response) => {
     const { name, email, password } = req.body;
     if (!name || !email || !password) {
         return res.status(400).json({ message: 'Nome, e-mail e senha são obrigatórios.' });
@@ -193,11 +172,8 @@ router.post('/auth/register', async (req: express.Request, res: express.Response
     }
 });
 
-// FIX: Use express.Request and express.Response to ensure correct type inference.
-// FIX: Use Request and Response types directly from the express import to avoid type conflicts.
-// FIX: Use Request and Response types from express import to resolve type errors.
-// FIX: Use namespaced express types to avoid conflicts.
-router.post('/auth/reset-password', async (req: express.Request, res: express.Response) => {
+// FIX: Add explicit types for req and res.
+router.post('/auth/reset-password', async (req: Request, res: Response) => {
     const { email, password } = req.body;
     if (!email || !password) {
         return res.status(400).json({ message: 'E-mail e nova senha são obrigatórios.' });
@@ -226,11 +202,8 @@ router.post('/auth/reset-password', async (req: express.Request, res: express.Re
 
 // --- Rotas de Gerenciamento de Usuários (Protegidas) ---
 
-// FIX: Use express.Request and express.Response to ensure correct type inference.
-// FIX: Use Request and Response types directly from the express import to avoid type conflicts.
-// FIX: Use Request and Response types from express import to resolve type errors.
-// FIX: Use namespaced express types to avoid conflicts.
-router.get('/users', verifyToken, isDeveloper, async (req: express.Request, res: express.Response) => {
+// FIX: Add explicit types for req and res.
+router.get('/users', verifyToken, isDeveloper, async (req: Request, res: Response) => {
     try {
         const result = await pool.query('SELECT id, name, email, role FROM users ORDER BY name');
         res.json(result.rows);
@@ -240,11 +213,8 @@ router.get('/users', verifyToken, isDeveloper, async (req: express.Request, res:
     }
 });
 
-// FIX: Use express.Request and express.Response to ensure correct type inference.
-// FIX: Use Request and Response types directly from the express import to avoid type conflicts.
-// FIX: Use Request and Response types from express import to resolve type errors.
-// FIX: Use namespaced express types to avoid conflicts.
-router.post('/users', verifyToken, isDeveloper, async (req: express.Request, res: express.Response) => {
+// FIX: Add explicit types for req and res.
+router.post('/users', verifyToken, isDeveloper, async (req: Request, res: Response) => {
     const { name, email, password, role } = req.body;
     if (!name || !email || !password || !role) {
         return res.status(400).json({ message: 'Todos os campos são obrigatórios' });
@@ -269,11 +239,8 @@ router.post('/users', verifyToken, isDeveloper, async (req: express.Request, res
     }
 });
 
-// FIX: Use express.Request and express.Response to ensure correct type inference.
-// FIX: Use Request and Response types directly from the express import to avoid type conflicts.
-// FIX: Use Request and Response types from express import to resolve type errors.
-// FIX: Use namespaced express types to avoid conflicts.
-router.put('/users/:id', verifyToken, isDeveloper, async (req: express.Request, res: express.Response) => {
+// FIX: Add explicit types for req and res.
+router.put('/users/:id', verifyToken, isDeveloper, async (req: Request, res: Response) => {
     const { id } = req.params;
     const { role } = req.body;
 
@@ -300,11 +267,8 @@ router.put('/users/:id', verifyToken, isDeveloper, async (req: express.Request, 
     }
 });
 
-// FIX: Use express.Request and express.Response to ensure correct type inference.
-// FIX: Use Request and Response types directly from the express import to avoid type conflicts.
-// FIX: Use Request and Response types from express import to resolve type errors.
-// FIX: Use namespaced express types to avoid conflicts.
-router.delete('/users/:id', verifyToken, isDeveloper, async (req: express.Request, res: express.Response) => {
+// FIX: Add explicit types for req and res.
+router.delete('/users/:id', verifyToken, isDeveloper, async (req: Request, res: Response) => {
     const { id } = req.params;
 
     if (req.user?.id === id) {
@@ -325,10 +289,8 @@ router.delete('/users/:id', verifyToken, isDeveloper, async (req: express.Reques
 
 // --- Rotas de Gerenciamento de Permissões (Protegidas) ---
 
-// FIX: Use Request and Response types directly from the express import.
-// FIX: Use Request and Response types from express import to resolve type errors.
-// FIX: Use namespaced express types to avoid conflicts.
-router.get('/permissions', verifyToken, isDeveloper, async (req: express.Request, res: express.Response) => {
+// FIX: Add explicit types for req and res.
+router.get('/permissions', verifyToken, isDeveloper, async (req: Request, res: Response) => {
     try {
         const result = await pool.query('SELECT role, permissions FROM role_permissions');
         const permissionsByRole = result.rows.reduce((acc, row) => {
@@ -342,10 +304,8 @@ router.get('/permissions', verifyToken, isDeveloper, async (req: express.Request
     }
 });
 
-// FIX: Use Request and Response types directly from the express import.
-// FIX: Use Request and Response types from express import to resolve type errors.
-// FIX: Use namespaced express types to avoid conflicts.
-router.put('/permissions/:role', verifyToken, isDeveloper, async (req: express.Request, res: express.Response) => {
+// FIX: Add explicit types for req and res.
+router.put('/permissions/:role', verifyToken, isDeveloper, async (req: Request, res: Response) => {
     const { role } = req.params;
     const { permissions } = req.body;
 

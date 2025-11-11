@@ -2,12 +2,8 @@
 // FIX: Add Node.js type reference to resolve globals like 'process'.
 /// <reference types="node" />
 
-// FIX: Use ES module import syntax for Express types to ensure correct type resolution.
-// FIX: Import the entire express module to avoid type conflicts with global DOM types.
-// FIX: Explicitly import Request, Response, and NextFunction types from express.
-// FIX: Import Request, Response, and NextFunction types from express to avoid conflicts with DOM types.
-// FIX: Change to namespace import to prevent type conflicts with DOM types.
-import * as express from 'express';
+// FIX: Use standard ES module imports for Express types.
+import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { UserRole } from '../types';
 
@@ -32,11 +28,8 @@ declare global {
     }
 }
 
-// FIX: Use express.Request, express.Response, and express.NextFunction to ensure correct type inference.
-// FIX: Use Request, Response, and NextFunction types directly from the express import to avoid type conflicts.
-// FIX: Use Request, Response, and NextFunction types from express import to resolve type errors.
-// FIX: Use namespaced express types to avoid conflicts.
-export const verifyToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+// FIX: Add explicit types for req, res, and next to resolve property access errors.
+export const verifyToken = (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
@@ -53,11 +46,8 @@ export const verifyToken = (req: express.Request, res: express.Response, next: e
     });
 };
 
-// FIX: Use express.Request, express.Response, and express.NextFunction to ensure correct type inference.
-// FIX: Use Request, Response, and NextFunction types directly from the express import to avoid type conflicts.
-// FIX: Use Request, Response, and NextFunction types from express import to resolve type errors.
-// FIX: Use namespaced express types to avoid conflicts.
-export const isDeveloper = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+// FIX: Add explicit types for req, res, and next to resolve property access errors.
+export const isDeveloper = (req: Request, res: Response, next: NextFunction) => {
     if (req.user?.role !== UserRole.DEVELOPER) {
         return res.status(403).json({ message: 'Acesso negado. Apenas desenvolvedores.' });
     }
