@@ -69,7 +69,22 @@ const renderPreviewBlock = (block: PageBlock) => {
 // FIX: Implemented the stubbed Inspector component to fix return type errors.
 const Inspector: React.FC<{ block: PageBlock; onUpdate: (updatedBlock: PageBlock) => void; onBack: () => void; }> = ({ block, onUpdate, onBack }) => {
     const handleContentChange = (field: string, value: string) => {
-        onUpdate({ ...block, content: { ...block.content, [field as keyof typeof block.content]: value } });
+        // FIX: Use a type-safe switch to handle updates for the discriminated union.
+        // This ensures that the content object matches the block's type.
+        switch (block.type) {
+            case 'hero':
+                onUpdate({ ...block, content: { ...block.content, [field as keyof HeroBlockContent]: value } });
+                break;
+            case 'text':
+                onUpdate({ ...block, content: { ...block.content, [field as keyof TextBlockContent]: value } });
+                break;
+            case 'image':
+                onUpdate({ ...block, content: { ...block.content, [field as keyof ImageBlockContent]: value } });
+                break;
+            case 'button':
+                onUpdate({ ...block, content: { ...block.content, [field as keyof ButtonBlockContent]: value } });
+                break;
+        }
     };
 
     const renderField = (label: string, field: string, value: string, isTextArea = false) => (
@@ -140,12 +155,18 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
   const [savedPage, setSavedPage] = useState<Page | null>(null);
   
   const [newPageData, setNewPageData] = useState({ title: '', slug: '' });
+  const [feedback, setFeedback] = useState<{ type: 'error' | 'success', message: string } | null>(null);
 
   // FIX: Added 'success' to the status type.
   const [status, setStatus] = useState<'idle' | 'loading' | 'saving' | 'error' | 'deleting' | 'success'>('loading');
   const [isPanelOpen, setIsPanelOpen] = useState(true);
   const { token } = useAuth();
   
+  const handleFeedback = (type: 'error' | 'success', message: string) => {
+    setFeedback({ type, message });
+    setTimeout(() => setFeedback(null), 4000);
+  };
+
   const fetchPages = useCallback(async () => {
     setStatus('loading');
     try {
@@ -166,10 +187,31 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
     }
   }, [view, fetchPages]);
   
-  const handleEditPage = (page: Page) => {
-    setEditingPage(page);
-    setSavedPage(page);
-    setView('editor');
+  const handleEditPage = async (page: Page) => {
+    setStatus('loading');
+    try {
+        const response = await fetch(`/api/site/pages/${page.id}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) {
+            throw new Error('Falha ao carregar os dados completos da página.');
+        }
+        const fullPageData: Page = await response.json();
+
+        // Garante que o conteúdo exista, se não, fornece uma estrutura padrão
+        if (!fullPageData.content) {
+            fullPageData.content = defaultPageContent;
+        }
+
+        setEditingPage(fullPageData);
+        setSavedPage(fullPageData);
+        setView('editor');
+    } catch (error: any) {
+        console.error(error);
+        handleFeedback('error', error.message || 'Não foi possível carregar a página para edição.');
+    } finally {
+        setStatus('idle');
+    }
   };
   
   const handleSaveChanges = async () => {
@@ -210,7 +252,7 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
         if (!response.ok) throw new Error((await response.json()).message || 'Falha ao criar página');
         const newPage = await response.json();
         setNewPageData({ title: '', slug: '' });
-        handleEditPage(newPage); // Automatically switch to editing the new page
+        await handleEditPage(newPage); // Troca para a edição da nova página (já busca os dados completos)
     } catch (error) {
         console.error(error);
         setStatus('error');
@@ -293,31 +335,35 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
             <h2 className="text-2xl font-bold text-slate-100">Gerenciador de Páginas</h2>
             <button onClick={() => setView('create')} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2"><FilePlusIcon className="w-5 h-5"/> Criar Nova Página</button>
         </div>
-        <div className="overflow-x-auto bg-slate-800/50 rounded-lg border border-slate-800">
-            <table className="min-w-full">
-                <thead>
-                    <tr className="border-b border-slate-700">
-                        <th className="p-3 text-left text-sm font-semibold text-slate-400">Título da Página</th>
-                        <th className="p-3 text-left text-sm font-semibold text-slate-400">URL (Slug)</th>
-                        <th className="p-3 text-left text-sm font-semibold text-slate-400">Status</th>
-                        <th className="p-3 text-left text-sm font-semibold text-slate-400">Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {pages.map(page => (
-                        <tr key={page.id} className="border-b border-slate-800 hover:bg-slate-800/50">
-                            <td className="p-3 text-sm font-medium">{page.title} {page.is_homepage && <span className="text-xs bg-cyan-500/20 text-cyan-300 px-2 py-1 rounded-full ml-2">Página Inicial</span>}</td>
-                            <td className="p-3 text-sm text-slate-400 font-mono">/{page.slug}</td>
-                            <td className="p-3 text-sm">{page.is_published ? <span className="text-green-400">Publicada</span> : <span className="text-yellow-400">Rascunho</span>}</td>
-                            <td className="p-3 text-sm flex items-center gap-4">
-                                <button onClick={() => handleEditPage(page)} className="text-cyan-400 hover:text-cyan-300 flex items-center gap-1"><EditIcon className="w-4 h-4"/> Editar</button>
-                                <button onClick={() => handleDeletePage(page.id)} className="text-red-500 hover:text-red-400 flex items-center gap-1"><Trash2Icon className="w-4 h-4"/> Excluir</button>
-                            </td>
+        {status === 'loading' && <div className="text-center">Carregando páginas...</div>}
+        {status === 'error' && <div className="text-center text-red-400">Falha ao carregar páginas.</div>}
+        {status !== 'loading' && (
+            <div className="overflow-x-auto bg-slate-800/50 rounded-lg border border-slate-800">
+                <table className="min-w-full">
+                    <thead>
+                        <tr className="border-b border-slate-700">
+                            <th className="p-3 text-left text-sm font-semibold text-slate-400">Título da Página</th>
+                            <th className="p-3 text-left text-sm font-semibold text-slate-400">URL (Slug)</th>
+                            <th className="p-3 text-left text-sm font-semibold text-slate-400">Status</th>
+                            <th className="p-3 text-left text-sm font-semibold text-slate-400">Ações</th>
                         </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
+                    </thead>
+                    <tbody>
+                        {pages.map(page => (
+                            <tr key={page.id} className="border-b border-slate-800 hover:bg-slate-800/50">
+                                <td className="p-3 text-sm font-medium">{page.title} {page.is_homepage && <span className="text-xs bg-cyan-500/20 text-cyan-300 px-2 py-1 rounded-full ml-2">Página Inicial</span>}</td>
+                                <td className="p-3 text-sm text-slate-400 font-mono">/{page.slug}</td>
+                                <td className="p-3 text-sm">{page.is_published ? <span className="text-green-400">Publicada</span> : <span className="text-yellow-400">Rascunho</span>}</td>
+                                <td className="p-3 text-sm flex items-center gap-4">
+                                    <button onClick={() => handleEditPage(page)} className="text-cyan-400 hover:text-cyan-300 flex items-center gap-1"><EditIcon className="w-4 h-4"/> Editar</button>
+                                    <button onClick={() => handleDeletePage(page.id)} className="text-red-500 hover:text-red-400 flex items-center gap-1"><Trash2Icon className="w-4 h-4"/> Excluir</button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        )}
     </div>
   );
   
@@ -345,7 +391,9 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
   );
 
   const renderEditorView = () => {
-    if (!editingPage) return null;
+    if (status === 'loading') return <div className="text-center p-8">Carregando editor...</div>;
+    if (!editingPage) return <div className="text-center p-8 text-red-400">Não foi possível carregar a página. Tente voltar para a lista.</div>;
+    
     return (
         <div className="flex-1 relative overflow-hidden">
         <aside className={`absolute top-0 left-0 h-full bg-slate-800/80 backdrop-blur-sm border-r border-slate-700 z-20 transition-transform duration-300 ease-in-out ${isPanelOpen ? 'translate-x-0' : '-translate-x-full'} w-full max-w-sm`}>
@@ -411,7 +459,12 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
         
         <div className="absolute bottom-0 left-0 right-0 p-4 bg-slate-900/80 backdrop-blur-sm border-t border-slate-700 z-30 flex justify-between items-center">
              <div>
-                  {hasUnsavedChanges && status !== 'error' && <div className="text-yellow-400 text-sm font-semibold">Alterações não salvas</div>}
+                  {feedback && (
+                    <div className={`text-sm font-semibold ${feedback.type === 'error' ? 'text-red-400' : 'text-green-400'}`}>
+                        {feedback.message}
+                    </div>
+                  )}
+                  {hasUnsavedChanges && !feedback && status !== 'error' && <div className="text-yellow-400 text-sm font-semibold">Alterações não salvas</div>}
                   {status === 'success' && <div className="text-green-400 text-sm font-semibold">Salvo com sucesso!</div>}
               </div>
               {status === 'error' ? (
@@ -444,7 +497,11 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
               <h2 className="text-xl font-bold text-slate-100">{view === 'editor' && editingPage ? `Editando: ${editingPage.title}` : 'Gerenciador de Site'}</h2>
           </div>
       </header>
-
+       {feedback && view !== 'editor' && (
+            <div className={`p-3 rounded-lg m-4 text-center ${feedback.type === 'error' ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>
+                {feedback.message}
+            </div>
+        )}
       <div className="flex-1 relative overflow-hidden">
         {view === 'list' && renderListView()}
         {view === 'create' && renderCreateView()}
