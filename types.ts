@@ -18,30 +18,17 @@ export interface AppModule {
 
 // --- Tipos de Conteúdo do Construtor de Páginas ---
 
-export interface RichTextStyles {
-  textColor?: string;
-  textAlign?: 'left' | 'center' | 'right' | 'justify';
-  fontWeight?: 'normal' | 'bold';
-  fontStyle?: 'normal' | 'italic';
-  fontFamily?: string;
-}
-
-export interface RichText {
-    text: string;
-    styles: RichTextStyles;
-}
-
 export interface HeroBlockContent {
-  title: RichText;
-  subtitle: RichText;
+  title: string;
+  subtitle: string;
   ctaText: string;
   ctaLink: string;
   ctaEnabled: boolean;
 }
 
 export interface TextBlockContent {
-  heading: RichText;
-  body: RichText;
+  heading: string;
+  body: string;
 }
 
 export interface ImageBlockContent {
@@ -81,7 +68,13 @@ export interface SpacerBlockContent {
 export interface BlockStyles {
   backgroundColor?: string;
   opacity?: number; // 0 to 1
+  textColor?: string;
   zIndex?: number;
+  // Rich text styles
+  textAlign?: 'left' | 'center' | 'right' | 'justify';
+  fontWeight?: 'normal' | 'bold';
+  fontStyle?: 'normal' | 'italic';
+  fontFamily?: string;
 }
 
 
