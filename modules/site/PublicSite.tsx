@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { MotorcycleIcon } from '../../components/icons/Icons';
 import { useRouter } from '../../App';
 import { Page, PageBlock, SectionBlock, MenuBlockContent } from '../../types';
 
@@ -111,52 +110,50 @@ const PublicSite: React.FC<PublicSiteProps> = ({ slug }) => {
     fetchContent();
   }, [slug]);
 
-  const handleNavigate = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    e.preventDefault();
-    navigate('/administrator');
-  };
+  const renderPageSections = (sections: SectionBlock[] | undefined) => {
+    if (!sections) return null;
+    return sections.map(section => renderSection(section));
+  }
 
-  const renderContent = () => {
-    if (status === 'loading') {
-      return <div className="text-center py-20">Carregando...</div>;
-    }
-    if (status === 'not_found') {
-      return <div className="text-center py-20">
-          <h1 className="text-4xl font-bold">404 - Página Não Encontrada</h1>
-          <p className="text-slate-400 mt-2">A página que você está procurando não existe.</p>
-      </div>;
-    }
-    if (status === 'error' || !page) {
-       return <div className="text-center py-20 text-red-400">Ocorreu um erro ao carregar o conteúdo.</div>;
-    }
-    return page.content.sections?.map(section => renderSection(section));
-  };
-  
   const siteSettings = page?.content?.settings;
   const pageStyle = {
     backgroundColor: siteSettings?.backgroundColor || '#0f172a' // slate-900
   };
 
+  if (status === 'loading') {
+    return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Carregando...</div>;
+  }
+  if (status === 'not_found') {
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white text-center">
+            <div>
+                <h1 className="text-4xl font-bold">404 - Página Não Encontrada</h1>
+                <p className="text-slate-400 mt-2">A página que você está procurando não existe.</p>
+            </div>
+        </div>
+    );
+  }
+  if (status === 'error' || !page) {
+     return (
+        <div className="min-h-screen flex items-center justify-center bg-slate-900 text-red-400 text-center">
+            Ocorreu um erro ao carregar o conteúdo.
+        </div>
+     );
+  }
+
   return (
     <div className="min-h-screen text-slate-100 font-sans" style={pageStyle}>
-      <header className="bg-slate-800/50 backdrop-blur-sm sticky top-0 z-10 border-b border-slate-800">
-        <nav className="container mx-auto px-6 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <MotorcycleIcon className="w-8 h-8 text-cyan-400" />
-            <span className="text-xl font-bold">{siteSettings?.brandName || (status === 'loading' ? '' : 'Marca')}</span>
-          </div>
-          <a href="#/administrator" onClick={handleNavigate} className="bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-            {siteSettings?.loginButtonText || (status === 'loading' ? '' : 'Login')}
-          </a>
-        </nav>
+      <header>
+        {/* FIX: Use optional chaining to prevent crash if content is null */}
+        {renderPageSections(page.content?.headerSections)}
       </header>
-
-      {renderContent()}
-      
-      <footer className="border-t border-slate-800 mt-20 py-8">
-        <div className="container mx-auto px-6 text-center text-slate-500">
-          <p>&copy; {new Date().getFullYear()} {siteSettings?.brandName || (status === 'loading' ? '' : 'Marca')}. Todos os Direitos Reservados.</p>
-        </div>
+      <main>
+        {/* FIX: Use optional chaining to prevent crash if content is null */}
+        {renderPageSections(page.content?.sections)}
+      </main>
+      <footer>
+        {/* FIX: Use optional chaining to prevent crash if content is null */}
+        {renderPageSections(page.content?.footerSections)}
       </footer>
     </div>
   );

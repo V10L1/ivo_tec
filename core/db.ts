@@ -106,6 +106,25 @@ export const initializeDatabase = async () => {
                     loginButtonText: "Login do Admin",
                     backgroundColor: "#0f172a"
                 },
+                headerSections: [{
+                    id: "header_section_1",
+                    style: { backgroundColor: '#1e293b80', paddingTop: '1rem', paddingBottom: '1rem', backgroundImage: '' },
+                    columns: [{
+                        id: "header_col_1",
+                        style: { width: '100%' },
+                        blocks: [{
+                            id: "header_block_1",
+                            type: "menu",
+                            content: {
+                                items: [
+                                    { id: "item1", label: "Home", link: "#/home" },
+                                    { id: "item2", label: "Sobre", link: "#/sobre" },
+                                    { id: "item3", label: "Contato", link: "#/contato" }
+                                ]
+                            }
+                        }]
+                    }]
+                }],
                 sections: [
                     {
                         id: "section_1",
@@ -148,7 +167,23 @@ export const initializeDatabase = async () => {
                             }
                         ]
                     }
-                ]
+                ],
+                footerSections: [{
+                    id: "footer_section_1",
+                    style: { backgroundColor: 'transparent', paddingTop: '2rem', paddingBottom: '2rem', backgroundImage: '' },
+                    columns: [{
+                        id: "footer_col_1",
+                        style: { width: '100%' },
+                        blocks: [{
+                            id: "footer_block_1",
+                            type: "text",
+                            content: {
+                                heading: "",
+                                body: "© 2024 Mundo Moto. Todos os direitos reservados."
+                            }
+                        }]
+                    }]
+                }]
              };
              await client.query(
                 'INSERT INTO pages (title, slug, is_homepage, content) VALUES ($1, $2, $3, $4)',

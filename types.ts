@@ -89,7 +89,9 @@ export interface SiteSettings {
 // Representa o objeto de conteúdo JSONB dentro de cada página
 export interface SiteData {
   settings: SiteSettings;
-  sections: SectionBlock[];
+  headerSections: SectionBlock[];
+  sections: SectionBlock[]; // Conteúdo principal da página
+  footerSections: SectionBlock[];
 }
 
 // Representa uma página individual no banco de dados
@@ -99,7 +101,8 @@ export interface Page {
   slug: string; // URL part
   is_homepage: boolean;
   is_published: boolean;
-  content: SiteData;
+  // FIX: Allow content to be null to reflect database reality and prevent type errors.
+  content: SiteData | null;
   created_at: string;
   updated_at: string;
 }
