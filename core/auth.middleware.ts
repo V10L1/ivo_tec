@@ -3,7 +3,8 @@
 /// <reference types="node" />
 
 // FIX: Use standard ES module imports for Express types.
-import { Request, Response, NextFunction } from 'express';
+// FIX: Changed to a default import to resolve type conflicts.
+import express from 'express';
 import jwt from 'jsonwebtoken';
 import { UserRole, AppKey } from '../types';
 import { pool } from './db';
@@ -30,7 +31,8 @@ declare global {
 }
 
 // FIX: Use imported Express types for req, res, and next.
-export const verifyToken = (req: Request, res: Response, next: NextFunction) => {
+// FIX: Use express.Request, express.Response, and express.NextFunction types.
+export const verifyToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
@@ -48,7 +50,8 @@ export const verifyToken = (req: Request, res: Response, next: NextFunction) => 
 };
 
 // FIX: Use imported Express types for req, res, and next.
-export const isDeveloper = (req: Request, res: Response, next: NextFunction) => {
+// FIX: Use express.Request, express.Response, and express.NextFunction types.
+export const isDeveloper = (req: express.Request, res: express.Response, next: express.NextFunction) => {
     if (req.user?.role !== UserRole.DEVELOPER) {
         return res.status(403).json({ message: 'Acesso negado. Apenas desenvolvedores.' });
     }
@@ -56,7 +59,8 @@ export const isDeveloper = (req: Request, res: Response, next: NextFunction) => 
 };
 
 export const checkModulePermission = (requiredPermission: AppKey) => {
-    return async (req: Request, res: Response, next: NextFunction) => {
+    // FIX: Use express.Request, express.Response, and express.NextFunction types.
+    return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
         if (!req.user) {
             return res.status(401).json({ message: 'Não autenticado' });
         }

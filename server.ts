@@ -3,7 +3,8 @@
 /// <reference types="node" />
 
 // FIX: Use standard ES module import for Express.
-import express, { Application, Request, Response } from 'express';
+// FIX: Changed to a default import to resolve type conflicts.
+import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -15,7 +16,8 @@ import { initializeDatabase } from './core/db';
 // Carrega as variáveis de ambiente antes de qualquer outra coisa
 dotenv.config();
 
-const app: Application = express();
+// FIX: Use express.Application type from the default import.
+const app: express.Application = express();
 const PORT = process.env.PORT || 8069;
 
 app.use(cors());
@@ -68,7 +70,8 @@ const serveFrontend = () => {
     app.use(express.static(staticRootPath));
 
     // FIX: Use imported Express types for req and res.
-    app.get('*', (req: Request, res: Response) => {
+    // FIX: Use express.Request and express.Response types from the default import.
+    app.get('*', (req: express.Request, res: express.Response) => {
         if (req.path.startsWith('/api/')) {
             return res.status(404).json({ message: 'Endpoint da API não encontrado.' });
         }
