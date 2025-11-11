@@ -3,7 +3,7 @@
 /// <reference types="node" />
 
 // FIX: Use explicit type-only imports for express types
-import type { Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { UserRole } from '../types';
 

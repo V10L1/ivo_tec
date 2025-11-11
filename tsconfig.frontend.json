@@ -21,7 +21,12 @@
     "constants.ts",
     "contexts/**/*.tsx",
     "components/**/*.tsx",
-    "modules/**/*.tsx",
+    "modules/estoque/**/*.tsx",
+    "modules/loja/**/*.tsx",
+    "modules/mensagens/**/*.tsx",
+    "modules/site/**/*.tsx",
+    "modules/suporte/**/*.tsx",
+    "modules/usuario/**/*.tsx",
     "database/schema.ts"
     ],
   "exclude": ["node_modules", "server.ts"]

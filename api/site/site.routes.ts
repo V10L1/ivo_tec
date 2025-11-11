@@ -1,7 +1,6 @@
 // api/site/site.routes.ts
 // FIX: Use explicit type imports for express Request and Response
-import express from 'express';
-import type { Request, Response } from 'express';
+import express, { Request, Response } from 'express';
 import { pool } from '../../core/db';
 import { verifyToken, isDeveloper } from '../../core/auth.middleware';
 

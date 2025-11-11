@@ -3,8 +3,7 @@
 /// <reference types="node" />
 
 // FIX: Use explicit type imports for express Request and Response
-import express from 'express';
-import type { Request, Response } from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
