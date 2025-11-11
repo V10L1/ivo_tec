@@ -146,10 +146,13 @@ const AppContent: React.FC = () => {
       content = isAuthenticated ? <AdminPanel /> : <Login />;
     }
   } else if (path.startsWith('/preview')) {
-    content = <PreviewSite />;
+    const pageId = path.split('/')[1]; // Assumindo /preview/:pageId
+    content = <PreviewSite pageId={pageId} />;
   }
   else {
-    content = <PublicSite />;
+    // Roteamento dinâmico para páginas públicas
+    const slug = path === '/' ? 'home' : path.substring(1);
+    content = <PublicSite slug={slug} />;
   }
 
   return (
