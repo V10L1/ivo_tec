@@ -2,8 +2,8 @@
 // FIX: Add Node.js type reference to resolve globals like 'process'.
 /// <reference types="node" />
 
-// FIX: Use explicit type-only imports for express types
-import { Request, Response, NextFunction } from 'express';
+// FIX: Use default import for express to avoid type conflicts.
+import express from 'express';
 import jwt from 'jsonwebtoken';
 import { UserRole } from '../types';
 
@@ -28,7 +28,8 @@ declare global {
     }
 }
 
-export const verifyToken = (req: Request, res: Response, next: NextFunction) => {
+// FIX: Use explicit express types for request, response, and next function parameters.
+export const verifyToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
@@ -45,7 +46,8 @@ export const verifyToken = (req: Request, res: Response, next: NextFunction) => 
     });
 };
 
-export const isDeveloper = (req: Request, res: Response, next: NextFunction) => {
+// FIX: Use explicit express types for request, response, and next function parameters.
+export const isDeveloper = (req: express.Request, res: express.Response, next: express.NextFunction) => {
     if (req.user?.role !== UserRole.DEVELOPER) {
         return res.status(403).json({ message: 'Acesso negado. Apenas desenvolvedores.' });
     }

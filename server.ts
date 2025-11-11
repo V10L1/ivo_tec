@@ -2,8 +2,8 @@
 // FIX: Add Node.js type reference to resolve globals like 'process' and '__dirname'.
 /// <reference types="node" />
 
-// FIX: Use explicit type imports for express Request and Response
-import express, { Request, Response } from 'express';
+// FIX: Use default import for express to avoid type conflicts.
+import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -67,7 +67,8 @@ const serveFrontend = () => {
     app.use('/dist/client', express.static(clientDistPath));
     app.use(express.static(staticRootPath));
 
-    app.get('*', (req: Request, res: Response) => {
+    // FIX: Use explicit express.Request and express.Response types to ensure correct type inference.
+    app.get('*', (req: express.Request, res: express.Response) => {
         if (req.path.startsWith('/api/')) {
             return res.status(404).json({ message: 'Endpoint da API não encontrado.' });
         }

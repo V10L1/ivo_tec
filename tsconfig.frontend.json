@@ -21,6 +21,7 @@
     "constants.ts",
     "contexts/**/*.tsx",
     "components/**/*.tsx",
+    "modules/apps/**/*.tsx",
     "modules/estoque/**/*.tsx",
     "modules/loja/**/*.tsx",
     "modules/mensagens/**/*.tsx",

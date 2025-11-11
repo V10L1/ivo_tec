@@ -17,6 +17,7 @@ import PreviewSite from './modules/site/PreviewSite';
 import InitialSetup from './modules/usuario/InitialSetup';
 import ForgotPassword from './modules/usuario/ForgotPassword';
 import Register from './modules/usuario/Register';
+import AppsManager from './modules/apps/AppsManager';
 
 // --- Router Context ---
 interface RouterContextType {
@@ -40,6 +41,7 @@ const ModuleViews: Record<AppKey, React.ComponentType> = {
   MESSAGES: MessagesChat,
   SUPPORT: SupportTickets,
   USERS: UserManagement,
+  APPS: AppsManager,
 };
 
 const AdminPanel = () => {

@@ -7,7 +7,7 @@ export enum UserRole {
   DEVELOPER = 'Desenvolvedor',
 }
 
-export type AppKey = 'SITE' | 'STORE' | 'STOCK' | 'MESSAGES' | 'SUPPORT' | 'USERS';
+export type AppKey = 'SITE' | 'STORE' | 'STOCK' | 'MESSAGES' | 'SUPPORT' | 'USERS' | 'APPS';
 
 export interface AppModule {
   key: AppKey;

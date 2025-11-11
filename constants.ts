@@ -1,5 +1,5 @@
 import { AppModule, AppKey, UserRole } from './types';
-import { GlobeIcon, ShoppingCartIcon, ArchiveIcon, MessageSquareIcon, LifeBuoyIcon, UsersIcon } from './components/icons/Icons';
+import { GlobeIcon, ShoppingCartIcon, ArchiveIcon, MessageSquareIcon, LifeBuoyIcon, UsersIcon, GridIcon } from './components/icons/Icons';
 
 export const APP_MODULES: AppModule[] = [
   {
@@ -38,11 +38,17 @@ export const APP_MODULES: AppModule[] = [
     description: 'Gerencie usuários, funções e permissões da plataforma.',
     Icon: UsersIcon,
   },
+  {
+    key: 'APPS',
+    name: 'Apps',
+    description: 'Visualize todos os módulos instalados na plataforma.',
+    Icon: GridIcon,
+  },
 ];
 
 export const ROLE_PERMISSIONS: Record<UserRole, AppKey[]> = {
   [UserRole.OPERATOR]: ['SITE', 'STORE', 'STOCK', 'MESSAGES'],
   [UserRole.SUPPORT]: ['MESSAGES', 'SUPPORT'],
   [UserRole.ADMIN]: ['SITE', 'STORE', 'STOCK', 'MESSAGES', 'SUPPORT'],
-  [UserRole.DEVELOPER]: ['SITE', 'STORE', 'STOCK', 'MESSAGES', 'SUPPORT', 'USERS'],
+  [UserRole.DEVELOPER]: ['SITE', 'STORE', 'STOCK', 'MESSAGES', 'SUPPORT', 'USERS', 'APPS'],
 };
