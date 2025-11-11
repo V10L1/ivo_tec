@@ -2,9 +2,8 @@
 // FIX: Add Node.js type reference to resolve globals like 'process'.
 /// <reference types="node" />
 
-// FIX: Use standard ES module imports for Express types.
-// FIX: Changed to a default import to resolve type conflicts.
-import express from 'express';
+// FIX: Use standard ES module import for Express, with named type imports.
+import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { UserRole, AppKey } from '../types';
 import { pool } from './db';
@@ -30,9 +29,8 @@ declare global {
     }
 }
 
-// FIX: Use imported Express types for req, res, and next.
-// FIX: Use express.Request, express.Response, and express.NextFunction types.
-export const verifyToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+// FIX: Use imported Request, Response, and NextFunction types.
+export const verifyToken = (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
@@ -49,9 +47,8 @@ export const verifyToken = (req: express.Request, res: express.Response, next: e
     });
 };
 
-// FIX: Use imported Express types for req, res, and next.
-// FIX: Use express.Request, express.Response, and express.NextFunction types.
-export const isDeveloper = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+// FIX: Use imported Request, Response, and NextFunction types.
+export const isDeveloper = (req: Request, res: Response, next: NextFunction) => {
     if (req.user?.role !== UserRole.DEVELOPER) {
         return res.status(403).json({ message: 'Acesso negado. Apenas desenvolvedores.' });
     }
@@ -59,8 +56,8 @@ export const isDeveloper = (req: express.Request, res: express.Response, next: e
 };
 
 export const checkModulePermission = (requiredPermission: AppKey) => {
-    // FIX: Use express.Request, express.Response, and express.NextFunction types.
-    return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    // FIX: Use imported Request, Response, and NextFunction types.
+    return async (req: Request, res: Response, next: NextFunction) => {
         if (!req.user) {
             return res.status(401).json({ message: 'Não autenticado' });
         }

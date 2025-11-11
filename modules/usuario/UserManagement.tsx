@@ -32,7 +32,7 @@ const UserManagement: React.FC = () => {
   const fetchUsers = useCallback(async () => {
     setStatus('loading');
     try {
-      const response = await fetch('/api/users', { headers: { 'Authorization': `Bearer ${token}` } });
+      const response = await fetch('/api/iam/users', { headers: { 'Authorization': `Bearer ${token}` } });
       if (!response.ok) throw new Error('Falha ao buscar usuários.');
       const data = await response.json();
       setUsers(data);
@@ -46,7 +46,7 @@ const UserManagement: React.FC = () => {
   const fetchPermissions = useCallback(async () => {
     setStatus('loading');
     try {
-        const response = await fetch('/api/permissions', { headers: { 'Authorization': `Bearer ${token}` } });
+        const response = await fetch('/api/iam/permissions', { headers: { 'Authorization': `Bearer ${token}` } });
         if (!response.ok) throw new Error('Falha ao buscar permissões.');
         const data = await response.json();
         setAllPermissions(data);
@@ -90,7 +90,7 @@ const UserManagement: React.FC = () => {
       
       setStatus('submitting');
       try {
-          const response = await fetch(`/api/users/${selectedUser.id}`, {
+          const response = await fetch(`/api/iam/users/${selectedUser.id}`, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
               body: JSON.stringify({ role: editedRole })
@@ -114,7 +114,7 @@ const UserManagement: React.FC = () => {
 
     setStatus('submitting');
     try {
-        const response = await fetch(`/api/users/${userId}`, {
+        const response = await fetch(`/api/iam/users/${userId}`, {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -142,7 +142,7 @@ const UserManagement: React.FC = () => {
     if (!selectedGroup) return;
     setStatus('submitting');
     try {
-        const response = await fetch(`/api/permissions/${selectedGroup}`, {
+        const response = await fetch(`/api/iam/permissions/${selectedGroup}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
             body: JSON.stringify({ permissions: tempPermissions })
@@ -165,7 +165,7 @@ const UserManagement: React.FC = () => {
         e.preventDefault();
         setStatus('submitting');
         try {
-            const response = await fetch('/api/users', {
+            const response = await fetch('/api/iam/users', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(newUser)
@@ -193,7 +193,7 @@ const UserManagement: React.FC = () => {
         }
         setStatus('submitting');
         try {
-            const response = await fetch('/api/permissions', {
+            const response = await fetch('/api/iam/permissions', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ role: newGroupName, permissions: [] })

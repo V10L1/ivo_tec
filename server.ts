@@ -2,26 +2,39 @@
 // FIX: Add Node.js type reference to resolve globals like 'process' and '__dirname'.
 /// <reference types="node" />
 
-// FIX: Use standard ES module import for Express.
-// FIX: Changed to a default import to resolve type conflicts.
-import express from 'express';
+// FIX: Use standard ES module import for Express, with named type imports.
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs/promises';
 
 // Importa a função de inicialização do núcleo do banco de dados
-import { initializeDatabase } from './core/db';
+import { initializeDatabase, pool } from './core/db';
 
 // Carrega as variáveis de ambiente antes de qualquer outra coisa
 dotenv.config();
 
-// FIX: Use express.Application type from the default import.
-const app: express.Application = express();
+// FIX: Use express() to create the app. Type inference is sufficient.
+const app = express();
 const PORT = process.env.PORT || 8069;
 
 app.use(cors());
 app.use(express.json());
+
+// --- Rota de Verificação de Saúde ---
+// FIX: Use imported Request and Response types.
+app.get('/api/health', async (req: Request, res: Response) => {
+    try {
+        const client = await pool.connect();
+        await client.query('SELECT 1');
+        client.release();
+        res.status(200).json({ status: 'ok', message: 'Backend está rodando e conectado ao banco de dados.' });
+    } catch (error) {
+        res.status(503).json({ status: 'error', message: 'Falha ao conectar ao banco de dados.' });
+    }
+});
+
 
 // --- Carregador de Módulos Dinâmico ---
 const loadApiModules = async () => {
@@ -69,9 +82,8 @@ const serveFrontend = () => {
     app.use('/dist/client', express.static(clientDistPath));
     app.use(express.static(staticRootPath));
 
-    // FIX: Use imported Express types for req and res.
-    // FIX: Use express.Request and express.Response types from the default import.
-    app.get('*', (req: express.Request, res: express.Response) => {
+    // FIX: Use imported Request and Response types.
+    app.get('*', (req: Request, res: Response) => {
         if (req.path.startsWith('/api/')) {
             return res.status(404).json({ message: 'Endpoint da API não encontrado.' });
         }
