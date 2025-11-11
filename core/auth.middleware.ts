@@ -3,7 +3,8 @@
 /// <reference types="node" />
 
 // FIX: Use standard ES module import for Express types.
-import { Request, Response, NextFunction } from 'express';
+// FIX: Changed import to default to resolve type issues.
+import express from 'express';
 import jwt from 'jsonwebtoken';
 import { UserRole, AppKey } from '../types';
 import { pool } from './db';
@@ -30,7 +31,8 @@ declare global {
 }
 
 // FIX: Use Request, Response, and NextFunction types from Express.
-export const verifyToken = (req: Request, res: Response, next: NextFunction) => {
+// FIX: Use fully qualified express types to fix missing properties on req/res.
+export const verifyToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
@@ -48,7 +50,8 @@ export const verifyToken = (req: Request, res: Response, next: NextFunction) => 
 };
 
 // FIX: Use Request, Response, and NextFunction types from Express.
-export const isDeveloper = (req: Request, res: Response, next: NextFunction) => {
+// FIX: Use fully qualified express types to fix missing properties on req/res.
+export const isDeveloper = (req: express.Request, res: express.Response, next: express.NextFunction) => {
     if (req.user?.role !== UserRole.DEVELOPER) {
         return res.status(403).json({ message: 'Acesso negado. Apenas desenvolvedores.' });
     }
@@ -57,7 +60,8 @@ export const isDeveloper = (req: Request, res: Response, next: NextFunction) => 
 
 export const checkModulePermission = (requiredPermission: AppKey) => {
     // FIX: Use Request, Response, and NextFunction types from Express.
-    return async (req: Request, res: Response, next: NextFunction) => {
+    // FIX: Use fully qualified express types to fix missing properties on req/res.
+    return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
         if (!req.user) {
             return res.status(401).json({ message: 'Não autenticado' });
         }
