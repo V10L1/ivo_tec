@@ -1,5 +1,14 @@
 // server.ts - O Orquestrador Principal
-/// <reference types="node" />
+// FIX: Add declarations for Node.js globals to resolve type errors
+// when @types/node is not available.
+declare var __dirname: string;
+declare var process: {
+  env: {
+    PORT?: string;
+    [key: string]: string | undefined;
+  };
+  cwd: () => string;
+};
 
 import express, { Request, Response } from 'express';
 import cors from 'cors';

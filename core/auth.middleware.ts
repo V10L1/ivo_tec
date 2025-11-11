@@ -1,5 +1,13 @@
 // core/auth.middleware.ts - Middlewares de Autênticação e Autorização
-/// <reference types="node" />
+// FIX: Add declarations for Node.js globals to resolve type errors
+// when @types/node is not available.
+declare var process: {
+  env: {
+    JWT_SECRET?: string;
+    [key: string]: string | undefined;
+  };
+  exit: (code?: number) => never;
+};
 
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
