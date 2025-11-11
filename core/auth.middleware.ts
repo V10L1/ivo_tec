@@ -1,9 +1,8 @@
 // core/auth.middleware.ts - Middlewares de Autenticação e Autorização
-// FIX: Add Node.js type reference to resolve globals like 'process'.
 /// <reference types="node" />
 
-// FIX: Import Request, Response, and NextFunction types directly from express to resolve type conflicts.
-import { Request, Response, NextFunction } from 'express';
+// FIX: Alias express Request and Response to avoid conflict with DOM types.
+import { Request as ExpressRequest, Response as ExpressResponse, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { UserRole, AppKey } from '../types';
 import { pool } from './db';
@@ -29,8 +28,7 @@ declare global {
     }
 }
 
-// FIX: Use imported Request, Response, and NextFunction types.
-export const verifyToken = (req: Request, res: Response, next: NextFunction) => {
+export const verifyToken = (req: ExpressRequest, res: ExpressResponse, next: NextFunction) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
@@ -47,8 +45,7 @@ export const verifyToken = (req: Request, res: Response, next: NextFunction) => 
     });
 };
 
-// FIX: Use imported Request, Response, and NextFunction types.
-export const isDeveloper = (req: Request, res: Response, next: NextFunction) => {
+export const isDeveloper = (req: ExpressRequest, res: ExpressResponse, next: NextFunction) => {
     if (req.user?.role !== UserRole.DEVELOPER) {
         return res.status(403).json({ message: 'Acesso negado. Apenas desenvolvedores.' });
     }
@@ -56,8 +53,7 @@ export const isDeveloper = (req: Request, res: Response, next: NextFunction) => 
 };
 
 export const checkModulePermission = (requiredPermission: AppKey) => {
-    // FIX: Use imported Request, Response, and NextFunction types.
-    return async (req: Request, res: Response, next: NextFunction) => {
+    return async (req: ExpressRequest, res: ExpressResponse, next: NextFunction) => {
         if (!req.user) {
             return res.status(401).json({ message: 'Não autenticado' });
         }

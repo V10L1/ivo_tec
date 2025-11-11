@@ -233,9 +233,11 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
       setSavedPage(updatedPage);
       setEditingPage(updatedPage);
       setStatus('success');
+      handleFeedback('success', 'Salvo com sucesso!');
       setTimeout(() => setStatus('idle'), 2000);
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
+      handleFeedback('error', error.message || 'Falha ao salvar!');
       setStatus('error');
     }
   };
@@ -400,7 +402,7 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
           <div className="h-full flex flex-col">
               <div className="flex-grow overflow-y-auto">
                   {selectedBlock ? (
-                      <Inspector block={selectedBlock} onUpdate={handleUpdateBlock} onBack={() => setSelectedBlockId(null)} />
+                      <MemoizedInspector block={selectedBlock} onUpdate={handleUpdateBlock} onBack={() => setSelectedBlockId(null)} />
                   ) : (
                       <div className="p-4">
                           <h3 className="text-lg font-bold text-cyan-400 mb-4 flex items-center gap-2"><SettingsIcon className="w-5 h-5"/> Configurações da Página</h3>
@@ -427,6 +429,31 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
                       </div>
                   )}
               </div>
+              {/* Rodapé fixo do painel lateral */}
+              {!selectedBlock && (
+                <div className="flex-shrink-0 p-4 border-t border-slate-700 bg-slate-800 space-y-3">
+                   <div className="h-5">
+                      {feedback && (
+                        <div className={`text-sm font-semibold ${feedback.type === 'error' ? 'text-red-400' : 'text-green-400'}`}>
+                            {feedback.message}
+                        </div>
+                      )}
+                      {hasUnsavedChanges && !feedback && status !== 'error' && <div className="text-yellow-400 text-sm font-semibold">Alterações não salvas</div>}
+                      {status === 'success' && !hasUnsavedChanges && <div className="text-green-400 text-sm font-semibold">Salvo com sucesso!</div>}
+                  </div>
+                  {status === 'error' ? (
+                      <div className="flex items-center justify-between gap-4 text-red-400 text-sm font-semibold">
+                          <p>Falha ao salvar!</p>
+                          <button onClick={handleSaveChanges} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg">Tentar Novamente</button>
+                      </div>
+                  ) : (
+                      <button onClick={handleSaveChanges} disabled={!hasUnsavedChanges || status === 'saving'} className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg disabled:bg-slate-600 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                          <SaveIcon className="w-5 h-5"/>
+                          {status === 'saving' ? 'Salvando...' : 'Salvar Alterações'}
+                      </button>
+                  )}
+                </div>
+              )}
           </div>
         </aside>
         <button onClick={() => setIsPanelOpen(!isPanelOpen)} className="absolute top-1/2 -translate-y-1/2 bg-slate-800 hover:bg-cyan-600 text-white p-2 rounded-r-lg z-20 transition-transform duration-300 ease-in-out" style={{ left: isPanelOpen ? '24rem' : '0' }}>
@@ -444,7 +471,7 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
                                   {(provided, snapshot) => (
                                       <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} onClick={() => { setSelectedBlockId(block.id); setIsPanelOpen(true); }} className={`relative rounded-lg ring-2 transition-all cursor-pointer ${selectedBlockId === block.id ? 'ring-cyan-500' : 'ring-transparent hover:ring-slate-600'} ${snapshot.isDragging ? 'shadow-2xl shadow-cyan-900/50 opacity-80' : ''}`}>
                                           <div className="absolute top-2 right-2 z-10 flex gap-1 opacity-0 hover:opacity-100 transition-opacity"><button onClick={(e) => { e.stopPropagation(); handleDeleteBlock(block.id); }} className="p-1.5 bg-red-800/80 hover:bg-red-700 rounded-md text-white"><Trash2Icon className="w-4 h-4" /></button></div>
-                                          <div className="pointer-events-none">{renderPreviewBlock(block)}</div>
+                                          <div className="pointer-events-none"><MemoizedPreviewBlock {...block} /></div>
                                       </div>
                                   )}
                               </Draggable>
@@ -456,29 +483,6 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
             </DragDropContext>
             {editingPage.content.blocks.length === 0 && <div className="text-center py-20 text-slate-500"><p>Sua página está vazia.</p><p>Use o painel lateral para adicionar seu primeiro componente.</p></div>}
         </main>
-        
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-slate-900/80 backdrop-blur-sm border-t border-slate-700 z-30 flex justify-between items-center">
-             <div>
-                  {feedback && (
-                    <div className={`text-sm font-semibold ${feedback.type === 'error' ? 'text-red-400' : 'text-green-400'}`}>
-                        {feedback.message}
-                    </div>
-                  )}
-                  {hasUnsavedChanges && !feedback && status !== 'error' && <div className="text-yellow-400 text-sm font-semibold">Alterações não salvas</div>}
-                  {status === 'success' && <div className="text-green-400 text-sm font-semibold">Salvo com sucesso!</div>}
-              </div>
-              {status === 'error' ? (
-                  <div className="flex items-center gap-4 text-red-400 text-sm font-semibold">
-                      <p>Falha ao salvar!</p>
-                      <button onClick={handleSaveChanges} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg">Tentar Novamente</button>
-                  </div>
-              ) : (
-                  <button onClick={handleSaveChanges} disabled={!hasUnsavedChanges || status === 'saving'} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg disabled:bg-slate-600 disabled:cursor-not-allowed flex items-center gap-2">
-                      <SaveIcon className="w-5 h-5"/>
-                      {status === 'saving' ? 'Salvando...' : 'Salvar Alterações'}
-                  </button>
-              )}
-        </div>
       </div>
     );
   };
@@ -514,6 +518,12 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
 // --- Subcomponentes estáticos para evitar re-renderizações desnecessárias ---
 Inspector.displayName = "Inspector";
 const MemoizedInspector = React.memo(Inspector);
-const MemoizedPreviewBlock = React.memo(renderPreviewBlock);
+
+// Componente memoizado para renderização do bloco
+const MemoizedPreviewBlock: React.FC<PageBlock> = React.memo((block) => {
+    return renderPreviewBlock(block);
+});
+MemoizedPreviewBlock.displayName = "MemoizedPreviewBlock";
+
 
 export default SiteEditor;

@@ -1,9 +1,8 @@
 // server.ts - O Orquestrador Principal
-// FIX: Add Node.js type reference to resolve globals like 'process' and '__dirname'.
 /// <reference types="node" />
 
-// FIX: Import Request and Response types directly from express to resolve type conflicts.
-import express, { Request, Response } from 'express';
+// FIX: Alias express Request and Response to avoid conflict with DOM types.
+import express, { Request as ExpressRequest, Response as ExpressResponse } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -22,8 +21,7 @@ app.use(cors());
 app.use(express.json());
 
 // --- Rota de Verificação de Saúde ---
-// FIX: Use imported Request and Response types.
-app.get('/api/health', async (req: Request, res: Response) => {
+app.get('/api/health', async (req: ExpressRequest, res: ExpressResponse) => {
     try {
         const client = await pool.connect();
         await client.query('SELECT 1');
@@ -81,8 +79,7 @@ const serveFrontend = () => {
     app.use('/dist/client', express.static(clientDistPath));
     app.use(express.static(staticRootPath));
 
-    // FIX: Use imported Request and Response types.
-    app.get('*', (req: Request, res: Response) => {
+    app.get('*', (req: ExpressRequest, res: ExpressResponse) => {
         if (req.path.startsWith('/api/')) {
             return res.status(404).json({ message: 'Endpoint da API não encontrado.' });
         }
