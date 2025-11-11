@@ -1,13 +1,13 @@
 // api/site/site.routes.ts
-// FIX: Use `import = require()` syntax for Express to prevent type conflicts with global DOM types.
-import express = require('express');
+// FIX: Use ES module import syntax for Express to ensure correct type resolution.
+import express, { Request, Response } from 'express';
 import { pool } from '../../core/db';
 import { verifyToken, isDeveloper } from '../../core/auth.middleware';
 
 const router = express.Router();
 
-// FIX: Use namespaced express types for request and response objects.
-router.get('/content', async (req: express.Request, res: express.Response) => {
+// FIX: Use imported Request and Response types from Express.
+router.get('/content', async (req: Request, res: Response) => {
     try {
         res.setHeader('Cache-Control', 'no-store');
         const result = await pool.query('SELECT content FROM site_content WHERE id = 1');
@@ -21,8 +21,8 @@ router.get('/content', async (req: express.Request, res: express.Response) => {
     }
 });
 
-// FIX: Use namespaced express types for request and response objects.
-router.put('/content', verifyToken, isDeveloper, async (req: express.Request, res: express.Response) => {
+// FIX: Use imported Request and Response types from Express.
+router.put('/content', verifyToken, isDeveloper, async (req: Request, res: Response) => {
     const { content } = req.body;
     if (!content) {
         return res.status(400).json({ message: 'O conteúdo é obrigatório' });
