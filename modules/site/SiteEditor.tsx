@@ -132,6 +132,58 @@ const InspectorPanel: React.FC<{
     );
 };
 
+// --- Renderizador de Bloco para o Editor (WYSIWYG) ---
+const EditorBlockRenderer: React.FC<{ block: PageBlock }> = ({ block }) => {
+    const commonClasses = "w-full h-full flex flex-col p-4";
+    // Reduz o tamanho da fonte para melhor visualização no editor
+    const scaleText = "text-xs md:text-sm lg:text-base";
+
+    switch (block.type) {
+        case 'hero':
+            return (
+                <div className={`${commonClasses} text-center items-center justify-center bg-slate-800/50 rounded-lg`}>
+                    <h1 className="text-xl md:text-2xl font-extrabold text-white mb-2">{block.content.title}</h1>
+                    <p className={`text-slate-300 max-w-2xl mx-auto mb-3 ${scaleText}`}>{block.content.subtitle}</p>
+                    <div className="bg-cyan-600 text-white font-bold py-2 px-4 rounded-full text-xs">
+                        {block.content.ctaText}
+                    </div>
+                </div>
+            );
+        case 'text':
+            return (
+                 <div className={`${commonClasses} text-left overflow-hidden`}>
+                    <h2 className="text-lg font-bold mb-2 text-white truncate">{block.content.heading}</h2>
+                    <p className={`text-slate-400 whitespace-pre-wrap leading-relaxed ${scaleText}`}>{block.content.body}</p>
+                </div>
+            );
+        case 'image':
+            return (
+                <img src={block.content.imageUrl} alt={block.content.altText} className="w-full h-full object-cover rounded-lg shadow-lg" />
+            );
+        case 'button':
+            return (
+                 <div className={`${commonClasses} items-center justify-center`}>
+                    <div className="bg-slate-700 text-white font-bold py-2 px-5 rounded-lg inline-block text-sm">
+                        {block.content.text}
+                    </div>
+                </div>
+            );
+        case 'menu':
+            return (
+                 <nav className={`${commonClasses} flex-row items-center justify-center gap-4`}>
+                    {block.content.items.map(item => (
+                        <div key={item.id} className={`text-slate-300 font-medium ${scaleText}`}>
+                            {item.label}
+                        </div>
+                    ))}
+                </nav>
+            );
+        default:
+            return <div className="p-4 bg-red-900 rounded-lg">Bloco desconhecido</div>;
+    }
+};
+
+
 // --- Block Component on Canvas ---
 const Block: React.FC<{
     block: PageBlock;
@@ -153,15 +205,12 @@ const Block: React.FC<{
         <div 
             style={blockStyle} 
             className={`relative group transition-shadow duration-200 ${isSelected ? 'shadow-2xl shadow-cyan-500/30' : ''}`}
-            onClick={() => onSelect(block)}
+            onClick={(e) => { e.stopPropagation(); onSelect(block); }}
             onMouseDown={(e) => onMoveStart(e, block)}
         >
             <div className={`absolute inset-0 ring-2 rounded-lg pointer-events-none transition-all duration-200 ${isSelected ? 'ring-cyan-500' : 'ring-transparent group-hover:ring-cyan-500/50'}`}></div>
-            <div className="w-full h-full overflow-hidden rounded-lg bg-slate-800">
-                {block.type === 'hero' ? <div>...</div> : /* Simplified Render */
-                 block.type === 'image' ? <img src={block.content.imageUrl} alt={block.content.altText} className="w-full h-full object-cover"/> :
-                 <div className="p-2 text-xs text-center flex items-center justify-center h-full"><span>{block.type}</span></div>
-                }
+            <div className="w-full h-full overflow-hidden rounded-lg bg-slate-800 pointer-events-none">
+                 <EditorBlockRenderer block={block} />
             </div>
             {isSelected && resizeHandles.map(dir => (
                 <div 
@@ -190,7 +239,6 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
   const [isPanelOpen, setIsPanelOpen] = useState(true);
   const [activeTab, setActiveTab] = useState<'components' | 'inspector'>('components');
   const [selectedBlock, setSelectedBlock] = useState<PageBlock | null>(null);
-  const [editContext, setEditContext] = useState<'header' | 'content' | 'footer'>('content');
 
   const [interactionState, setInteractionState] = useState<{
       type: 'move' | 'resize' | 'new';
@@ -198,11 +246,14 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
       initialMouse: { x: number; y: number };
       initialLayout: BlockLayout;
       resizeDirection?: string;
+      targetContext: 'header' | 'content' | 'footer';
   } | null>(null);
-  const canvasRef = useRef<HTMLDivElement>(null);
+  const headerCanvasRef = useRef<HTMLDivElement>(null);
+  const contentCanvasRef = useRef<HTMLDivElement>(null);
+  const footerCanvasRef = useRef<HTMLDivElement>(null);
 
   const handleFeedback = (type: 'error' | 'success', message: string) => { setFeedback({ type, message }); setTimeout(() => setFeedback(null), 4000); };
-  const fetchPages = useCallback(async () => { /* ... (implementation is same as list view) ... */
+  const fetchPages = useCallback(async () => {
     setStatus('loading');
     try {
       const response = await fetch('/api/site/pages', { headers: { 'Authorization': `Bearer ${token}` } });
@@ -236,13 +287,12 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
         setEditingPage(fullPageData);
         setSavedPage(JSON.parse(JSON.stringify(fullPageData)));
         setView('editor');
-        setEditContext('content');
         setSelectedBlock(null);
         setActiveTab('components');
     } catch (error: any) { handleFeedback('error', error.message || 'Não foi possível carregar a página para edição.');
     } finally { setStatus('idle'); }
   };
-  const handleSaveChanges = async () => { /* ... (implementation is same as list view) ... */
+  const handleSaveChanges = async () => {
     if (!editingPage) return;
     setStatus('saving');
     try {
@@ -259,7 +309,7 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
     } catch (error: any) { handleFeedback('error', error.message || 'Falha ao salvar!');
     } finally { setStatus('idle'); }
   };
-  const handleCreatePage = async (e: React.FormEvent) => { /* ... (implementation is same as list view) ... */
+  const handleCreatePage = async (e: React.FormEvent) => {
     e.preventDefault(); setStatus('saving');
     try {
         const response = await fetch('/api/site/pages', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ title: newPageData.title, slug: newPageData.slug }) });
@@ -270,7 +320,7 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
     } catch (error: any) { handleFeedback('error', error.message || 'Erro ao criar página');
     } finally { setStatus('idle'); }
   };
-  const handleDeletePage = async (pageId: string) => { /* ... (implementation is same as list view) ... */
+  const handleDeletePage = async (pageId: string) => {
     if (!window.confirm("Você tem certeza que quer excluir esta página? Esta ação é irreversível.")) return;
     setStatus('deleting');
     try {
@@ -316,23 +366,70 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
   };
 
   // --- Drag and Drop / Resize Logic ---
+   const getCanvasForContext = (context: 'header' | 'content' | 'footer') => {
+    if (context === 'header') return headerCanvasRef.current;
+    if (context === 'footer') return footerCanvasRef.current;
+    return contentCanvasRef.current;
+   };
+
   const handleNewBlockDragStart = (e: React.MouseEvent, type: PageBlock['type']) => {
     const newBlock = createNewBlock(type);
-    setInteractionState({ type: 'new', block: newBlock, initialMouse: { x: e.clientX, y: e.clientY }, initialLayout: newBlock.layout.desktop });
+    setInteractionState({ 
+        type: 'new', 
+        block: newBlock, 
+        initialMouse: { x: e.clientX, y: e.clientY }, 
+        initialLayout: newBlock.layout.desktop,
+        targetContext: 'content' // Default, will be updated on move
+    });
   };
   const handleMoveStart = (e: React.MouseEvent, block: PageBlock) => {
     if (e.target instanceof HTMLDivElement && e.target.classList.contains('resize-handle')) return;
-    setInteractionState({ type: 'move', block, initialMouse: { x: e.clientX, y: e.clientY }, initialLayout: block.layout.desktop });
+     // Determine context based on where the block is
+    let context: 'header' | 'content' | 'footer' = 'content';
+    if (editingPage?.content?.headerBlocks.some(b => b.id === block.id)) context = 'header';
+    if (editingPage?.content?.footerBlocks.some(b => b.id === block.id)) context = 'footer';
+    
+    setInteractionState({ 
+        type: 'move', 
+        block, 
+        initialMouse: { x: e.clientX, y: e.clientY }, 
+        initialLayout: block.layout.desktop,
+        targetContext: context
+    });
   };
   const handleResizeStart = (e: React.MouseEvent, block: PageBlock, direction: string) => {
-    setInteractionState({ type: 'resize', block, resizeDirection: direction, initialMouse: { x: e.clientX, y: e.clientY }, initialLayout: block.layout.desktop });
+     let context: 'header' | 'content' | 'footer' = 'content';
+     if (editingPage?.content?.headerBlocks.some(b => b.id === block.id)) context = 'header';
+     if (editingPage?.content?.footerBlocks.some(b => b.id === block.id)) context = 'footer';
+
+    setInteractionState({ 
+        type: 'resize', 
+        block, 
+        resizeDirection: direction, 
+        initialMouse: { x: e.clientX, y: e.clientY }, 
+        initialLayout: block.layout.desktop,
+        targetContext: context
+    });
   };
   
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-        if (!interactionState || !canvasRef.current || !editingPage?.content) return;
+        if (!interactionState || !editingPage?.content) return;
         
-        const canvasRect = canvasRef.current.getBoundingClientRect();
+        // Determine current canvas
+        let currentContext: 'header' | 'content' | 'footer' = 'content';
+        const headerRect = headerCanvasRef.current?.getBoundingClientRect();
+        const footerRect = footerCanvasRef.current?.getBoundingClientRect();
+        if (headerRect && e.clientY > headerRect.top && e.clientY < headerRect.bottom) {
+            currentContext = 'header';
+        } else if (footerRect && e.clientY > footerRect.top && e.clientY < footerRect.bottom) {
+            currentContext = 'footer';
+        }
+        
+        const canvasEl = getCanvasForContext(currentContext);
+        if (!canvasEl) return;
+        
+        const canvasRect = canvasEl.getBoundingClientRect();
         const grid = editingPage.content.gridSettings.desktop;
         const cellWidth = (canvasRect.width - (grid.columns - 1) * grid.gap) / grid.columns;
         const cellHeight = grid.rowHeight;
@@ -362,18 +459,20 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
         const updatedBlock = { ...interactionState.block, layout: { ...interactionState.block.layout, desktop: newLayout } };
 
         if (interactionState.type === 'new') {
-            setInteractionState({...interactionState, block: updatedBlock }); // Just update the floating block
+            setInteractionState({...interactionState, block: updatedBlock, targetContext: currentContext });
         } else {
             updateBlock(updatedBlock);
             setSelectedBlock(updatedBlock);
         }
     };
 
-    const handleMouseUp = () => {
+    const handleMouseUp = (e: MouseEvent) => {
         if (interactionState?.type === 'new') {
+            const finalContext = interactionState.targetContext;
             updateEditingPage(draft => {
-                const key = `${editContext}Blocks` as const;
-                if(draft.content) draft.content[key].push(interactionState.block);
+                if(!draft.content) return;
+                const key = `${finalContext}Blocks` as const;
+                draft.content[key].push(interactionState.block);
             });
         }
         setInteractionState(null);
@@ -381,7 +480,7 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
 
     if (interactionState) {
         window.addEventListener('mousemove', handleMouseMove);
-        window.addEventListener('mouseup', handleMouseUp);
+        window.addEventListener('mouseup', handleMouseUp, { once: true });
     }
     return () => {
         window.removeEventListener('mousemove', handleMouseMove);
@@ -392,7 +491,7 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
   const hasUnsavedChanges = useMemo(() => JSON.stringify(editingPage) !== JSON.stringify(savedPage), [editingPage, savedPage]);
 
   // ----- RENDERERS -----
-  const renderListView = () => ( /* ... (same as before) ... */ 
+  const renderListView = () => ( 
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold text-slate-100">Gerenciador de Páginas</h2>
@@ -422,7 +521,7 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
         )}
     </div>
   );
-  const renderCreateView = () => ( /* ... (same as before) ... */ 
+  const renderCreateView = () => ( 
      <div className="p-6">
         <button onClick={() => setView('list')} className="flex items-center gap-2 mb-4 text-slate-400 hover:text-white"><ArrowLeftIcon className="w-4 h-4" /> Voltar para a Lista</button>
         <h2 className="text-2xl font-bold text-slate-100 mb-6">Criar Nova Página</h2>
@@ -439,22 +538,37 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
     const pageStyle = { backgroundColor: editingPage.content.settings.backgroundColor || '#0f172a' };
     
     const gridSettings = editingPage.content.gridSettings.desktop;
-    const gridStyle = {
-        display: 'grid',
-        gridTemplateColumns: `repeat(${gridSettings.columns}, 1fr)`,
-        gridAutoRows: `${gridSettings.rowHeight}px`,
-        gap: `${gridSettings.gap}px`,
+    
+    const GridCanvas = ({ blocks, canvasRef, contextName }: { blocks: PageBlock[], canvasRef: React.RefObject<HTMLDivElement>, contextName: 'header' | 'content' | 'footer' }) => {
+        const gridStyle = {
+            display: 'grid',
+            gridTemplateColumns: `repeat(${gridSettings.columns}, 1fr)`,
+            gridAutoRows: `${gridSettings.rowHeight}px`,
+            gap: `${gridSettings.gap}px`,
+        };
+        return (
+            <div ref={canvasRef} style={gridStyle} className="relative bg-slate-900/50 rounded-lg border border-dashed border-slate-700 min-h-[200px] p-2">
+                {blocks.map(block => (
+                    <Block 
+                        key={block.id} 
+                        block={block}
+                        gridSettings={gridSettings}
+                        isSelected={selectedBlock?.id === block.id}
+                        onSelect={(b) => { setSelectedBlock(b); setActiveTab('inspector'); }}
+                        onMoveStart={handleMoveStart}
+                        onResizeStart={handleResizeStart}
+                    />
+                ))}
+            </div>
+        );
     };
 
-    const key = `${editContext}Blocks` as const;
-    const blocksToRender = editingPage.content[key] || [];
-    
     return (
       <div className="flex flex-row h-full w-full overflow-hidden bg-slate-900">
         <aside className={`flex-shrink-0 bg-slate-800/80 backdrop-blur-sm border-r border-slate-700 transition-all duration-300 ease-in-out overflow-hidden ${isPanelOpen ? 'w-full max-w-sm' : 'w-0'}`}>
           <div className="h-full flex flex-col">
               <div className="flex-shrink-0 border-b border-slate-700 flex">
-                {(['components', 'inspector'] as const).map(tab => ( <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 p-3 text-sm font-semibold capitalize ${activeTab === tab ? 'bg-slate-900 text-cyan-400' : 'text-slate-400 hover:bg-slate-700'}`}>{tab}</button> ))}
+                {(['components', 'inspector'] as const).map(tab => ( <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 p-3 text-sm font-semibold capitalize ${activeTab === tab ? 'bg-slate-900 text-cyan-400' : 'text-slate-400 hover:bg-slate-700'}`}>{tab}</button>))}
               </div>
               <div className="flex-grow overflow-y-auto">
                  {activeTab === 'inspector' && <InspectorPanel selectedBlock={selectedBlock} pageData={editingPage.content} onUpdateBlock={updateBlock} onUpdatePageSettings={(f, v) => updateEditingPage(d => d.content && (d.content.settings[f] = v))} onUpdateGridSettings={(f,v) => updateEditingPage(d => d.content && (d.content.gridSettings.desktop[f] = v))}/>}
@@ -480,29 +594,22 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
 
         <div className="flex-1 relative flex flex-col" onMouseDown={() => setSelectedBlock(null)}>
            <button onClick={() => setIsPanelOpen(!isPanelOpen)} className={`absolute top-4 bg-slate-800 hover:bg-cyan-600 text-white p-2 rounded-r-lg z-30 transition-all ${isPanelOpen ? '-left-px' : 'left-0'}`}><ChevronRightIcon className="w-5 h-5"/></button>
-            <div className="flex-shrink-0 p-2 bg-slate-900/50 border-b border-slate-800 flex items-center justify-center gap-2">
-                {(['header', 'content', 'footer'] as const).map(ctx => (
-                    <button key={ctx} onClick={() => { setEditContext(ctx); setSelectedBlock(null); }} className={`px-4 py-2 text-sm font-semibold rounded-md ${editContext === ctx ? 'bg-cyan-600 text-white' : 'bg-slate-800 hover:bg-slate-700'}`}>Editar {ctx === 'header' ? 'Cabeçalho' : ctx === 'footer' ? 'Rodapé' : 'Conteúdo'}</button>
-                ))}
-            </div>
-            <main className="flex-1 overflow-auto p-4" style={pageStyle}>
-              <div ref={canvasRef} style={gridStyle} className="relative bg-slate-900/50 rounded-lg border border-dashed border-slate-700 min-h-[500px]">
-                {blocksToRender.map(block => (
-                    <Block 
-                        key={block.id} 
-                        block={block}
-                        gridSettings={gridSettings}
-                        isSelected={selectedBlock?.id === block.id}
-                        onSelect={(b) => { setSelectedBlock(b); setActiveTab('inspector'); }}
-                        onMoveStart={handleMoveStart}
-                        onResizeStart={handleResizeStart}
-                    />
-                ))}
+            <main className="flex-1 overflow-auto p-4 space-y-4" style={pageStyle}>
+              <div className="p-2 border-b-2 border-dashed border-slate-700/50">
+                <h3 className="text-center text-xs font-semibold uppercase text-slate-500 mb-2">Cabeçalho</h3>
+                <GridCanvas blocks={editingPage.content.headerBlocks} canvasRef={headerCanvasRef} contextName="header" />
+              </div>
+              <div className="p-2">
+                 <h3 className="text-center text-xs font-semibold uppercase text-slate-500 mb-2">Conteúdo da Página</h3>
+                <GridCanvas blocks={editingPage.content.contentBlocks} canvasRef={contentCanvasRef} contextName="content" />
+              </div>
+              <div className="p-2 border-t-2 border-dashed border-slate-700/50">
+                 <h3 className="text-center text-xs font-semibold uppercase text-slate-500 mb-2">Rodapé</h3>
+                <GridCanvas blocks={editingPage.content.footerBlocks} canvasRef={footerCanvasRef} contextName="footer" />
               </div>
             </main>
         </div>
         
-        {/* Render floating block for new component drag */}
         {interactionState?.type === 'new' && (
             <div className="fixed top-0 left-0 pointer-events-none z-50 opacity-80" style={{ transform: `translate(${interactionState.initialMouse.x + 10}px, ${interactionState.initialMouse.y + 10}px)`}}>
                 <div className="flex items-center gap-3 p-3 bg-slate-700 rounded-md text-left">
