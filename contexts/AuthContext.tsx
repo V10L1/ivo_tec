@@ -31,9 +31,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (!response.ok) {
             throw new Error("Token inválido ou sessão expirada");
           }
-          const { user, permissions: userPermissions } = await response.json();
+          const { user, permissions: userPermissions = [] } = await response.json();
           setCurrentUser(user);
-          setPermissions(userPermissions);
+          setPermissions(Array.isArray(userPermissions) ? userPermissions : []);
           setToken(storedToken);
         } catch (error) {
           console.error("Falha ao verificar token:", error);
@@ -62,11 +62,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('Falha no login');
       }
 
-      const { token: receivedToken, user, permissions: receivedPermissions } = await response.json();
+      // FIX: Garante que 'permissions' seja sempre um array, mesmo que a API não o retorne.
+      const { token: receivedToken, user, permissions: receivedPermissions = [] } = await response.json();
       localStorage.setItem('authToken', receivedToken);
       setToken(receivedToken);
       setCurrentUser(user);
-      setPermissions(receivedPermissions);
+      // FIX: Adiciona validação extra para garantir que apenas um array seja definido no estado.
+      setPermissions(Array.isArray(receivedPermissions) ? receivedPermissions : []);
   };
 
   const logout = () => {
@@ -84,7 +86,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   return (
     <AuthContext.Provider value={{ isAuthenticated, currentUser, token, permissions, login, logout, isLoading }}>
       {children}
-    </AuthContext.Provider>
+    </Auth.Provider>
   );
 };
 
