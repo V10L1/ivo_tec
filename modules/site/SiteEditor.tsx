@@ -397,8 +397,9 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
     if (!editingPage) return <div className="text-center p-8 text-red-400">Não foi possível carregar a página. Tente voltar para a lista.</div>;
     
     return (
-        <div className="flex-1 relative overflow-hidden">
-        <aside className={`absolute top-0 left-0 h-full bg-slate-800/80 backdrop-blur-sm border-r border-slate-700 z-20 transition-transform duration-300 ease-in-out ${isPanelOpen ? 'translate-x-0' : '-translate-x-full'} w-full max-w-sm`}>
+      <div className="flex flex-row h-full w-full overflow-hidden">
+        {/* Painel Lateral */}
+        <aside className={`flex-shrink-0 bg-slate-800/80 backdrop-blur-sm border-r border-slate-700 transition-all duration-300 ease-in-out overflow-hidden ${isPanelOpen ? 'w-full max-w-sm' : 'w-0'}`}>
           <div className="h-full flex flex-col">
               <div className="flex-grow overflow-y-auto">
                   {selectedBlock ? (
@@ -456,33 +457,35 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
               )}
           </div>
         </aside>
-        <button onClick={() => setIsPanelOpen(!isPanelOpen)} className="absolute top-1/2 -translate-y-1/2 bg-slate-800 hover:bg-cyan-600 text-white p-2 rounded-r-lg z-20 transition-transform duration-300 ease-in-out" style={{ left: isPanelOpen ? '24rem' : '0' }}>
+
+        {/* Área de Conteúdo Principal */}
+        <div className="flex-1 relative">
+           <button onClick={() => setIsPanelOpen(!isPanelOpen)} className="absolute top-4 left-4 bg-slate-800 hover:bg-cyan-600 text-white p-2 rounded-lg z-30 transition-all duration-300 ease-in-out">
               {isPanelOpen ? <ChevronLeftIcon className="w-5 h-5"/> : <ChevronRightIcon className="w-5 h-5"/>}
-        </button>
-
-
-        <main className="flex-1 overflow-y-auto bg-slate-900 transition-all duration-300 ease-in-out" style={{ paddingLeft: isPanelOpen ? '25rem' : '3rem', paddingRight: '1rem' }}>
-            <DragDropContext onDragEnd={onDragEnd}>
-              <StrictModeDroppable droppableId="canvas">
-                  {(provided) => (
-                      <div {...provided.droppableProps} ref={provided.innerRef} className="py-8 space-y-4">
-                          {editingPage.content.blocks.map((block, index) => (
-                              <Draggable key={block.id} draggableId={block.id} index={index}>
-                                  {(provided, snapshot) => (
-                                      <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} onClick={() => { setSelectedBlockId(block.id); setIsPanelOpen(true); }} className={`relative rounded-lg ring-2 transition-all cursor-pointer ${selectedBlockId === block.id ? 'ring-cyan-500' : 'ring-transparent hover:ring-slate-600'} ${snapshot.isDragging ? 'shadow-2xl shadow-cyan-900/50 opacity-80' : ''}`}>
-                                          <div className="absolute top-2 right-2 z-10 flex gap-1 opacity-0 hover:opacity-100 transition-opacity"><button onClick={(e) => { e.stopPropagation(); handleDeleteBlock(block.id); }} className="p-1.5 bg-red-800/80 hover:bg-red-700 rounded-md text-white"><Trash2Icon className="w-4 h-4" /></button></div>
-                                          <div className="pointer-events-none"><MemoizedPreviewBlock {...block} /></div>
-                                      </div>
-                                  )}
-                              </Draggable>
-                          ))}
-                          {provided.placeholder}
-                      </div>
-                  )}
-              </StrictModeDroppable>
-            </DragDropContext>
-            {editingPage.content.blocks.length === 0 && <div className="text-center py-20 text-slate-500"><p>Sua página está vazia.</p><p>Use o painel lateral para adicionar seu primeiro componente.</p></div>}
-        </main>
+            </button>
+            <main className="h-full overflow-y-auto bg-slate-900 p-8">
+              <DragDropContext onDragEnd={onDragEnd}>
+                <StrictModeDroppable droppableId="canvas">
+                    {(provided) => (
+                        <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-4 max-w-5xl mx-auto">
+                            {editingPage.content.blocks.map((block, index) => (
+                                <Draggable key={block.id} draggableId={block.id} index={index}>
+                                    {(provided, snapshot) => (
+                                        <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} onClick={() => { setSelectedBlockId(block.id); setIsPanelOpen(true); }} className={`relative rounded-lg ring-2 transition-all cursor-pointer ${selectedBlockId === block.id ? 'ring-cyan-500' : 'ring-transparent hover:ring-slate-600'} ${snapshot.isDragging ? 'shadow-2xl shadow-cyan-900/50 opacity-80' : ''}`}>
+                                            <div className="absolute top-2 right-2 z-10 flex gap-1 opacity-0 hover:opacity-100 transition-opacity"><button onClick={(e) => { e.stopPropagation(); handleDeleteBlock(block.id); }} className="p-1.5 bg-red-800/80 hover:bg-red-700 rounded-md text-white"><Trash2Icon className="w-4 h-4" /></button></div>
+                                            <div className="pointer-events-none"><MemoizedPreviewBlock {...block} /></div>
+                                        </div>
+                                    )}
+                                </Draggable>
+                            ))}
+                            {provided.placeholder}
+                        </div>
+                    )}
+                </StrictModeDroppable>
+              </DragDropContext>
+              {editingPage.content.blocks.length === 0 && <div className="text-center py-20 text-slate-500"><p>Sua página está vazia.</p><p>Use o painel lateral para adicionar seu primeiro componente.</p></div>}
+            </main>
+        </div>
       </div>
     );
   };
