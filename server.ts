@@ -2,7 +2,7 @@
 /// <reference types="node" />
 
 // FIX: Explicitly import Request and Response from express to resolve type conflicts.
-import express from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -22,7 +22,7 @@ app.use(express.json());
 
 // --- Rota de Verificação de Saúde ---
 // FIX: Use express.Request and express.Response to avoid type conflicts.
-app.get('/api/health', async (req: express.Request, res: express.Response) => {
+app.get('/api/health', async (req: Request, res: Response) => {
     try {
         const client = await pool.connect();
         await client.query('SELECT 1');
@@ -81,7 +81,7 @@ const serveFrontend = () => {
     app.use(express.static(staticRootPath));
 
     // FIX: Use express.Request and express.Response to avoid type conflicts.
-    app.get('*', (req: express.Request, res: express.Response) => {
+    app.get('*', (req: Request, res: Response) => {
         if (req.path.startsWith('/api/')) {
             return res.status(404).json({ message: 'Endpoint da API não encontrado.' });
         }
