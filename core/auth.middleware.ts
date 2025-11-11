@@ -3,7 +3,7 @@
 
 // FIX: Explicitly import express types to avoid conflict with DOM types.
 // FIX: Import Request, Response, and NextFunction from express
-import { Request, Response, NextFunction } from 'express';
+import express from 'express';
 import jwt from 'jsonwebtoken';
 import { UserRole, AppKey } from '../types';
 import { pool } from './db';
@@ -31,7 +31,7 @@ declare global {
 
 // FIX: Use express.Request and express.Response to avoid type conflicts.
 // FIX: Use Request, Response, and NextFunction types from express
-export const verifyToken = (req: Request, res: Response, next: NextFunction) => {
+export const verifyToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
@@ -50,7 +50,7 @@ export const verifyToken = (req: Request, res: Response, next: NextFunction) => 
 
 // FIX: Use express.Request and express.Response to avoid type conflicts.
 // FIX: Use Request, Response, and NextFunction types from express
-export const isDeveloper = (req: Request, res: Response, next: NextFunction) => {
+export const isDeveloper = (req: express.Request, res: express.Response, next: express.NextFunction) => {
     if (req.user?.role !== UserRole.DEVELOPER) {
         return res.status(403).json({ message: 'Acesso negado. Apenas desenvolvedores.' });
     }
@@ -60,7 +60,7 @@ export const isDeveloper = (req: Request, res: Response, next: NextFunction) => 
 export const checkModulePermission = (requiredPermission: AppKey) => {
     // FIX: Use express.Request and express.Response to avoid type conflicts.
     // FIX: Use Request, Response, and NextFunction types from express
-    return async (req: Request, res: Response, next: NextFunction) => {
+    return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
         if (!req.user) {
             return res.status(401).json({ message: 'Não autenticado' });
         }

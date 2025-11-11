@@ -205,8 +205,15 @@ const Block: React.FC<{
         <div 
             style={blockStyle} 
             className={`relative group transition-shadow duration-200 ${isSelected ? 'shadow-2xl shadow-cyan-500/30' : ''}`}
-            onClick={(e) => { e.stopPropagation(); onSelect(block); }}
-            onMouseDown={(e) => onMoveStart(e, block)}
+            onMouseDown={(e) => {
+                // Let resize handle its own event
+                if (e.target instanceof HTMLDivElement && e.target.classList.contains('resize-handle')) {
+                    return;
+                }
+                e.stopPropagation();
+                onSelect(block);
+                onMoveStart(e, block);
+            }}
         >
             <div className={`absolute inset-0 ring-2 rounded-lg pointer-events-none transition-all duration-200 ${isSelected ? 'ring-cyan-500' : 'ring-transparent group-hover:ring-cyan-500/50'}`}></div>
             <div className="w-full h-full overflow-hidden rounded-lg bg-slate-800 pointer-events-none">
@@ -363,6 +370,8 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
             }
         }
     });
+    // FIX: Keep the selectedBlock state in sync with the page data
+    setSelectedBlock(updatedBlock);
   };
 
   // --- Drag and Drop / Resize Logic ---
@@ -462,7 +471,6 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
             setInteractionState({...interactionState, block: updatedBlock, targetContext: currentContext });
         } else {
             updateBlock(updatedBlock);
-            setSelectedBlock(updatedBlock);
         }
     };
 
@@ -474,6 +482,8 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
                 const key = `${finalContext}Blocks` as const;
                 draft.content[key].push(interactionState.block);
             });
+            setSelectedBlock(interactionState.block);
+            setActiveTab('inspector');
         }
         setInteractionState(null);
     };
@@ -592,7 +602,7 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
           </div>
         </aside>
 
-        <div className="flex-1 relative flex flex-col" onMouseDown={() => setSelectedBlock(null)}>
+        <div className="flex-1 relative flex flex-col" onMouseDown={(e) => { if (e.target === e.currentTarget) { setSelectedBlock(null); } }}>
            <button onClick={() => setIsPanelOpen(!isPanelOpen)} className={`absolute top-4 bg-slate-800 hover:bg-cyan-600 text-white p-2 rounded-r-lg z-30 transition-all ${isPanelOpen ? '-left-px' : 'left-0'}`}><ChevronRightIcon className="w-5 h-5"/></button>
             <main className="flex-1 overflow-auto p-4 space-y-4" style={pageStyle}>
               <div className="p-2 border-b-2 border-dashed border-slate-700/50">
