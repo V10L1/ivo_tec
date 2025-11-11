@@ -1,7 +1,6 @@
 // server.ts - O Orquestrador Principal
 /// <reference types="node" />
 
-// FIX: Directly import Request and Response from express to avoid type conflicts with global DOM types.
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -14,14 +13,14 @@ import { initializeDatabase, pool } from './core/db';
 // Carrega as variáveis de ambiente antes de qualquer outra coisa
 dotenv.config();
 
-const app = express();
+// FIX: Explicitly type the express app to resolve middleware type conflicts.
+const app: express.Express = express();
 const PORT = process.env.PORT || 8069;
 
 app.use(cors());
 app.use(express.json());
 
 // --- Rota de Verificação de Saúde ---
-// FIX: Use direct Request and Response types from express.
 app.get('/api/health', async (req: Request, res: Response) => {
     try {
         const client = await pool.connect();
@@ -80,7 +79,6 @@ const serveFrontend = () => {
     app.use('/dist/client', express.static(clientDistPath));
     app.use(express.static(staticRootPath));
 
-    // FIX: Use direct Request and Response types from express.
     app.get('*', (req: Request, res: Response) => {
         if (req.path.startsWith('/api/')) {
             return res.status(404).json({ message: 'Endpoint da API não encontrado.' });

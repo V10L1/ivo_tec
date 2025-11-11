@@ -1,5 +1,4 @@
 // api/site/site.routes.ts
-// FIX: Directly import Request and Response from express to avoid type conflicts with global DOM types.
 import express, { Request, Response } from 'express';
 import { pool } from '../../core/db';
 import { verifyToken, checkModulePermission } from '../../core/auth.middleware';

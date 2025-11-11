@@ -33,17 +33,24 @@ const BlockRenderer: React.FC<{ block: PageBlock }> = ({ block }) => {
     const inlineStyle = {
         backgroundColor: styles.backgroundColor,
         opacity: styles.opacity,
+    };
+    
+    const textStyles: React.CSSProperties = {
         color: styles.textColor,
+        textAlign: styles.textAlign,
+        fontWeight: styles.fontWeight,
+        fontStyle: styles.fontStyle,
+        fontFamily: styles.fontFamily,
     };
 
     switch (block.type) {
         case 'hero':
             return (
                 <div style={inlineStyle} className={`${commonClasses} text-center items-center justify-center rounded-lg`}>
-                    <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-4" style={{color: styles.textColor}}>{block.content.title}</h1>
-                    <p className="text-md md:text-lg text-slate-300 max-w-2xl mx-auto mb-6" style={{color: styles.textColor}}>{block.content.subtitle}</p>
+                    <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-4" style={textStyles}>{block.content.title}</h1>
+                    <p className="text-md md:text-lg text-slate-300 max-w-2xl mx-auto mb-6" style={textStyles}>{block.content.subtitle}</p>
                     {block.content.ctaEnabled && (
-                         <a href={block.content.ctaLink} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-8 rounded-full text-lg transition-transform transform hover:scale-105">
+                         <a href={block.content.ctaLink} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-8 rounded-full text-lg transition-transform transform hover:scale-105" style={{...textStyles, backgroundColor: styles.backgroundColor}}>
                             {block.content.ctaText}
                         </a>
                     )}
@@ -52,8 +59,8 @@ const BlockRenderer: React.FC<{ block: PageBlock }> = ({ block }) => {
         case 'text':
             return (
                  <div style={inlineStyle} className={`${commonClasses} text-left`}>
-                    <h2 className="text-3xl font-bold mb-4" style={{color: styles.textColor}}>{block.content.heading}</h2>
-                    <p className="text-slate-400 whitespace-pre-wrap leading-relaxed" style={{color: styles.textColor}}>{block.content.body}</p>
+                    <h2 className="text-3xl font-bold mb-4" style={textStyles}>{block.content.heading}</h2>
+                    <p className="text-slate-400 whitespace-pre-wrap leading-relaxed" style={textStyles}>{block.content.body}</p>
                 </div>
             );
         case 'image':
@@ -63,16 +70,16 @@ const BlockRenderer: React.FC<{ block: PageBlock }> = ({ block }) => {
         case 'button':
             return (
                  <div className={`${commonClasses} items-center justify-center`}>
-                    <a href={block.content.link} className="text-white font-bold py-3 px-8 rounded-lg inline-block transition-colors" style={inlineStyle}>
+                    <a href={block.content.link} className="text-white font-bold py-3 px-8 rounded-lg inline-block transition-colors" style={{...inlineStyle, ...textStyles}}>
                         {block.content.text}
                     </a>
                 </div>
             );
         case 'menu':
             return (
-                 <nav className={`${commonClasses} flex-row items-center justify-center gap-6`}>
+                 <nav style={inlineStyle} className={`${commonClasses} flex-row items-center justify-center gap-6`}>
                     {block.content.items.map(item => (
-                        <a key={item.id} href={item.link} className="text-slate-300 hover:text-cyan-400 font-medium transition-colors" style={{color: styles.textColor}}>
+                        <a key={item.id} href={item.link} className="text-slate-300 hover:text-cyan-400 font-medium transition-colors" style={textStyles}>
                             {item.label}
                         </a>
                     ))}

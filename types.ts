@@ -70,6 +70,11 @@ export interface BlockStyles {
   opacity?: number; // 0 to 1
   textColor?: string;
   zIndex?: number;
+  // Rich text styles
+  textAlign?: 'left' | 'center' | 'right' | 'justify';
+  fontWeight?: 'normal' | 'bold';
+  fontStyle?: 'normal' | 'italic';
+  fontFamily?: string;
 }
 
 
