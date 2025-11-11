@@ -2,8 +2,8 @@
 // FIX: Add Node.js type reference to resolve globals like 'process' and '__dirname'.
 /// <reference types="node" />
 
-// FIX: Explicitly import types from express using aliases to avoid conflicts with global DOM types.
-import express, { Request as ExpressRequest, Response as ExpressResponse, Application } from 'express';
+// FIX: Use `import = require()` syntax for Express to prevent type conflicts with global DOM types.
+import express = require('express');
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -15,7 +15,7 @@ import { initializeDatabase } from './core/db';
 // Carrega as variáveis de ambiente antes de qualquer outra coisa
 dotenv.config();
 
-const app: Application = express();
+const app: express.Application = express();
 const PORT = process.env.PORT || 8069;
 
 app.use(cors());
@@ -67,8 +67,8 @@ const serveFrontend = () => {
     app.use('/dist/client', express.static(clientDistPath));
     app.use(express.static(staticRootPath));
 
-    // FIX: Use explicit aliased types to ensure correct type inference.
-    app.get('*', (req: ExpressRequest, res: ExpressResponse) => {
+    // FIX: Use namespaced express types to ensure correct type inference for request and response objects.
+    app.get('*', (req: express.Request, res: express.Response) => {
         if (req.path.startsWith('/api/')) {
             return res.status(404).json({ message: 'Endpoint da API não encontrado.' });
         }

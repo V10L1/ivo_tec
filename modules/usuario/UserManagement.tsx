@@ -108,15 +108,17 @@ const UserManagement: React.FC = () => {
   const renderMain = () => (
     <>
       <h3 className="text-xl font-semibold text-white mb-4">Gerenciamento de Usuários e Grupos</h3>
-      <p className="mb-6 text-slate-400">Selecione uma categoria para gerenciar.</p>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        <div onClick={() => setView('users')} className="group relative aspect-square bg-slate-800 rounded-lg p-4 flex flex-col items-center justify-center gap-4 cursor-pointer border border-slate-700 hover:border-cyan-400 transition-all duration-300">
-          <UsersIcon className="w-16 h-16 text-cyan-400 mx-auto transition-transform duration-300 group-hover:scale-110" />
-          <h4 className="font-bold text-2xl text-slate-100 mt-3">Usuários</h4>
-        </div>
-        <div onClick={() => setView('groups')} className="group relative aspect-square bg-slate-800 rounded-lg p-4 flex flex-col items-center justify-center gap-4 cursor-pointer border border-slate-700 hover:border-cyan-400 transition-all duration-300">
-          <ShieldIcon className="w-16 h-16 text-cyan-400 mx-auto transition-transform duration-300 group-hover:scale-110" />
-          <h4 className="font-bold text-2xl text-slate-100 mt-3">Grupos</h4>
+      <p className="mb-6 text-slate-400 max-w-xl">Selecione uma categoria para gerenciar.</p>
+      <div className="max-w-xl">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div onClick={() => setView('users')} className="group relative aspect-square bg-slate-800 rounded-lg p-4 flex flex-col items-center justify-center gap-4 cursor-pointer border border-slate-700 hover:border-cyan-400 transition-all duration-300">
+            <UsersIcon className="w-16 h-16 text-cyan-400 mx-auto transition-transform duration-300 group-hover:scale-110" />
+            <h4 className="font-bold text-2xl text-slate-100 mt-3">Usuários</h4>
+          </div>
+          <div onClick={() => setView('groups')} className="group relative aspect-square bg-slate-800 rounded-lg p-4 flex flex-col items-center justify-center gap-4 cursor-pointer border border-slate-700 hover:border-cyan-400 transition-all duration-300">
+            <ShieldIcon className="w-16 h-16 text-cyan-400 mx-auto transition-transform duration-300 group-hover:scale-110" />
+            <h4 className="font-bold text-2xl text-slate-100 mt-3">Grupos</h4>
+          </div>
         </div>
       </div>
     </>
