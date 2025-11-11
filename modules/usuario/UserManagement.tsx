@@ -362,7 +362,12 @@ const UserManagement: React.FC = () => {
             </div>
 
             <div className="mt-8 pt-6 border-t border-slate-700 flex justify-between items-center">
-                <button onClick={() => handleDeleteGroup(selectedGroup)} disabled={isSystemRole || status === 'submitting'} className="text-red-500 hover:text-red-400 font-semibold disabled:text-slate-600 disabled:cursor-not-allowed flex items-center gap-2">
+                <button 
+                  onClick={() => handleDeleteGroup(selectedGroup)} 
+                  disabled={isSystemRole || status === 'submitting'} 
+                  className="text-red-500 hover:text-red-400 font-semibold disabled:text-slate-600 disabled:cursor-not-allowed flex items-center gap-2"
+                  title={isSystemRole ? 'Grupos de sistema não podem ser removidos.' : 'Remover este grupo permanentemente'}
+                >
                     <Trash2Icon className="w-4 h-4" /> Remover Grupo
                 </button>
                 <button onClick={handleSaveGroupPermissions} disabled={isDeveloperRole || status === 'submitting'} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg disabled:bg-slate-600 disabled:cursor-not-allowed flex items-center gap-2">

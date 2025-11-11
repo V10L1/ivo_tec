@@ -1,13 +1,13 @@
 // api/site/site.routes.ts
-// FIX: Use require-style import for Express to ensure correct type resolution for CommonJS modules.
-import express = require('express');
+// FIX: Use standard ES module import for Express.
+import express, { Request, Response } from 'express';
 import { pool } from '../../core/db';
 import { verifyToken, checkModulePermission } from '../../core/auth.middleware';
 
 const router = express.Router();
 
-// FIX: Use express.Request and express.Response types.
-router.get('/content', async (req: express.Request, res: express.Response) => {
+// FIX: Use Request and Response types from Express.
+router.get('/content', async (req: Request, res: Response) => {
     try {
         res.setHeader('Cache-Control', 'no-store');
         const result = await pool.query('SELECT content FROM site_content WHERE id = 1');
@@ -21,8 +21,8 @@ router.get('/content', async (req: express.Request, res: express.Response) => {
     }
 });
 
-// FIX: Use express.Request and express.Response types.
-router.put('/content', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
+// FIX: Use Request and Response types from Express.
+router.put('/content', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
     const { content } = req.body;
     if (!content) {
         return res.status(400).json({ message: 'O conteúdo é obrigatório' });
