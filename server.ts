@@ -2,8 +2,8 @@
 // FIX: Add Node.js type reference to resolve globals like 'process' and '__dirname'.
 /// <reference types="node" />
 
-// FIX: Use standard ES module import for Express instead of require().
-import express, { Application, Request, Response } from 'express';
+// FIX: Use require() for Express to ensure proper CommonJS module interoperability and type resolution.
+import express = require('express');
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -15,7 +15,7 @@ import { initializeDatabase } from './core/db';
 // Carrega as variáveis de ambiente antes de qualquer outra coisa
 dotenv.config();
 
-const app: Application = express();
+const app: express.Application = express();
 const PORT = process.env.PORT || 8069;
 
 app.use(cors());
@@ -70,7 +70,7 @@ const serveFrontend = () => {
     app.use(express.static(staticRootPath));
 
     // FIX: Add explicit types for req and res to resolve property access errors.
-    app.get('*', (req: Request, res: Response) => {
+    app.get('*', (req: express.Request, res: express.Response) => {
         if (req.path.startsWith('/api/')) {
             return res.status(404).json({ message: 'Endpoint da API não encontrado.' });
         }

@@ -2,10 +2,11 @@
 // FIX: Add Node.js type reference to resolve globals like 'process'.
 /// <reference types="node" />
 
-// FIX: Use standard ES module imports for Express types.
-import { Request, Response, NextFunction } from 'express';
+// FIX: Use require() for Express to ensure proper CommonJS module interoperability and type resolution.
+import express = require('express');
 import jwt from 'jsonwebtoken';
-import { UserRole } from '../types';
+import { UserRole, AppKey } from '../types';
+import { pool } from './db';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -29,7 +30,7 @@ declare global {
 }
 
 // FIX: Add explicit types for req, res, and next to resolve property access errors.
-export const verifyToken = (req: Request, res: Response, next: NextFunction) => {
+export const verifyToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
@@ -47,9 +48,36 @@ export const verifyToken = (req: Request, res: Response, next: NextFunction) => 
 };
 
 // FIX: Add explicit types for req, res, and next to resolve property access errors.
-export const isDeveloper = (req: Request, res: Response, next: NextFunction) => {
+export const isDeveloper = (req: express.Request, res: express.Response, next: express.NextFunction) => {
     if (req.user?.role !== UserRole.DEVELOPER) {
         return res.status(403).json({ message: 'Acesso negado. Apenas desenvolvedores.' });
     }
     next();
+};
+
+export const checkModulePermission = (requiredPermission: AppKey) => {
+    return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+        if (!req.user) {
+            return res.status(401).json({ message: 'Não autenticado' });
+        }
+        
+        try {
+            const permissionsResult = await pool.query('SELECT permissions FROM role_permissions WHERE role = $1', [req.user.role]);
+            
+            if (permissionsResult.rows.length === 0) {
+                return res.status(403).json({ message: 'Acesso negado. Nenhuma permissão definida para esta função.' });
+            }
+
+            const userPermissions = permissionsResult.rows[0].permissions;
+
+            if (Array.isArray(userPermissions) && userPermissions.includes(requiredPermission)) {
+                next();
+            } else {
+                return res.status(403).json({ message: 'Acesso negado. Permissão de módulo insuficiente.' });
+            }
+        } catch (error) {
+            console.error('Erro ao verificar permissões do módulo:', error);
+            return res.status(500).json({ message: 'Erro interno ao verificar permissões.' });
+        }
+    };
 };
