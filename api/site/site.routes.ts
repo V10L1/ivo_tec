@@ -3,7 +3,8 @@
 // FIX: Import the entire express module to avoid type conflicts with global DOM types.
 // FIX: Explicitly import Request and Response types from express.
 // FIX: Import Request and Response types from express to avoid conflicts with DOM types.
-import express, { Request, Response } from 'express';
+// FIX: Change to namespace import to prevent type conflicts with DOM types.
+import * as express from 'express';
 import { pool } from '../../core/db';
 import { verifyToken, isDeveloper } from '../../core/auth.middleware';
 
@@ -12,7 +13,8 @@ const router = express.Router();
 // FIX: Use express.Request and express.Response to ensure correct type inference.
 // FIX: Use Request and Response types directly from the express import to avoid type conflicts.
 // FIX: Use Request and Response types from express import to resolve type errors.
-router.get('/content', async (req: Request, res: Response) => {
+// FIX: Use namespaced express types to avoid conflicts.
+router.get('/content', async (req: express.Request, res: express.Response) => {
     try {
         res.setHeader('Cache-Control', 'no-store');
         const result = await pool.query('SELECT content FROM site_content WHERE id = 1');
@@ -29,7 +31,8 @@ router.get('/content', async (req: Request, res: Response) => {
 // FIX: Use express.Request and express.Response to ensure correct type inference.
 // FIX: Use Request and Response types directly from the express import to avoid type conflicts.
 // FIX: Use Request and Response types from express import to resolve type errors.
-router.put('/content', verifyToken, isDeveloper, async (req: Request, res: Response) => {
+// FIX: Use namespaced express types to avoid conflicts.
+router.put('/content', verifyToken, isDeveloper, async (req: express.Request, res: express.Response) => {
     const { content } = req.body;
     if (!content) {
         return res.status(400).json({ message: 'O conteúdo é obrigatório' });
