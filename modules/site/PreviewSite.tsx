@@ -68,7 +68,7 @@ const PreviewSite: React.FC = () => {
         <nav className="container mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <MotorcycleIcon className="w-8 h-8 text-cyan-400" />
-            <span className="text-xl font-bold">{siteData?.settings.brandName || 'Marca'}</span>
+            <span className="text-xl font-bold">{siteData?.settings?.brandName || 'Marca'}</span>
           </div>
           <div className="bg-yellow-500/20 text-yellow-300 text-sm font-bold px-4 py-2 rounded-lg">
             MODO DE VISUALIZAÇÃO
@@ -86,7 +86,7 @@ const PreviewSite: React.FC = () => {
       {/* Rodapé */}
       <footer className="border-t border-slate-800 mt-20 py-8">
         <div className="container mx-auto px-6 text-center text-slate-500">
-          <p>&copy; {new Date().getFullYear()} {siteData?.settings.brandName || 'Marca'}. Todos os Direitos Reservados.</p>
+          <p>&copy; {new Date().getFullYear()} {siteData?.settings?.brandName || 'Marca'}. Todos os Direitos Reservados.</p>
         </div>
       </footer>
     </div>

@@ -81,10 +81,10 @@ const PublicSite: React.FC = () => {
         <nav className="container mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <MotorcycleIcon className="w-8 h-8 text-cyan-400" />
-            <span className="text-xl font-bold">{siteData?.settings.brandName || ''}</span>
+            <span className="text-xl font-bold">{siteData?.settings?.brandName || ''}</span>
           </div>
           <a href="#/administrator" onClick={handleNavigate} className="bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-            {siteData?.settings.loginButtonText || ''}
+            {siteData?.settings?.loginButtonText || ''}
           </a>
         </nav>
       </header>
@@ -99,7 +99,7 @@ const PublicSite: React.FC = () => {
       {/* Rodapé */}
       <footer className="border-t border-slate-800 mt-20 py-8">
         <div className="container mx-auto px-6 text-center text-slate-500">
-          <p>&copy; {new Date().getFullYear()} {siteData?.settings.brandName || ''}. Todos os Direitos Reservados.</p>
+          <p>&copy; {new Date().getFullYear()} {siteData?.settings?.brandName || ''}. Todos os Direitos Reservados.</p>
         </div>
       </footer>
     </div>
