@@ -1,13 +1,13 @@
 // api/site/site.routes.ts
-// FIX: Use default import for express to avoid type conflicts.
-import express from 'express';
+// FIX: Explicitly import types from express to avoid conflicts and resolve type errors.
+import express, { Request, Response } from 'express';
 import { pool } from '../../core/db';
 import { verifyToken, isDeveloper } from '../../core/auth.middleware';
 
 const router = express.Router();
 
-// FIX: Use explicit express.Request and express.Response types.
-router.get('/content', async (req: express.Request, res: express.Response) => {
+// FIX: Use explicit Request and Response types.
+router.get('/content', async (req: Request, res: Response) => {
     try {
         res.setHeader('Cache-Control', 'no-store');
         const result = await pool.query('SELECT content FROM site_content WHERE id = 1');
@@ -21,8 +21,8 @@ router.get('/content', async (req: express.Request, res: express.Response) => {
     }
 });
 
-// FIX: Use explicit express.Request and express.Response types.
-router.put('/content', verifyToken, isDeveloper, async (req: express.Request, res: express.Response) => {
+// FIX: Use explicit Request and Response types.
+router.put('/content', verifyToken, isDeveloper, async (req: Request, res: Response) => {
     const { content } = req.body;
     if (!content) {
         return res.status(400).json({ message: 'O conteúdo é obrigatório' });

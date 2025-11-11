@@ -8,37 +8,25 @@ const AppsManager: React.FC = () => {
       <p className="mb-6 text-slate-400">
         Abaixo estão todos os módulos atualmente instalados e ativos na plataforma.
       </p>
-      <div className="overflow-x-auto">
-        <table className="min-w-full bg-slate-900 rounded-lg">
-          <thead>
-            <tr className="border-b border-slate-700">
-              <th className="p-3 text-left text-sm font-semibold text-slate-400">Módulo</th>
-              <th className="p-3 text-left text-sm font-semibold text-slate-400">Descrição</th>
-              <th className="p-3 text-left text-sm font-semibold text-slate-400">Status</th>
-            </tr>
-          </thead>
-          <tbody>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
             {APP_MODULES.map((module) => (
-              <tr key={module.key} className="border-b border-slate-800 hover:bg-slate-800/50">
-                <td className="p-3 text-sm text-slate-200 font-medium">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-slate-700 rounded-md">
-                        <module.Icon className="w-5 h-5 text-cyan-400" />
-                    </div>
-                    <span>{module.name}</span>
-                  </div>
-                </td>
-                <td className="p-3 text-sm text-slate-400">{module.description}</td>
-                <td className="p-3 text-sm">
-                  <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-500/20 text-green-400">
-                    Ativo
-                  </span>
-                </td>
-              </tr>
+              <div
+                key={module.key}
+                className="group relative aspect-square bg-slate-800 rounded-lg p-4 flex flex-col items-center justify-center gap-4 cursor-default border border-slate-700 transition-all duration-300 overflow-hidden"
+              >
+                {/* Ícone e Nome (visível por padrão) */}
+                <div className="text-center transition-opacity duration-300 group-hover:opacity-20">
+                    <module.Icon className="w-12 h-12 text-cyan-400 mx-auto transition-transform duration-300 group-hover:scale-110" />
+                    <h4 className="font-bold text-lg text-slate-100 mt-3">{module.name}</h4>
+                </div>
+
+                {/* Descrição (visível no hover) */}
+                <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm p-4 flex items-center justify-center text-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <p className="text-sm text-slate-300">{module.description}</p>
+                </div>
+              </div>
             ))}
-          </tbody>
-        </table>
-      </div>
+        </div>
     </div>
   );
 };
