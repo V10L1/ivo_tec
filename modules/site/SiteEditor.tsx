@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Page, SiteData, PageBlock, SiteSettings, HeroBlockContent, TextBlockContent, ImageBlockContent, ButtonBlockContent, MenuBlockContent, MenuItem, GridSettings, BlockLayout } from '../../types';
+import { Page, SiteData, PageBlock, SiteSettings, HeroBlockContent, TextBlockContent, ImageBlockContent, ButtonBlockContent, MenuBlockContent, VideoBlockContent, MenuItem, GridSettings, BlockLayout, BlockStyles } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 // FIX: Added GridIcon to imports
-import { PlusCircleIcon, SettingsIcon, Trash2Icon, MotorcycleIcon, TypeIcon, ImageIcon, CodeIcon, ChevronLeftIcon, ChevronRightIcon, SaveIcon, ArrowLeftIcon, FilePlusIcon, EditIcon, LayoutIcon, MenuIcon, PointerIcon, AlignStartVerticalIcon, AlignCenterVerticalIcon, AlignEndVerticalIcon, AlignStartHorizontalIcon, AlignCenterHorizontalIcon, AlignEndHorizontalIcon, GridIcon } from '../../components/icons/Icons';
+import { PlusCircleIcon, SettingsIcon, Trash2Icon, MotorcycleIcon, TypeIcon, ImageIcon, CodeIcon, ChevronLeftIcon, ChevronRightIcon, SaveIcon, ArrowLeftIcon, FilePlusIcon, EditIcon, LayoutIcon, MenuIcon, PointerIcon, AlignStartVerticalIcon, AlignCenterVerticalIcon, AlignEndVerticalIcon, AlignStartHorizontalIcon, AlignCenterHorizontalIcon, AlignEndHorizontalIcon, GridIcon, VideoIcon, DividerIcon, SparklesIcon } from '../../components/icons/Icons';
 
 // --- UTILITIES & HELPERS ---
 const generateId = (prefix = 'id') => `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-const defaultGridSettings: GridSettings = { columns: 12, rowHeight: 20, gap: 10 };
-const defaultLayout: BlockLayout = { colStart: 1, colEnd: 5, rowStart: 1, rowEnd: 5, alignSelf: 'stretch', justifySelf: 'stretch' };
+const defaultGridSettings: GridSettings = { columns: 48, rowHeight: 10, gap: 8 };
+const defaultLayout: BlockLayout = { colStart: 1, colEnd: 13, rowStart: 1, rowEnd: 13, alignSelf: 'stretch', justifySelf: 'stretch' };
+const defaultStyles: BlockStyles = { backgroundColor: '#1e293b', opacity: 1, textColor: '#cbd5e1'};
 
 const defaultPageContent: SiteData = {
   settings: { brandName: 'Nova Marca', loginButtonText: 'Login', backgroundColor: '#0f172a' },
@@ -20,16 +21,21 @@ const defaultPageContent: SiteData = {
 
 const createNewBlock = (type: PageBlock['type']): PageBlock => {
     const id = generateId('block');
-    const baseBlock = { id, layout: { desktop: defaultLayout } };
+    const baseBlock = { id, layout: { desktop: defaultLayout }, styles: {...defaultStyles} };
     switch (type) {
-      case 'hero': return { ...baseBlock, type, content: { title: 'Novo Título de Herói', subtitle: 'Um subtítulo atraente.', ctaText: 'Saiba Mais' } };
+      case 'hero': return { ...baseBlock, type, content: { title: 'Novo Título de Herói', subtitle: 'Um subtítulo atraente.', ctaText: 'Saiba Mais', ctaLink: '#', ctaEnabled: true } };
       case 'text': return { ...baseBlock, type, content: { heading: 'Nova Seção', body: 'Texto padrão.' } };
       case 'image': return { ...baseBlock, type, content: { imageUrl: 'https://via.placeholder.com/600x400.png/1e293b/94a3b8?text=Imagem', altText: 'Imagem de Exemplo' } };
       case 'button': return { ...baseBlock, type, content: { text: 'Clique Aqui', link: '#' } };
       case 'menu': return { ...baseBlock, type, content: { items: [{ id: generateId('menuitem'), label: 'Home', link: '#/'}, { id: generateId('menuitem'), label: 'Sobre', link: '#/sobre'}] } };
-      default:
-        const exhaustiveCheck: never = type;
-        throw new Error(`Unsupported block type: ${exhaustiveCheck}`);
+      case 'video': return { ...baseBlock, type, content: { videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' } };
+      case 'divider': return { ...baseBlock, type, content: {} };
+      case 'spacer': return { ...baseBlock, type, content: {} };
+      default: {
+        // Fallback for any unhandled type
+        const _: never = type;
+        return { ...baseBlock, type: 'text', content: { heading: 'Bloco Desconhecido', body: '' } };
+      }
     }
 };
 
@@ -39,12 +45,16 @@ const componentList: { type: PageBlock['type']; label: string; Icon: React.FC<an
     { type: 'image', label: 'Imagem', Icon: ImageIcon },
     { type: 'button', label: 'Botão', Icon: CodeIcon },
     { type: 'menu', label: 'Menu', Icon: MenuIcon },
+    { type: 'video', label: 'Vídeo', Icon: VideoIcon },
+    { type: 'divider', label: 'Divisor', Icon: DividerIcon },
+    { type: 'spacer', label: 'Espaçador', Icon: SparklesIcon },
 ];
 
 // --- EDITOR SUB-COMPONENTS ---
-const InputField: React.FC<{ label: string; value: string | number; onChange: (value: string) => void; type?: string; placeholder?: string; min?: number; max?: number }> = ({ label, value, onChange, type = "text", placeholder, min, max }) => ( <div> <label className="block text-sm font-medium text-slate-400 mb-1">{label}</label> <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} type={type} min={min} max={max} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-sm" /> </div> );
+const InputField: React.FC<{ label: string; value: string | number; onChange: (value: string) => void; type?: string; placeholder?: string; min?: number; max?: number; step?: number; }> = ({ label, value, onChange, type = "text", placeholder, min, max, step }) => ( <div> <label className="block text-sm font-medium text-slate-400 mb-1">{label}</label> <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} type={type} min={min} max={max} step={step} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-sm" /> </div> );
 const TextareaField: React.FC<{ label: string; value: string; onChange: (value: string) => void }> = ({ label, value, onChange }) => ( <div> <label className="block text-sm font-medium text-slate-400 mb-1">{label}</label> <textarea value={value} onChange={e => onChange(e.target.value)} rows={5} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-sm" /> </div> );
 const ColorField: React.FC<{ label: string; value: string; onChange: (value: string) => void }> = ({ label, value, onChange }) => ( <div> <label className="block text-sm font-medium text-slate-400 mb-1">{label}</label> <div className="flex items-center gap-2"> <input type="color" value={value} onChange={e => onChange(e.target.value)} className="w-8 h-8 p-0 border-none rounded bg-slate-900" /> <input value={value} onChange={e => onChange(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-sm" /> </div> </div> );
+const ToggleField: React.FC<{ label: string; checked: boolean; onChange: (checked: boolean) => void; }> = ({ label, checked, onChange }) => ( <div className="flex items-center justify-between"> <label className="text-sm font-medium text-slate-400">{label}</label> <button onClick={() => onChange(!checked)} className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${checked ? 'bg-cyan-600' : 'bg-slate-700'}`}> <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'}`} /> </button> </div>);
 const ButtonGroupField: React.FC<{ label: string; value: string; options: { value: string; icon: React.FC<{className?: string}> }[]; onChange: (value: string) => void }> = ({ label, value, options, onChange }) => (<div><label className="block text-sm font-medium text-slate-400 mb-1">{label}</label><div className="flex rounded-md bg-slate-900 border border-slate-700 p-1">{options.map(opt => <button key={opt.value} onClick={() => onChange(opt.value)} className={`flex-1 p-1 rounded ${value === opt.value ? 'bg-cyan-600' : 'hover:bg-slate-700'}`}><opt.icon className="w-4 h-4 mx-auto"/></button>)}</div></div>);
 
 const InspectorPanel: React.FC<{
@@ -53,33 +63,69 @@ const InspectorPanel: React.FC<{
     onUpdateBlock: (updatedBlock: PageBlock) => void;
     onUpdatePageSettings: (field: keyof SiteSettings, value: string) => void;
     onUpdateGridSettings: (field: keyof GridSettings, value: number) => void;
-}> = ({ selectedBlock, pageData, onUpdateBlock, onUpdatePageSettings, onUpdateGridSettings }) => {
+}> = ({ selectedBlock: block, pageData, onUpdateBlock, onUpdatePageSettings, onUpdateGridSettings }) => {
     
+    // FIX: Use a derived state for inputs to avoid re-renders resetting typed values
+    const [inspectorData, setInspectorData] = useState<PageBlock | null>(null);
+
+    useEffect(() => {
+        setInspectorData(block);
+    }, [block]);
+
+    if (!inspectorData && !pageData) {
+        return null;
+    }
+
+    const handleUpdate = (updatedBlock: PageBlock) => {
+        setInspectorData(updatedBlock);
+        onUpdateBlock(updatedBlock);
+    };
+
     const handleLayoutChange = (field: keyof BlockLayout, value: string | number) => {
-        if (!selectedBlock) return;
-        const newLayout = { ...selectedBlock.layout.desktop, [field]: value };
-        onUpdateBlock({ ...selectedBlock, layout: { ...selectedBlock.layout, desktop: newLayout } });
+        if (!inspectorData) return;
+        const newLayout = { ...inspectorData.layout.desktop, [field]: value };
+        handleUpdate({ ...inspectorData, layout: { ...inspectorData.layout, desktop: newLayout } });
+    };
+
+    const handleStyleChange = (field: keyof BlockStyles, value: string | number) => {
+        if (!inspectorData) return;
+        const newStyles = { ...defaultStyles, ...inspectorData.styles, [field]: value };
+        handleUpdate({ ...inspectorData, styles: newStyles });
     };
 
     const renderBlockInspector = () => {
-        if (!selectedBlock) return null;
-        const block = selectedBlock;
-        const layout = block.layout.desktop;
+        if (!inspectorData) return null;
+        
+        const layout = inspectorData.layout.desktop;
+        const styles = { ...defaultStyles, ...inspectorData.styles };
         
         let contentInspector;
-        switch (block.type) {
-            case 'hero': { const handleContentChange = (field: keyof HeroBlockContent, value: string) => { onUpdateBlock({ ...block, content: { ...block.content, [field]: value } }); }; contentInspector = <> <InputField label="Título" value={block.content.title} onChange={v => handleContentChange('title', v)} /> <InputField label="Subtítulo" value={block.content.subtitle} onChange={v => handleContentChange('subtitle', v)} /> <InputField label="Texto do Botão" value={block.content.ctaText} onChange={v => handleContentChange('ctaText', v)} /> </>; break; }
-            case 'text': { const handleContentChange = (field: keyof TextBlockContent, value: string) => { onUpdateBlock({ ...block, content: { ...block.content, [field]: value } }); }; contentInspector = <> <InputField label="Cabeçalho" value={block.content.heading} onChange={v => handleContentChange('heading', v)} /> <TextareaField label="Corpo do Texto" value={block.content.body} onChange={v => handleContentChange('body', v)} /> </>; break; }
-            case 'image': { const handleContentChange = (field: keyof ImageBlockContent, value: string) => { onUpdateBlock({ ...block, content: { ...block.content, [field]: value } }); }; contentInspector = <> <InputField label="URL da Imagem" value={block.content.imageUrl} onChange={v => handleContentChange('imageUrl', v)} /> <InputField label="Texto Alternativo" value={block.content.altText} onChange={v => handleContentChange('altText', v)} /> </>; break; }
-            case 'button': { const handleContentChange = (field: keyof ButtonBlockContent, value: string) => { onUpdateBlock({ ...block, content: { ...block.content, [field]: value } }); }; contentInspector = <> <InputField label="Texto do Botão" value={block.content.text} onChange={v => handleContentChange('text', v)} /> <InputField label="Link" value={block.content.link} onChange={v => handleContentChange('link', v)} /> </>; break; }
-            case 'menu': { const menuContent = block.content; const handleItemChange = (itemId: string, field: 'label' | 'link', value: string) => { const newItems = menuContent.items.map(item => item.id === itemId ? { ...item, [field]: value } : item); onUpdateBlock({ ...block, content: { ...menuContent, items: newItems }}); }; contentInspector = <> <h4 className="text-md font-semibold text-slate-300 mb-2">Itens do Menu</h4> {menuContent.items.map(item => ( <div key={item.id} className="p-2 border border-slate-700 rounded mb-2 space-y-2"> <InputField label="Rótulo" value={item.label} onChange={v => handleItemChange(item.id, 'label', v)} /> <InputField label="Link" value={item.link} onChange={v => handleItemChange(item.id, 'link', v)} /> </div> ))} </>; break; }
+        switch (inspectorData.type) {
+            case 'hero': { const handleContentChange = (field: keyof HeroBlockContent, value: string | boolean) => { handleUpdate({ ...inspectorData, content: { ...inspectorData.content, [field]: value } }); }; contentInspector = <> <InputField label="Título" value={inspectorData.content.title} onChange={v => handleContentChange('title', v)} /> <InputField label="Subtítulo" value={inspectorData.content.subtitle} onChange={v => handleContentChange('subtitle', v)} /> <ToggleField label="Botão Ativo" checked={inspectorData.content.ctaEnabled} onChange={v => handleContentChange('ctaEnabled', v)} /> {inspectorData.content.ctaEnabled && <> <InputField label="Texto do Botão" value={inspectorData.content.ctaText} onChange={v => handleContentChange('ctaText', v)} /> <InputField label="Link do Botão" value={inspectorData.content.ctaLink} onChange={v => handleContentChange('ctaLink', v)} /> </>} </>; break; }
+            case 'text': { const handleContentChange = (field: keyof TextBlockContent, value: string) => { handleUpdate({ ...inspectorData, content: { ...inspectorData.content, [field]: value } }); }; contentInspector = <> <InputField label="Cabeçalho" value={inspectorData.content.heading} onChange={v => handleContentChange('heading', v)} /> <TextareaField label="Corpo do Texto" value={inspectorData.content.body} onChange={v => handleContentChange('body', v)} /> </>; break; }
+            case 'image': { const handleContentChange = (field: keyof ImageBlockContent, value: string) => { handleUpdate({ ...inspectorData, content: { ...inspectorData.content, [field]: value } }); }; contentInspector = <> <InputField label="URL da Imagem" value={inspectorData.content.imageUrl} onChange={v => handleContentChange('imageUrl', v)} /> <InputField label="Texto Alternativo" value={inspectorData.content.altText} onChange={v => handleContentChange('altText', v)} /> </>; break; }
+            case 'button': { const handleContentChange = (field: keyof ButtonBlockContent, value: string) => { handleUpdate({ ...inspectorData, content: { ...inspectorData.content, [field]: value } }); }; contentInspector = <> <InputField label="Texto do Botão" value={inspectorData.content.text} onChange={v => handleContentChange('text', v)} /> <InputField label="Link" value={inspectorData.content.link} onChange={v => handleContentChange('link', v)} /> </>; break; }
+            case 'menu': { const menuContent = inspectorData.content; const handleItemChange = (itemId: string, field: 'label' | 'link', value: string) => { const newItems = menuContent.items.map(item => item.id === itemId ? { ...item, [field]: value } : item); handleUpdate({ ...inspectorData, content: { ...menuContent, items: newItems }}); }; contentInspector = <> <h4 className="text-md font-semibold text-slate-300 mb-2">Itens do Menu</h4> {menuContent.items.map(item => ( <div key={item.id} className="p-2 border border-slate-700 rounded mb-2 space-y-2"> <InputField label="Rótulo" value={item.label} onChange={v => handleItemChange(item.id, 'label', v)} /> <InputField label="Link" value={item.link} onChange={v => handleItemChange(item.id, 'link', v)} /> </div> ))} </>; break; }
+            case 'video': { const handleContentChange = (field: keyof VideoBlockContent, value: string) => { handleUpdate({ ...inspectorData, content: { ...inspectorData.content, [field]: value } }); }; contentInspector = <InputField label="URL do Vídeo (YouTube)" value={inspectorData.content.videoUrl} onChange={v => handleContentChange('videoUrl', v)} />; break; }
+            case 'divider':
+            case 'spacer': contentInspector = <p className="text-sm text-slate-500">Este bloco é usado para layout e não possui conteúdo editável.</p>; break;
             default: contentInspector = <p>Inspetor não disponível para este bloco.</p>;
         }
+
+        const showTextColor = inspectorData.type === 'hero' || inspectorData.type === 'text' || inspectorData.type === 'button' || inspectorData.type === 'menu';
 
         return (
             <>
                 <h4 className="text-md font-semibold text-slate-300 mb-2 mt-4 border-t border-slate-700 pt-4">Conteúdo</h4>
                 {contentInspector}
+                
+                <h4 className="text-md font-semibold text-slate-300 mb-2 mt-4 border-t border-slate-700 pt-4">Estilos</h4>
+                 <div className="space-y-2">
+                    <ColorField label="Cor de Fundo" value={styles.backgroundColor || '#1e293b'} onChange={v => handleStyleChange('backgroundColor', v)} />
+                    {showTextColor && <ColorField label="Cor do Texto" value={styles.textColor || '#cbd5e1'} onChange={v => handleStyleChange('textColor', v)} />}
+                    <InputField label="Opacidade" type="range" value={styles.opacity || 1} onChange={v => handleStyleChange('opacity', parseFloat(v))} min={0} max={1} step={0.05} />
+                 </div>
+
                 <h4 className="text-md font-semibold text-slate-300 mb-2 mt-4 border-t border-slate-700 pt-4">Layout</h4>
                 <div className="grid grid-cols-2 gap-2">
                     <InputField label="Col Início" type="number" value={layout.colStart} onChange={v => handleLayoutChange('colStart', parseInt(v))} min={1} max={pageData?.gridSettings.desktop.columns} />
@@ -107,7 +153,7 @@ const InspectorPanel: React.FC<{
                 <ColorField label="Cor de Fundo da Página" value={settings.backgroundColor} onChange={v => onUpdatePageSettings('backgroundColor', v)} />
                 
                 <h4 className="text-md font-semibold text-slate-300 mb-2 mt-4 border-t border-slate-700 pt-4">Configurações da Grade</h4>
-                <InputField label="Colunas" type="number" value={grid.columns} onChange={v => onUpdateGridSettings('columns', parseInt(v))} min={1} max={24} /> 
+                <InputField label="Colunas" type="number" value={grid.columns} onChange={v => onUpdateGridSettings('columns', parseInt(v))} min={1} max={48} /> 
                 <InputField label="Altura da Linha (px)" type="number" value={grid.rowHeight} onChange={v => onUpdateGridSettings('rowHeight', parseInt(v))} min={1} /> 
                 <InputField label="Espaçamento (px)" type="number" value={grid.gap} onChange={v => onUpdateGridSettings('gap', parseInt(v))} min={0} /> 
             </>
@@ -115,18 +161,18 @@ const InspectorPanel: React.FC<{
     };
 
     const getTitle = () => {
-        if (!selectedBlock) return "Configurações da Página";
-        return `Editando Bloco: ${selectedBlock.type}`;
+        if (!inspectorData) return "Configurações da Página";
+        return `Editando Bloco: ${inspectorData.type}`;
     };
 
     return ( 
         <div className="p-4 space-y-4"> 
             <h3 className="text-lg font-bold text-cyan-400 capitalize flex items-center gap-2">
-                {selectedBlock ? <EditIcon className="w-5 h-5"/> : <SettingsIcon className="w-5 h-5"/>} {getTitle()}
+                {inspectorData ? <EditIcon className="w-5 h-5"/> : <SettingsIcon className="w-5 h-5"/>} {getTitle()}
             </h3> 
             <div className="space-y-4"> 
-                {!selectedBlock && renderPageInspector()} 
-                {selectedBlock && renderBlockInspector()}
+                {!inspectorData && renderPageInspector()} 
+                {inspectorData && renderBlockInspector()}
             </div> 
         </div> 
     );
@@ -134,50 +180,54 @@ const InspectorPanel: React.FC<{
 
 // --- Renderizador de Bloco para o Editor (WYSIWYG) ---
 const EditorBlockRenderer: React.FC<{ block: PageBlock }> = ({ block }) => {
-    const commonClasses = "w-full h-full flex flex-col p-4";
-    // Reduz o tamanho da fonte para melhor visualização no editor
-    const scaleText = "text-xs md:text-sm lg:text-base";
+    const commonClasses = "w-full h-full flex flex-col p-2";
+    const scaleText = "text-xs md:text-sm";
+    const styles = block.styles || {};
+    const inlineStyle = {
+        backgroundColor: styles.backgroundColor,
+        opacity: styles.opacity,
+        color: styles.textColor,
+    };
+
+    const getYouTubeEmbedUrl = (url: string) => {
+        let videoId;
+        if (url.includes('youtube.com/watch?v=')) {
+            videoId = new URL(url).searchParams.get('v');
+        } else if (url.includes('youtu.be/')) {
+            videoId = new URL(url).pathname.split('/').pop();
+        }
+        return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
+    };
 
     switch (block.type) {
         case 'hero':
             return (
-                <div className={`${commonClasses} text-center items-center justify-center bg-slate-800/50 rounded-lg`}>
-                    <h1 className="text-xl md:text-2xl font-extrabold text-white mb-2">{block.content.title}</h1>
-                    <p className={`text-slate-300 max-w-2xl mx-auto mb-3 ${scaleText}`}>{block.content.subtitle}</p>
-                    <div className="bg-cyan-600 text-white font-bold py-2 px-4 rounded-full text-xs">
-                        {block.content.ctaText}
-                    </div>
+                <div style={inlineStyle} className={`${commonClasses} text-center items-center justify-center rounded-lg`}>
+                    <h1 className="text-lg md:text-xl font-extrabold mb-1" style={{color: styles.textColor}}>{block.content.title}</h1>
+                    <p className={`max-w-2xl mx-auto mb-2 ${scaleText}`} style={{color: styles.textColor}}>{block.content.subtitle}</p>
+                    {block.content.ctaEnabled && <div className="bg-cyan-600 text-white font-bold py-1 px-3 rounded-full text-xs">{block.content.ctaText}</div>}
                 </div>
             );
         case 'text':
             return (
-                 <div className={`${commonClasses} text-left overflow-hidden`}>
-                    <h2 className="text-lg font-bold mb-2 text-white truncate">{block.content.heading}</h2>
-                    <p className={`text-slate-400 whitespace-pre-wrap leading-relaxed ${scaleText}`}>{block.content.body}</p>
+                 <div style={inlineStyle} className={`${commonClasses} text-left overflow-hidden`}>
+                    <h2 className="text-md font-bold mb-1 truncate" style={{color: styles.textColor}}>{block.content.heading}</h2>
+                    <p className={`whitespace-pre-wrap leading-relaxed ${scaleText}`} style={{color: styles.textColor}}>{block.content.body}</p>
                 </div>
             );
         case 'image':
-            return (
-                <img src={block.content.imageUrl} alt={block.content.altText} className="w-full h-full object-cover rounded-lg shadow-lg" />
-            );
+            return <img src={block.content.imageUrl} alt={block.content.altText} className="w-full h-full object-cover rounded-lg" style={{opacity: styles.opacity}}/>;
         case 'button':
-            return (
-                 <div className={`${commonClasses} items-center justify-center`}>
-                    <div className="bg-slate-700 text-white font-bold py-2 px-5 rounded-lg inline-block text-sm">
-                        {block.content.text}
-                    </div>
-                </div>
-            );
+            return <div className={`${commonClasses} items-center justify-center`}><div className="text-white font-bold py-2 px-4 rounded-lg inline-block text-sm" style={inlineStyle}>{block.content.text}</div></div>;
         case 'menu':
-            return (
-                 <nav className={`${commonClasses} flex-row items-center justify-center gap-4`}>
-                    {block.content.items.map(item => (
-                        <div key={item.id} className={`text-slate-300 font-medium ${scaleText}`}>
-                            {item.label}
-                        </div>
-                    ))}
-                </nav>
-            );
+            return <nav className={`${commonClasses} flex-row items-center justify-center gap-2`}><p className='text-xs'>Menu</p>{block.content.items.map(item => (<div key={item.id} className={`font-medium ${scaleText}`} style={{color: styles.textColor}}>{item.label}</div>))}</nav>;
+        case 'video':
+            const embedUrl = getYouTubeEmbedUrl(block.content.videoUrl);
+            return <div className="w-full h-full bg-slate-900 rounded-lg flex items-center justify-center text-slate-500"><VideoIcon className="w-1/3 h-1/3"/></div>;
+        case 'divider':
+            return <div className="flex items-center justify-center w-full h-full"><hr className="w-full border-slate-700" style={{borderColor: styles.backgroundColor}}/></div>;
+        case 'spacer':
+            return <div className="w-full h-full bg-slate-700/20 rounded-lg" style={inlineStyle}></div>;
         default:
             return <div className="p-4 bg-red-900 rounded-lg">Bloco desconhecido</div>;
     }
@@ -189,10 +239,9 @@ const Block: React.FC<{
     block: PageBlock;
     gridSettings: GridSettings;
     isSelected: boolean;
-    onSelect: (block: PageBlock) => void;
-    onMoveStart: (e: React.MouseEvent, block: PageBlock) => void;
+    onMouseDown: (e: React.MouseEvent, block: PageBlock) => void;
     onResizeStart: (e: React.MouseEvent, block: PageBlock, direction: string) => void;
-}> = ({ block, gridSettings, isSelected, onSelect, onMoveStart, onResizeStart }) => {
+}> = ({ block, gridSettings, isSelected, onMouseDown, onResizeStart }) => {
     const layout = block.layout.desktop;
     const blockStyle = {
         gridColumn: `${layout.colStart} / ${layout.colEnd}`,
@@ -205,24 +254,16 @@ const Block: React.FC<{
         <div 
             style={blockStyle} 
             className={`relative group transition-shadow duration-200 ${isSelected ? 'shadow-2xl shadow-cyan-500/30' : ''}`}
-            onMouseDown={(e) => {
-                // Let resize handle its own event
-                if (e.target instanceof HTMLDivElement && e.target.classList.contains('resize-handle')) {
-                    return;
-                }
-                e.stopPropagation();
-                onSelect(block);
-                onMoveStart(e, block);
-            }}
+            onMouseDown={(e) => onMouseDown(e, block)}
         >
             <div className={`absolute inset-0 ring-2 rounded-lg pointer-events-none transition-all duration-200 ${isSelected ? 'ring-cyan-500' : 'ring-transparent group-hover:ring-cyan-500/50'}`}></div>
-            <div className="w-full h-full overflow-hidden rounded-lg bg-slate-800 pointer-events-none">
+            <div className="w-full h-full overflow-hidden rounded-lg pointer-events-none">
                  <EditorBlockRenderer block={block} />
             </div>
             {isSelected && resizeHandles.map(dir => (
                 <div 
                     key={dir}
-                    className={`absolute w-3 h-3 bg-cyan-500 border-2 border-slate-900 rounded-full resize-handle-${dir} cursor-${dir}-resize`}
+                    className={`absolute w-3 h-3 bg-cyan-500 border-2 border-slate-900 rounded-full resize-handle-${dir} cursor-${dir}-resize z-10`}
                     onMouseDown={(e) => { e.stopPropagation(); onResizeStart(e, block, dir); }}
                 ></div>
             ))}
@@ -359,19 +400,19 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
   };
 
   const updateBlock = (updatedBlock: PageBlock) => {
-    updateEditingPage(draft => {
-        if (!draft.content) return;
-        const allBlocks = ['headerBlocks', 'contentBlocks', 'footerBlocks'] as const;
-        for (const key of allBlocks) {
-            const index = draft.content[key].findIndex(b => b.id === updatedBlock.id);
-            if (index !== -1) {
-                draft.content[key][index] = updatedBlock;
-                break;
-            }
-        }
-    });
-    // FIX: Keep the selectedBlock state in sync with the page data
-    setSelectedBlock(updatedBlock);
+      updateEditingPage(draft => {
+          if (!draft.content) return;
+          const allBlockKeys = ['headerBlocks', 'contentBlocks', 'footerBlocks'] as const;
+          for (const key of allBlockKeys) {
+              const index = draft.content[key].findIndex(b => b.id === updatedBlock.id);
+              if (index !== -1) {
+                  draft.content[key][index] = updatedBlock;
+                  // Ensure selectedBlock state is also updated to reflect this change
+                  setSelectedBlock(updatedBlock); 
+                  break;
+              }
+          }
+      });
   };
 
   // --- Drag and Drop / Resize Logic ---
@@ -388,12 +429,19 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
         block: newBlock, 
         initialMouse: { x: e.clientX, y: e.clientY }, 
         initialLayout: newBlock.layout.desktop,
-        targetContext: 'content' // Default, will be updated on move
+        targetContext: 'content'
     });
   };
-  const handleMoveStart = (e: React.MouseEvent, block: PageBlock) => {
-    if (e.target instanceof HTMLDivElement && e.target.classList.contains('resize-handle')) return;
-     // Determine context based on where the block is
+
+  const handleBlockMouseDown = (e: React.MouseEvent, block: PageBlock) => {
+    // Prevent starting a move if a resize handle was clicked
+    if (e.target instanceof HTMLElement && e.target.classList.contains('resize-handle-se')) {
+      return;
+    }
+    e.stopPropagation();
+    setSelectedBlock(block);
+    setActiveTab('inspector');
+
     let context: 'header' | 'content' | 'footer' = 'content';
     if (editingPage?.content?.headerBlocks.some(b => b.id === block.id)) context = 'header';
     if (editingPage?.content?.footerBlocks.some(b => b.id === block.id)) context = 'footer';
@@ -406,6 +454,7 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
         targetContext: context
     });
   };
+
   const handleResizeStart = (e: React.MouseEvent, block: PageBlock, direction: string) => {
      let context: 'header' | 'content' | 'footer' = 'content';
      if (editingPage?.content?.headerBlocks.some(b => b.id === block.id)) context = 'header';
@@ -425,7 +474,6 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
     const handleMouseMove = (e: MouseEvent) => {
         if (!interactionState || !editingPage?.content) return;
         
-        // Determine current canvas
         let currentContext: 'header' | 'content' | 'footer' = 'content';
         const headerRect = headerCanvasRef.current?.getBoundingClientRect();
         const footerRect = footerCanvasRef.current?.getBoundingClientRect();
@@ -475,6 +523,7 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
     };
 
     const handleMouseUp = (e: MouseEvent) => {
+        document.body.style.userSelect = ''; // Re-enable text selection
         if (interactionState?.type === 'new') {
             const finalContext = interactionState.targetContext;
             updateEditingPage(draft => {
@@ -489,10 +538,12 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
     };
 
     if (interactionState) {
+        document.body.style.userSelect = 'none'; // Disable text selection during drag
         window.addEventListener('mousemove', handleMouseMove);
         window.addEventListener('mouseup', handleMouseUp, { once: true });
     }
     return () => {
+        document.body.style.userSelect = ''; // Ensure cleanup
         window.removeEventListener('mousemove', handleMouseMove);
         window.removeEventListener('mouseup', handleMouseUp);
     };
@@ -549,7 +600,7 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
     
     const gridSettings = editingPage.content.gridSettings.desktop;
     
-    const GridCanvas = ({ blocks, canvasRef, contextName }: { blocks: PageBlock[], canvasRef: React.RefObject<HTMLDivElement>, contextName: 'header' | 'content' | 'footer' }) => {
+    const GridCanvas = ({ blocks, canvasRef, context }: { blocks: PageBlock[], canvasRef: React.RefObject<HTMLDivElement>, context: 'header' | 'content' | 'footer' }) => {
         const gridStyle = {
             display: 'grid',
             gridTemplateColumns: `repeat(${gridSettings.columns}, 1fr)`,
@@ -557,15 +608,22 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
             gap: `${gridSettings.gap}px`,
         };
         return (
-            <div ref={canvasRef} style={gridStyle} className="relative bg-slate-900/50 rounded-lg border border-dashed border-slate-700 min-h-[200px] p-2">
+            <div 
+              ref={canvasRef} 
+              style={gridStyle} 
+              className="relative bg-slate-900/50 rounded-lg border border-dashed border-slate-700 min-h-[200px] p-2"
+              onMouseDown={() => { 
+                setSelectedBlock(null);
+                setActiveTab('inspector');
+              }}
+            >
                 {blocks.map(block => (
                     <Block 
                         key={block.id} 
                         block={block}
                         gridSettings={gridSettings}
                         isSelected={selectedBlock?.id === block.id}
-                        onSelect={(b) => { setSelectedBlock(b); setActiveTab('inspector'); }}
-                        onMoveStart={handleMoveStart}
+                        onMouseDown={handleBlockMouseDown}
                         onResizeStart={handleResizeStart}
                     />
                 ))}
@@ -602,20 +660,20 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
           </div>
         </aside>
 
-        <div className="flex-1 relative flex flex-col" onMouseDown={(e) => { if (e.target === e.currentTarget) { setSelectedBlock(null); } }}>
+        <div className="flex-1 relative flex flex-col">
            <button onClick={() => setIsPanelOpen(!isPanelOpen)} className={`absolute top-4 bg-slate-800 hover:bg-cyan-600 text-white p-2 rounded-r-lg z-30 transition-all ${isPanelOpen ? '-left-px' : 'left-0'}`}><ChevronRightIcon className="w-5 h-5"/></button>
             <main className="flex-1 overflow-auto p-4 space-y-4" style={pageStyle}>
               <div className="p-2 border-b-2 border-dashed border-slate-700/50">
                 <h3 className="text-center text-xs font-semibold uppercase text-slate-500 mb-2">Cabeçalho</h3>
-                <GridCanvas blocks={editingPage.content.headerBlocks} canvasRef={headerCanvasRef} contextName="header" />
+                <GridCanvas blocks={editingPage.content.headerBlocks} canvasRef={headerCanvasRef} context="header" />
               </div>
               <div className="p-2">
                  <h3 className="text-center text-xs font-semibold uppercase text-slate-500 mb-2">Conteúdo da Página</h3>
-                <GridCanvas blocks={editingPage.content.contentBlocks} canvasRef={contentCanvasRef} contextName="content" />
+                <GridCanvas blocks={editingPage.content.contentBlocks} canvasRef={contentCanvasRef} context="content" />
               </div>
               <div className="p-2 border-t-2 border-dashed border-slate-700/50">
                  <h3 className="text-center text-xs font-semibold uppercase text-slate-500 mb-2">Rodapé</h3>
-                <GridCanvas blocks={editingPage.content.footerBlocks} canvasRef={footerCanvasRef} contextName="footer" />
+                <GridCanvas blocks={editingPage.content.footerBlocks} canvasRef={footerCanvasRef} context="footer"/>
               </div>
             </main>
         </div>

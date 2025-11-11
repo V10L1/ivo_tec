@@ -22,6 +22,8 @@ export interface HeroBlockContent {
   title: string;
   subtitle: string;
   ctaText: string;
+  ctaLink: string;
+  ctaEnabled: boolean;
 }
 
 export interface TextBlockContent {
@@ -49,6 +51,24 @@ export interface MenuBlockContent {
   items: MenuItem[];
 }
 
+export interface VideoBlockContent {
+  videoUrl: string; // YouTube or Vimeo URL
+}
+
+export interface DividerBlockContent {
+  // No content needed, styles will control appearance
+}
+
+export interface SpacerBlockContent {
+  // No content needed, layout controls height
+}
+
+export interface BlockStyles {
+  backgroundColor?: string;
+  opacity?: number; // 0 to 1
+  textColor?: string;
+}
+
 
 // --- Estrutura do Construtor de Layout (Grade CSS) ---
 
@@ -67,12 +87,16 @@ export type PageBlock = {
     desktop: BlockLayout;
     // Futuramente: tablet: BlockLayout; mobile: BlockLayout;
   };
+  styles?: BlockStyles;
 } & (
   | { type: 'hero'; content: HeroBlockContent }
   | { type: 'text'; content: TextBlockContent }
   | { type: 'image'; content: ImageBlockContent }
   | { type: 'button'; content: ButtonBlockContent }
   | { type: 'menu'; content: MenuBlockContent }
+  | { type: 'video'; content: VideoBlockContent }
+  | { type: 'divider'; content: DividerBlockContent }
+  | { type: 'spacer'; content: SpacerBlockContent }
 );
 
 

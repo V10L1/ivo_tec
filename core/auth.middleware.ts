@@ -1,9 +1,8 @@
 // core/auth.middleware.ts - Middlewares de Autenticação e Autorização
 /// <reference types="node" />
 
-// FIX: Explicitly import express types to avoid conflict with DOM types.
-// FIX: Import Request, Response, and NextFunction from express
-import express from 'express';
+// FIX: Aliased Request and Response to avoid conflicts with global types.
+import { Request as ExpressRequest, Response as ExpressResponse, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { UserRole, AppKey } from '../types';
 import { pool } from './db';
@@ -29,9 +28,8 @@ declare global {
     }
 }
 
-// FIX: Use express.Request and express.Response to avoid type conflicts.
-// FIX: Use Request, Response, and NextFunction types from express
-export const verifyToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+// FIX: Use aliased express types to avoid conflicts.
+export const verifyToken = (req: ExpressRequest, res: ExpressResponse, next: NextFunction) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
@@ -48,9 +46,8 @@ export const verifyToken = (req: express.Request, res: express.Response, next: e
     });
 };
 
-// FIX: Use express.Request and express.Response to avoid type conflicts.
-// FIX: Use Request, Response, and NextFunction types from express
-export const isDeveloper = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+// FIX: Use aliased express types to avoid conflicts.
+export const isDeveloper = (req: ExpressRequest, res: ExpressResponse, next: NextFunction) => {
     if (req.user?.role !== UserRole.DEVELOPER) {
         return res.status(403).json({ message: 'Acesso negado. Apenas desenvolvedores.' });
     }
@@ -58,9 +55,8 @@ export const isDeveloper = (req: express.Request, res: express.Response, next: e
 };
 
 export const checkModulePermission = (requiredPermission: AppKey) => {
-    // FIX: Use express.Request and express.Response to avoid type conflicts.
-    // FIX: Use Request, Response, and NextFunction types from express
-    return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    // FIX: Use aliased express types to avoid conflicts.
+    return async (req: ExpressRequest, res: ExpressResponse, next: NextFunction) => {
         if (!req.user) {
             return res.status(401).json({ message: 'Não autenticado' });
         }
