@@ -7,7 +7,8 @@ import { PlusCircleIcon, SettingsIcon, Trash2Icon, MotorcycleIcon, TypeIcon, Ima
 
 // --- UTILITIES, HELPERS, AND DEFAULTS ---
 
-const generateId = (prefix = 'id') => `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+// FIX: Replaced deprecated `substr` method with `slice` for modern compatibility and to resolve potential tooling errors. The slice end index is start+length.
+const generateId = (prefix = 'id') => `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 const hexToRgba = (hex: string, alpha: number = 1): string => { if (!hex || !/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)) { return `rgba(30, 41, 59, ${alpha})`; } let c = hex.substring(1).split(''); if (c.length === 3) { c = [c[0], c[0], c[1], c[1], c[2], c[2]]; } const i = parseInt(c.join(''), 16); return `rgba(${(i >> 16) & 255}, ${(i >> 8) & 255}, ${i & 255}, ${alpha})`; };
 const getBorderRadiusClass = (radius: ContainerStyles['borderRadius']) => { switch (radius) { case 'full': return 'rounded-full'; case 'none': return 'rounded-none'; case 'medium': default: return 'rounded-lg'; } }
 const createTextStyle = (textStyles?: TextStyles, textOpacity: number = 1): React.CSSProperties => { if (!textStyles) return {}; return { color: textStyles.textColor, textAlign: textStyles.textAlign, fontWeight: textStyles.fontWeight, fontStyle: textStyles.fontStyle, fontFamily: textStyles.fontFamily, fontSize: textStyles.fontSize ? `${textStyles.fontSize}px` : undefined, opacity: textOpacity, }; };
@@ -327,16 +328,30 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
             </div>
         );
     };
+    
+    // --- DYNAMIC PADDING CALCULATION FOR WYSIWYG ---
+    const finalPadding = useMemo(() => {
+        const basePadding = {
+            paddingTop: fixedContainers.top.enabled && !collapsedStates.top ? `${fixedContainers.top.size}px` : '0px',
+            paddingBottom: fixedContainers.bottom.enabled && !collapsedStates.bottom ? `${fixedContainers.bottom.size}px` : '0px',
+            paddingLeft: fixedContainers.left.enabled && !collapsedStates.left ? `${fixedContainers.left.size}px` : '0px',
+            paddingRight: fixedContainers.right.enabled && !collapsedStates.right ? `${fixedContainers.right.size}px` : '0px',
+        };
 
-    const mainPadding = {
-        paddingTop: fixedContainers.top.enabled && !collapsedStates.top ? `${fixedContainers.top.size}px` : '0px',
-        paddingBottom: fixedContainers.bottom.enabled && !collapsedStates.bottom ? `${fixedContainers.bottom.size}px` : '0px',
-        paddingLeft: fixedContainers.left.enabled && !collapsedStates.left ? `${fixedContainers.left.size}px` : '0px',
-        paddingRight: fixedContainers.right.enabled && !collapsedStates.right ? `${fixedContainers.right.size}px` : '0px',
-    };
+        if (isEditMode) {
+            if (!isToolbarCollapsed) {
+                basePadding.paddingTop = `calc(${basePadding.paddingTop} + 48px)`; // 48px is editor toolbar height
+            }
+            if (isPanelOpen) {
+                basePadding.paddingLeft = `calc(${basePadding.paddingLeft} + 20rem)`; // 20rem (w-80) is editor panel width
+            }
+        }
+        return basePadding;
+    }, [fixedContainers, collapsedStates, isEditMode, isPanelOpen, isToolbarCollapsed]);
+
 
     return (
-        <div className="min-h-screen transition-colors duration-300" style={{ backgroundColor: settings.backgroundColor, ...mainPadding }}>
+        <div className="min-h-screen transition-all duration-300" style={{ backgroundColor: settings.backgroundColor, ...finalPadding }}>
             
             {canEdit && (
                 <>
@@ -380,7 +395,6 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
                                         {componentList.map(comp => <div key={comp.type} onMouseDown={(e) => handleNewBlockDragStart(e, comp.type)} className="p-4 text-center bg-slate-800 rounded-lg cursor-grab hover:bg-slate-700 hover:text-cyan-400 transition-colors"><comp.Icon className="w-8 h-8 mx-auto mb-2" /><span className="text-xs font-semibold">{comp.label}</span></div>)}
                                     </div>
                                 ) : (
-                                    // FIX: Pass pageData.content (SiteData) to InspectorPanel instead of pageData (Page) to match prop types.
                                     <InspectorPanel selectedBlock={selectedBlock} selectedContainerId={selectedContainerId} pageData={pageData.content} onUpdateBlock={updateBlock} onUpdatePageSettings={(f,v) => updatePageData(d => {if(d.content) d.content.settings[f] = v;})} onUpdateGridSettings={(f,v) => updatePageData(d => {if(d.content) d.content.gridSettings.desktop[f] = v;})} onUpdateContainer={(id, f, v) => updatePageData(d => {if(d.content) (d.content.fixedContainers[id] as any)[f] = v;})} onZIndexChange={handleZIndexChange} />
                                 )}
                             </div>
