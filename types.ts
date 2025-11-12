@@ -55,7 +55,9 @@ export interface ImageBlockContent {
 
 export interface ButtonBlockContent {
   text: StyledText;
-  link: string;
+  actionType: 'link' | 'toggleContainer';
+  linkUrl: string;
+  actionTarget: FixedContainerPosition | null;
 }
 
 export interface MenuItem {
@@ -139,6 +141,8 @@ export interface FixedContainer {
   enabled: boolean;
   size: number; // height for top/bottom, width for left/right in pixels
   isCollapsed: boolean; // default state for public view
+  collapsible: boolean; // can the user collapse this container?
+  toggleButtonPosition: 'left' | 'center' | 'right' | 'none';
   blocks: PageBlock[];
 }
 

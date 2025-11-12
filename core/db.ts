@@ -107,7 +107,7 @@ export const initializeDatabase = async () => {
         const pagesCheck = await client.query('SELECT COUNT(*) FROM pages');
         if (parseInt(pagesCheck.rows[0].count, 10) === 0) {
             const defaultTextStyles: TextStyles = { textColor: '#cbd5e1', textAlign: 'left', fontWeight: 'normal', fontStyle: 'normal', fontFamily: 'sans-serif', fontSize: 16};
-            const defaultFixedContainer: FixedContainer = { enabled: false, size: 60, isCollapsed: false, blocks: [] };
+            const defaultFixedContainer: Omit<FixedContainer, 'blocks'> = { enabled: false, size: 60, isCollapsed: false, collapsible: true, toggleButtonPosition: 'center' };
             
              const initialContent = {
                 settings: {
@@ -118,17 +118,17 @@ export const initializeDatabase = async () => {
                     desktop: { columns: 48, rowHeight: 10, gap: 8 }
                 },
                 fixedContainers: {
-                    top: { ...defaultFixedContainer, size: 80 },
-                    left: { ...defaultFixedContainer, size: 240 },
-                    right: { ...defaultFixedContainer, size: 240 },
-                    bottom: { ...defaultFixedContainer, size: 60 },
+                    top: { ...defaultFixedContainer, size: 80, blocks: [] },
+                    left: { ...defaultFixedContainer, size: 240, blocks: [] },
+                    right: { ...defaultFixedContainer, size: 240, blocks: [] },
+                    bottom: { ...defaultFixedContainer, size: 60, blocks: [] },
                 },
                 mainBlocks: [
                     {
                         id: "block_1",
                         type: "hero",
                         layout: { desktop: { colStart: 5, colEnd: 45, rowStart: 5, rowEnd: 28, alignSelf: 'stretch', justifySelf: 'stretch' } },
-                        styles: { backgroundColor: "#1e293b", opacity: 1, zIndex: 1 },
+                        styles: { backgroundColor: "#1e293b", backgroundOpacity: 1, textOpacity: 1, borderRadius: 'medium', zIndex: 1 },
                         content: {
                             title: { text: "Bem-vindo ao Mundo Moto", styles: { ...defaultTextStyles, textColor: '#ffffff', textAlign: 'center', fontWeight: 'bold', fontSize: 48 } },
                             subtitle: { text: "Sua parada única para as melhores motos do planeta. Comece sua aventura hoje.", styles: { ...defaultTextStyles, textColor: '#ffffff', textAlign: 'center', fontSize: 18 } },
@@ -137,11 +137,23 @@ export const initializeDatabase = async () => {
                             ctaEnabled: true
                         }
                     },
+                     {
+                        id: "block_button_1",
+                        type: "button",
+                        layout: { desktop: { colStart: 20, colEnd: 30, rowStart: 29, rowEnd: 33, alignSelf: 'start', justifySelf: 'center' } },
+                        styles: { backgroundColor: "#0891b2", backgroundOpacity: 1, textOpacity: 1, borderRadius: 'medium', zIndex: 1 },
+                        content: {
+                           text: { text: 'Nossa História', styles: {...defaultTextStyles, textAlign: 'center'}},
+                           actionType: 'link',
+                           linkUrl: '#/sobre',
+                           actionTarget: null
+                        }
+                    },
                     {
                         id: "block_2",
                         type: "text",
-                        layout: { desktop: { colStart: 8, colEnd: 42, rowStart: 32, rowEnd: 52, alignSelf: 'start', justifySelf: 'stretch' } },
-                        styles: { backgroundColor: "transparent", opacity: 1, zIndex: 1 },
+                        layout: { desktop: { colStart: 8, colEnd: 42, rowStart: 35, rowEnd: 55, alignSelf: 'start', justifySelf: 'stretch' } },
+                        styles: { backgroundColor: "transparent", backgroundOpacity: 1, textOpacity: 1, borderRadius: 'medium', zIndex: 1 },
                         content: {
                             heading: { text: "Sobre Nossa Paixão", styles: { ...defaultTextStyles, fontWeight: 'bold', fontSize: 32 } },
                             body: { text: "Nós vivemos e respiramos motocicletas. Nossa missão é fornecer aos entusiastas máquinas de alta qualidade e serviço incomparável. Cada moto em nossa coleção é escolhida a dedo e inspecionada para garantir que atenda aos nossos altos padrões de desempenho e confiabilidade.", styles: {...defaultTextStyles, fontSize: 16 } }
@@ -153,7 +165,7 @@ export const initializeDatabase = async () => {
                         id: "footer_block_1",
                         type: "text",
                         layout: { desktop: { colStart: 1, colEnd: 49, rowStart: 2, rowEnd: 6, alignSelf: 'center', justifySelf: 'center' } },
-                        styles: { backgroundColor: "transparent", opacity: 1, zIndex: 1 },
+                        styles: { backgroundColor: "transparent", backgroundOpacity: 1, textOpacity: 1, borderRadius: 'medium', zIndex: 1 },
                         content: {
                             heading: { text: "", styles: defaultTextStyles },
                             body: { text: "© 2024 Mundo Moto. Todos os direitos reservados.", styles: { ...defaultTextStyles, textColor: '#64748b', textAlign: 'center', fontSize: 14 } }

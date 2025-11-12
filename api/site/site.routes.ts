@@ -6,7 +6,7 @@ import { SiteData, FixedContainer } from '../../types';
 
 const router = express.Router();
 
-const defaultFixedContainer: FixedContainer = { enabled: false, size: 60, isCollapsed: false, blocks: [] };
+const defaultFixedContainer: Omit<FixedContainer, 'blocks'> = { enabled: false, size: 60, isCollapsed: false, collapsible: true, toggleButtonPosition: 'center' };
 
 const defaultNewPageContent: SiteData = {
   settings: { brandName: 'Nova Página', backgroundColor: '#0f172a' },
@@ -14,10 +14,10 @@ const defaultNewPageContent: SiteData = {
     desktop: { columns: 48, rowHeight: 10, gap: 8 }
   },
   fixedContainers: {
-      top: { ...defaultFixedContainer, size: 80 },
-      left: { ...defaultFixedContainer, size: 240 },
-      right: { ...defaultFixedContainer, size: 240 },
-      bottom: { ...defaultFixedContainer, size: 60 },
+      top: { ...defaultFixedContainer, size: 80, blocks: [] },
+      left: { ...defaultFixedContainer, size: 240, blocks: [] },
+      right: { ...defaultFixedContainer, size: 240, blocks: [] },
+      bottom: { ...defaultFixedContainer, size: 60, blocks: [] },
   },
   mainBlocks: [],
   footerBlocks: [],
