@@ -179,32 +179,36 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
     return (
         <div className={`min-h-screen font-sans w-full h-full flex flex-col`} style={pageStyle}>
             {canEdit && (
-                 <div className={`sticky top-0 z-[9998] transition-transform duration-300 ease-in-out ${isToolbarCollapsed ? '-translate-y-full' : 'translate-y-0'}`}>
-                    <header className="bg-slate-900/80 backdrop-blur-sm border-b border-slate-800 flex items-center justify-between h-16 px-6 flex-shrink-0">
-                        <div className="flex items-center gap-4">
-                            <button onClick={() => navigate('/administrator')} className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold py-2 px-4 rounded-lg inline-flex items-center"><ArrowLeftIcon className="w-5 h-5 mr-2" /><span>Painel</span></button>
-                            <h2 className="text-xl font-bold text-slate-100 hidden sm:block">Editor de Site</h2>
-                        </div>
-                        {feedback && <div className={`absolute left-1/2 -translate-x-1/2 text-sm font-semibold ${feedback.type === 'error' ? 'text-red-400' : 'text-green-400'}`}>{feedback.message}</div>}
-                        <div className="flex items-center gap-4">
-                            <div className="h-8 text-sm font-semibold flex items-center">{hasUnsavedChanges ? <span className="text-yellow-400">Alterações não salvas</span> : <span className="text-green-400/80">Sincronizado</span>}</div>
-                            <button onClick={handleSaveChanges} disabled={!hasUnsavedChanges || status === 'saving'} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-3 rounded-lg disabled:bg-slate-600 disabled:cursor-not-allowed flex items-center justify-center gap-2"><SaveIcon className="w-5 h-5"/> <span className="hidden md:inline">{status === 'saving' ? 'Salvando...' : 'Salvar'}</span></button>
-                            <button onClick={() => setIsEditMode(!isEditMode)} className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold py-2 px-3 rounded-lg flex items-center gap-2">{isEditMode ? <><EyeOffIcon className="w-5 h-5"/> <span className="hidden md:inline">Visualizar</span></> : <><EyeIcon className="w-5 h-5"/> <span className="hidden md:inline">Editar</span></>}</button>
-                        </div>
-                    </header>
-                    <button onClick={() => setIsToolbarCollapsed(true)} className="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 p-1 rounded-b-lg text-slate-400 hover:text-white"><ChevronsUpIcon className="w-4 h-4" /></button>
-                 </div>
-            )}
-            {canEdit && isToolbarCollapsed && (
-                <button onClick={() => setIsToolbarCollapsed(false)} className="fixed top-2 left-1/2 -translate-x-1/2 z-50 bg-slate-800/80 backdrop-blur-sm p-2 rounded-b-lg text-slate-400 hover:text-white animate-fade-in">
-                    <ChevronsDownIcon className="w-5 h-5" />
-                </button>
+                <>
+                    <div className={`fixed top-0 left-0 right-0 z-[9998] transition-transform duration-300 ease-in-out ${isToolbarCollapsed ? '-translate-y-full' : 'translate-y-0'}`}>
+                        <header className="bg-slate-900/80 backdrop-blur-sm border-b border-slate-800 flex items-center justify-between h-16 px-6 flex-shrink-0">
+                            <div className="flex items-center gap-4">
+                                <button onClick={() => navigate('/administrator')} className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold py-2 px-4 rounded-lg inline-flex items-center"><ArrowLeftIcon className="w-5 h-5 mr-2" /><span>Painel</span></button>
+                                <h2 className="text-xl font-bold text-slate-100 hidden sm:block">Editor de Site</h2>
+                            </div>
+                            {feedback && <div className={`absolute left-1/2 -translate-x-1/2 text-sm font-semibold ${feedback.type === 'error' ? 'text-red-400' : 'text-green-400'}`}>{feedback.message}</div>}
+                            <div className="flex items-center gap-4">
+                                <div className="h-8 text-sm font-semibold flex items-center">{hasUnsavedChanges ? <span className="text-yellow-400">Alterações não salvas</span> : <span className="text-green-400/80">Sincronizado</span>}</div>
+                                <button onClick={handleSaveChanges} disabled={!hasUnsavedChanges || status === 'saving'} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-3 rounded-lg disabled:bg-slate-600 disabled:cursor-not-allowed flex items-center justify-center gap-2"><SaveIcon className="w-5 h-5"/> <span className="hidden md:inline">{status === 'saving' ? 'Salvando...' : 'Salvar'}</span></button>
+                                <button onClick={() => setIsEditMode(!isEditMode)} className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold py-2 px-3 rounded-lg flex items-center gap-2">{isEditMode ? <><EyeOffIcon className="w-5 h-5"/> <span className="hidden md:inline">Visualizar</span></> : <><EyeIcon className="w-5 h-5"/> <span className="hidden md:inline">Editar</span></>}</button>
+                            </div>
+                        </header>
+                    </div>
+                     <button 
+                        onClick={() => setIsToolbarCollapsed(!isToolbarCollapsed)}
+                        className={`fixed left-1/2 -translate-x-1/2 z-[9999] bg-slate-800/80 backdrop-blur-sm p-1 rounded-b-lg text-slate-400 hover:text-white transition-all duration-300 ease-in-out`}
+                        style={{ top: isToolbarCollapsed ? '0.5rem' : '4rem' }}
+                        title={isToolbarCollapsed ? "Exibir barra de ferramentas" : "Ocultar barra de ferramentas"}
+                    >
+                        {isToolbarCollapsed ? <ChevronsDownIcon className="w-4 h-4" /> : <ChevronsUpIcon className="w-4 h-4" />}
+                    </button>
+                </>
             )}
             
             <div className={`flex flex-1 w-full relative overflow-hidden ${isEditMode ? 'flex-row' : 'flex-col'}`}>
                 {isEditMode && (
                     <>
-                        <aside className={`flex-shrink-0 bg-slate-800/80 backdrop-blur-sm border-r border-slate-700 transition-all duration-300 ease-in-out overflow-y-auto ${isPanelOpen ? 'w-full max-w-sm' : 'w-0'}`}>
+                        <aside className={`fixed top-0 bottom-0 left-0 flex-shrink-0 bg-slate-800/80 backdrop-blur-sm border-r border-slate-700 transition-transform duration-300 ease-in-out w-full max-w-sm z-40 ${isPanelOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                             <div className="h-full flex flex-col">
                                 <div className="flex-shrink-0 border-b border-slate-700 flex"> <button onClick={() => setActiveTab('components')} className={`flex-1 p-3 text-sm font-semibold capitalize ${activeTab === 'components' ? 'bg-slate-900 text-cyan-400' : 'text-slate-400 hover:bg-slate-700'}`}>Componentes</button> <button onClick={() => setActiveTab('inspector')} className={`flex-1 p-3 text-sm font-semibold capitalize ${activeTab === 'inspector' ? 'bg-slate-900 text-cyan-400' : 'text-slate-400 hover:bg-slate-700'}`}>Inspector</button> </div>
                                 <div className="flex-grow overflow-y-auto">
@@ -217,15 +221,15 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
                          <button 
                             onClick={() => setIsPanelOpen(!isPanelOpen)}
                             title={isPanelOpen ? "Recolher Painel" : "Expandir Painel"}
-                            className="absolute top-1/2 -translate-y-1/2 w-6 h-20 bg-slate-800 hover:bg-cyan-600 text-white z-40 transition-all duration-300 ease-in-out flex items-center justify-center rounded-r-lg border-y border-r border-slate-700"
-                            style={{ left: isPanelOpen ? '24rem' : '0' }}
+                            className="fixed top-1/2 -translate-y-1/2 w-6 h-20 bg-slate-800 hover:bg-cyan-600 text-white z-40 transition-transform duration-300 ease-in-out flex items-center justify-center rounded-r-lg border-y border-r border-slate-700"
+                            style={{ transform: `translateX(${isPanelOpen ? '24rem' : '0px'})` }}
                         >
                             <ChevronLeftIcon className={`w-5 h-5 transition-transform duration-300 ${isPanelOpen ? 'transform rotate-0' : 'transform rotate-180'}`} />
                         </button>
                     </>
                 )}
 
-                <div className="flex-1 relative" style={isEditMode ? {} : mainContentStyle}>
+                <div className="flex-1 relative transition-all duration-300 ease-in-out" style={isEditMode ? { paddingLeft: isPanelOpen ? '24rem' : '0' } : mainContentStyle}>
                     <div className="absolute inset-0 overflow-auto flex flex-col">
                         <FixedContainerRenderer position="top" />
                         <div className="flex flex-row flex-grow min-h-0">
