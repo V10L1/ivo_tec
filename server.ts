@@ -1,6 +1,6 @@
+// FIX: Add a triple-slash directive to include Node.js type definitions. This resolves errors related to 'process.cwd', '__dirname', and the inability to find the 'node' type definition file.
 /// <reference types="node" />
 
-// FIX: Add reference to node types to resolve errors with process and __dirname
 // server.ts - O Orquestrador Principal
 
 import express, { Request, Response } from 'express';

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Page, SiteData, PageBlock, SiteSettings, HeroBlockContent, TextBlockContent, ImageBlockContent, ButtonBlockContent, MenuBlockContent, VideoBlockContent, MenuItem, GridSettings, BlockLayout, ContainerStyles, TextStyles, StyledText } from '../../types';
+import { Page, SiteData, PageBlock, SiteSettings, HeroBlockContent, TextBlockContent, ImageBlockContent, ButtonBlockContent, MenuBlockContent, VideoBlockContent, MenuItem, GridSettings, BlockLayout, ContainerStyles, TextStyles, StyledText, FixedContainer } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 // FIX: Added GridIcon and new layer icons to imports
-import { PlusCircleIcon, SettingsIcon, Trash2Icon, MotorcycleIcon, TypeIcon, ImageIcon, CodeIcon, ChevronLeftIcon, ChevronRightIcon, SaveIcon, ArrowLeftIcon, FilePlusIcon, EditIcon, LayoutIcon, MenuIcon, PointerIcon, AlignStartVerticalIcon, AlignCenterVerticalIcon, AlignEndVerticalIcon, AlignStartHorizontalIcon, AlignCenterHorizontalIcon, AlignEndHorizontalIcon, GridIcon, VideoIcon, DividerIcon, SparklesIcon, BringToFrontIcon, SendToBackIcon, BoldIcon, ItalicIcon, AlignLeftIcon, AlignCenterIcon, AlignRightIcon, AlignJustifyIcon, SquareIcon, RoundedSquareIcon, CircleIcon, PinIcon, PinTopIcon, PinBottomIcon, PinLeftIcon, PinRightIcon } from '../../components/icons/Icons';
+import { PlusCircleIcon, SettingsIcon, Trash2Icon, MotorcycleIcon, TypeIcon, ImageIcon, CodeIcon, ChevronLeftIcon, ChevronRightIcon, SaveIcon, ArrowLeftIcon, FilePlusIcon, EditIcon, LayoutIcon, MenuIcon, PointerIcon, AlignStartVerticalIcon, AlignCenterVerticalIcon, AlignEndVerticalIcon, AlignStartHorizontalIcon, AlignCenterHorizontalIcon, AlignEndHorizontalIcon, GridIcon, VideoIcon, DividerIcon, SparklesIcon, BringToFrontIcon, SendToBackIcon, BoldIcon, ItalicIcon, AlignLeftIcon, AlignCenterIcon, AlignRightIcon, AlignJustifyIcon, SquareIcon, RoundedSquareIcon, CircleIcon, PinIcon, PinTopIcon, PinBottomIcon, PinLeftIcon, PinRightIcon, PanelTopIcon, PanelLeftIcon, PanelRightIcon, PanelBottomIcon, PanelCloseIcon, PanelOpenIcon } from '../../components/icons/Icons';
 
 // --- UTILITIES & HELPERS ---
 const generateId = (prefix = 'id') => `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -33,6 +33,8 @@ const getBorderRadiusClass = (radius: ContainerStyles['borderRadius']) => {
 }
 
 const defaultGridSettings: GridSettings = { columns: 48, rowHeight: 10, gap: 8 };
+const defaultFixedContainerGridSettings: GridSettings = { columns: 24, rowHeight: 10, gap: 4 };
+
 const defaultLayout: BlockLayout = { colStart: 1, colEnd: 13, rowStart: 1, rowEnd: 13, alignSelf: 'stretch', justifySelf: 'stretch', positioning: 'grid' };
 const defaultContainerStyles: ContainerStyles = { backgroundColor: '#1e293b', backgroundOpacity: 1, textOpacity: 1, borderRadius: 'medium', zIndex: 0 };
 const defaultTextStyles: TextStyles = { textColor: '#cbd5e1', textAlign: 'left', fontWeight: 'normal', fontStyle: 'normal', fontFamily: 'sans-serif', fontSize: 16};
@@ -40,6 +42,12 @@ const defaultTextStyles: TextStyles = { textColor: '#cbd5e1', textAlign: 'left',
 const defaultPageContent: SiteData = {
   settings: { brandName: 'Nova Marca', backgroundColor: '#0f172a' },
   gridSettings: { desktop: defaultGridSettings },
+  fixedContainers: {
+      top: { id: 'top', enabled: false, isCollapsed: false, size: 60, blocks: [], gridSettings: defaultFixedContainerGridSettings },
+      bottom: { id: 'bottom', enabled: false, isCollapsed: false, size: 60, blocks: [], gridSettings: defaultFixedContainerGridSettings },
+      left: { id: 'left', enabled: false, isCollapsed: false, size: 200, blocks: [], gridSettings: defaultFixedContainerGridSettings },
+      right: { id: 'right', enabled: false, isCollapsed: false, size: 200, blocks: [], gridSettings: defaultFixedContainerGridSettings },
+  },
   mainBlocks: [],
   footerBlocks: [],
 };
@@ -135,14 +143,16 @@ const RichTextInputWithToolbar: React.FC<{
 
 const InspectorPanel: React.FC<{
     selectedBlock: PageBlock | null;
+    selectedContainerId: FixedContainer['id'] | null;
     pageData: SiteData | null;
     onUpdateBlock: (updatedBlock: PageBlock) => void;
     onUpdatePageSettings: (field: keyof SiteSettings, value: string) => void;
     onUpdateGridSettings: (field: keyof GridSettings, value: number) => void;
+    onUpdateFixedContainer: (id: FixedContainer['id'], field: keyof FixedContainer, value: any) => void;
     onZIndexChange: (direction: 'front' | 'back') => void;
-}> = ({ selectedBlock, pageData, onUpdateBlock, onUpdatePageSettings, onUpdateGridSettings, onZIndexChange }) => {
+}> = ({ selectedBlock, selectedContainerId, pageData, onUpdateBlock, onUpdatePageSettings, onUpdateGridSettings, onUpdateFixedContainer, onZIndexChange }) => {
     
-    if (!selectedBlock && !pageData) {
+    if (!selectedBlock && !pageData && !selectedContainerId) {
         return null;
     }
 
@@ -239,7 +249,7 @@ const InspectorPanel: React.FC<{
                 <InputField label="Nome da Marca (Título da Página)" value={settings.brandName} onChange={v => onUpdatePageSettings('brandName', v)} /> 
                 <ColorField label="Cor de Fundo da Página" value={settings.backgroundColor} onChange={v => onUpdatePageSettings('backgroundColor', v)} />
                 
-                <h4 className="text-md font-semibold text-slate-300 mb-2 mt-4 border-t border-slate-700 pt-4">Configurações da Grade</h4>
+                <h4 className="text-md font-semibold text-slate-300 mb-2 mt-4 border-t border-slate-700 pt-4">Configurações da Grade Principal</h4>
                 <InputField label="Colunas" type="number" value={grid.columns} onChange={v => onUpdateGridSettings('columns', parseInt(v))} min={1} max={48} /> 
                 <InputField label="Altura da Linha (px)" type="number" value={grid.rowHeight} onChange={v => onUpdateGridSettings('rowHeight', parseInt(v))} min={1} /> 
                 <InputField label="Espaçamento (px)" type="number" value={grid.gap} onChange={v => onUpdateGridSettings('gap', parseInt(v))} min={0} /> 
@@ -247,19 +257,45 @@ const InspectorPanel: React.FC<{
         )
     };
 
-    const getTitle = () => {
-        if (!selectedBlock) return "Configurações da Página";
-        return `Editando Bloco: ${selectedBlock.type}`;
+    const renderContainerInspector = () => {
+        // FIX: The `pageData` prop is the `SiteData` object itself and does not have a nested 'content' property. Access `fixedContainers` directly on `pageData`.
+        if (!selectedContainerId || !pageData?.fixedContainers) return null;
+        const container = pageData.fixedContainers[selectedContainerId];
+        const isVertical = selectedContainerId === 'left' || selectedContainerId === 'right';
+        return (
+            <>
+                <ToggleField label="Ativado" checked={container.enabled} onChange={v => onUpdateFixedContainer(selectedContainerId, 'enabled', v)} />
+                <InputField label={isVertical ? "Largura (px)" : "Altura (px)"} type="number" value={container.size} onChange={v => onUpdateFixedContainer(selectedContainerId, 'size', parseInt(v))} />
+                <ToggleField label="Recolhido por Padrão" checked={container.isCollapsed} onChange={v => onUpdateFixedContainer(selectedContainerId, 'isCollapsed', v)} />
+            </>
+        );
     };
+
+    const getTitle = () => {
+        if (selectedBlock) return `Editando Bloco: ${selectedBlock.type}`;
+        if (selectedContainerId) return `Editando Painel: ${selectedContainerId}`;
+        return "Configurações da Página";
+    };
+
+    const getIcon = () => {
+        if (selectedBlock) return <EditIcon className="w-5 h-5"/>;
+        if (selectedContainerId) {
+            const icons = { top: PanelTopIcon, bottom: PanelBottomIcon, left: PanelLeftIcon, right: PanelRightIcon };
+            const Icon = icons[selectedContainerId];
+            return <Icon className="w-5 h-5"/>;
+        }
+        return <SettingsIcon className="w-5 h-5"/>
+    }
 
     return ( 
         <div className="p-4 space-y-4"> 
             <h3 className="text-lg font-bold text-cyan-400 capitalize flex items-center gap-2">
-                {selectedBlock ? <EditIcon className="w-5 h-5"/> : <SettingsIcon className="w-5 h-5"/>} {getTitle()}
+                {getIcon()} {getTitle()}
             </h3> 
             <div className="space-y-4"> 
-                {!selectedBlock && renderPageInspector()} 
                 {selectedBlock && renderBlockInspector()}
+                {selectedContainerId && renderContainerInspector()}
+                {!selectedBlock && !selectedContainerId && renderPageInspector()}
             </div> 
         </div> 
     );
@@ -372,20 +408,6 @@ const Block: React.FC<{
     };
     const resizeHandles = ['ne', 'se', 'sw', 'nw', 'n', 'e', 's', 'w'];
     
-    const positioning = block.layout.desktop.positioning || 'grid';
-    const isFixed = positioning !== 'grid';
-
-    const getFixedLabel = () => {
-        switch (positioning) {
-            case 'fixed-top': return { icon: PinTopIcon, label: 'Fixo no Topo'};
-            case 'fixed-bottom': return { icon: PinBottomIcon, label: 'Fixo no Rodapé'};
-            case 'fixed-left': return { icon: PinLeftIcon, label: 'Fixo à Esquerda'};
-            case 'fixed-right': return { icon: PinRightIcon, label: 'Fixo à Direita'};
-            default: return null;
-        }
-    }
-    const fixedInfo = getFixedLabel();
-
     return (
         <div 
             style={blockStyle} 
@@ -396,12 +418,6 @@ const Block: React.FC<{
             <div className={`w-full h-full overflow-hidden pointer-events-none ${borderRadiusClass}`}>
                  <EditorBlockRenderer block={block} />
             </div>
-             {isFixed && fixedInfo && (
-                <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center text-center text-cyan-400 pointer-events-none z-10">
-                    <fixedInfo.icon className="w-8 h-8" />
-                    <span className="text-xs font-semibold mt-1">{fixedInfo.label}</span>
-                </div>
-            )}
             {isSelected && resizeHandles.map(dir => (
                 <div 
                     key={dir}
@@ -429,6 +445,7 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
   const [isPanelOpen, setIsPanelOpen] = useState(true);
   const [activeTab, setActiveTab] = useState<'components' | 'inspector'>('components');
   const [selectedBlock, setSelectedBlock] = useState<PageBlock | null>(null);
+  const [selectedContainerId, setSelectedContainerId] = useState<FixedContainer['id'] | null>(null);
 
   const [interactionState, setInteractionState] = useState<{
       type: 'move' | 'resize' | 'new';
@@ -436,10 +453,17 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
       initialMouse: { x: number; y: number };
       initialLayout: BlockLayout;
       resizeDirection?: string;
-      targetContext: 'main' | 'footer';
+      targetContext: 'main' | 'footer' | FixedContainer['id'];
   } | null>(null);
-  const mainCanvasRef = useRef<HTMLDivElement>(null);
-  const footerCanvasRef = useRef<HTMLDivElement>(null);
+
+  const canvasRefs = {
+      main: useRef<HTMLDivElement>(null),
+      footer: useRef<HTMLDivElement>(null),
+      top: useRef<HTMLDivElement>(null),
+      bottom: useRef<HTMLDivElement>(null),
+      left: useRef<HTMLDivElement>(null),
+      right: useRef<HTMLDivElement>(null),
+  };
 
   const handleFeedback = (type: 'error' | 'success', message: string) => { setFeedback({ type, message }); setTimeout(() => setFeedback(null), 4000); };
   const fetchPages = useCallback(async () => {
@@ -468,24 +492,23 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
     try {
         const response = await fetch(`/api/site/pages/${page.id}`, { headers: { 'Authorization': `Bearer ${token}` } });
         if (!response.ok) throw new Error('Falha ao carregar os dados completos da página.');
-        const fullPageData: Page = await response.json();
+        let fullPageData: Page = await response.json();
         
-        // MIGRAÇÃO DE COMPATIBILIDADE PARA TRÁS
         const content = (fullPageData.content || {}) as any;
+        // Backwards compatibility migration
         if (content.headerBlocks || content.contentBlocks) {
-            content.mainBlocks = [
-                ...(content.headerBlocks || []),
-                ...(content.contentBlocks || []),
-            ];
-            delete content.headerBlocks;
-            delete content.contentBlocks;
+            content.mainBlocks = [...(content.headerBlocks || []), ...(content.contentBlocks || [])];
+            delete content.headerBlocks; delete content.contentBlocks;
         }
 
         const validatedContent: SiteData = {
-          settings: content?.settings || defaultPageContent.settings,
-          gridSettings: content?.gridSettings || defaultPageContent.gridSettings,
-          mainBlocks: content?.mainBlocks || [],
-          footerBlocks: content?.footerBlocks || [],
+            ...defaultPageContent,
+            ...content,
+            settings: content.settings || defaultPageContent.settings,
+            gridSettings: content.gridSettings || defaultPageContent.gridSettings,
+            fixedContainers: { ...defaultPageContent.fixedContainers, ...(content.fixedContainers || {})},
+            mainBlocks: content.mainBlocks || [],
+            footerBlocks: content.footerBlocks || [],
         };
         fullPageData.content = validatedContent;
         
@@ -493,6 +516,7 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
         setSavedPage(JSON.parse(JSON.stringify(fullPageData)));
         setView('editor');
         setSelectedBlock(null);
+        setSelectedContainerId(null);
         setActiveTab('components');
     } catch (error: any) { handleFeedback('error', error.message || 'Não foi possível carregar a página para edição.');
     } finally { setStatus('idle'); }
@@ -541,6 +565,9 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
         if (!draft.content) return;
         draft.content.mainBlocks = draft.content.mainBlocks.filter(b => b.id !== selectedBlock.id);
         draft.content.footerBlocks = draft.content.footerBlocks.filter(b => b.id !== selectedBlock.id);
+        Object.values(draft.content.fixedContainers).forEach(c => {
+            c.blocks = c.blocks.filter(b => b.id !== selectedBlock.id);
+        });
     });
     setSelectedBlock(null);
   }
@@ -558,122 +585,107 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
   const updateBlock = (updatedBlock: PageBlock) => {
       updateEditingPage(draft => {
           if (!draft.content) return;
-          const allBlockKeys = ['mainBlocks', 'footerBlocks'] as const;
-          for (const key of allBlockKeys) {
-              const index = draft.content[key].findIndex(b => b.id === updatedBlock.id);
-              if (index !== -1) {
-                  draft.content[key][index] = updatedBlock;
-                  setSelectedBlock(updatedBlock); 
-                  break;
+          const areas: (PageBlock[] | undefined)[] = [
+              draft.content.mainBlocks,
+              draft.content.footerBlocks,
+              draft.content.fixedContainers?.top.blocks,
+              draft.content.fixedContainers?.bottom.blocks,
+              draft.content.fixedContainers?.left.blocks,
+              draft.content.fixedContainers?.right.blocks,
+          ];
+          for (const area of areas) {
+              if (area) {
+                  const index = area.findIndex(b => b.id === updatedBlock.id);
+                  if (index !== -1) {
+                      area[index] = updatedBlock;
+                      setSelectedBlock(updatedBlock);
+                      break;
+                  }
               }
+          }
+      });
+  };
+
+  const handleUpdateFixedContainer = (id: FixedContainer['id'], field: keyof FixedContainer, value: any) => {
+      updateEditingPage(draft => {
+          if (draft.content?.fixedContainers) {
+              (draft.content.fixedContainers[id] as any)[field] = value;
           }
       });
   };
 
   const handleZIndexChange = (direction: 'front' | 'back') => {
       if (!selectedBlock) return;
-
       updateEditingPage(draft => {
           if (!draft.content) return;
-          const allBlocks = [ ...draft.content.mainBlocks, ...draft.content.footerBlocks ];
-          
+          const allBlocks = [
+              ...draft.content.mainBlocks,
+              ...draft.content.footerBlocks,
+              ...Object.values(draft.content.fixedContainers).flatMap(c => c.blocks)
+          ];
           const zIndexes = allBlocks.map(b => b.styles?.zIndex || 0);
           const maxZ = Math.max(0, ...zIndexes);
           const minZ = Math.min(0, ...zIndexes);
-          
           const currentZ = selectedBlock.styles?.zIndex || 0;
           const newZ = direction === 'front' ? maxZ + 1 : minZ - 1;
-          
-          const blockArrayKeys = ['mainBlocks', 'footerBlocks'] as const;
-          for (const key of blockArrayKeys) {
-              const blockIndex = draft.content[key].findIndex(b => b.id === selectedBlock.id);
-              if (blockIndex !== -1) {
-                  const blockToUpdate = draft.content[key][blockIndex];
-                  if (!blockToUpdate.styles) blockToUpdate.styles = {};
-                  blockToUpdate.styles.zIndex = newZ;
-                  
-                  const updatedSelectedBlock = { ...selectedBlock, styles: { ...(selectedBlock.styles || {}), zIndex: newZ } };
-                  setSelectedBlock(updatedSelectedBlock);
-                  break; 
-              }
+
+          const blockToUpdate = allBlocks.find(b => b.id === selectedBlock.id);
+          if (blockToUpdate) {
+              if (!blockToUpdate.styles) blockToUpdate.styles = {};
+              blockToUpdate.styles.zIndex = newZ;
+              setSelectedBlock({ ...selectedBlock, styles: { ...(selectedBlock.styles || {}), zIndex: newZ } });
           }
       });
   };
 
 
   // --- Drag and Drop / Resize Logic ---
-   const getCanvasForContext = (context: 'main' | 'footer') => {
-    if (context === 'footer') return footerCanvasRef.current;
-    return mainCanvasRef.current;
-   };
+  const getCanvasContextFromEvent = (e: MouseEvent): typeof interactionState.targetContext => {
+      for (const key of ['top', 'bottom', 'left', 'right', 'footer', 'main'] as const) {
+          const rect = canvasRefs[key].current?.getBoundingClientRect();
+          if (rect && e.clientX > rect.left && e.clientX < rect.right && e.clientY > rect.top && e.clientY < rect.bottom) {
+              return key;
+          }
+      }
+      return 'main';
+  };
 
   const handleNewBlockDragStart = (e: React.MouseEvent, type: PageBlock['type']) => {
     const newBlock = createNewBlock(type);
-    setInteractionState({ 
-        type: 'new', 
-        block: newBlock, 
-        initialMouse: { x: e.clientX, y: e.clientY }, 
-        initialLayout: newBlock.layout.desktop,
-        targetContext: 'main'
-    });
+    setInteractionState({ type: 'new', block: newBlock, initialMouse: { x: e.clientX, y: e.clientY }, initialLayout: newBlock.layout.desktop, targetContext: 'main' });
   };
 
-  const handleBlockMouseDown = (e: React.MouseEvent, block: PageBlock) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    // Update selected block state only if it's different
+  const handleBlockMouseDown = (e: React.MouseEvent, block: PageBlock, context: typeof interactionState.targetContext) => {
+    e.preventDefault(); e.stopPropagation();
     if (selectedBlock?.id !== block.id) {
-        const currentBlockInState = editingPage?.content?.mainBlocks.find(b => b.id === block.id) ||
-                                  editingPage?.content?.footerBlocks.find(b => b.id === block.id);
-        setSelectedBlock(currentBlockInState || block);
+        setSelectedBlock(block);
+        setSelectedContainerId(null);
         setActiveTab('inspector');
     }
-
-    let context: 'main' | 'footer' = 'main';
-    if (editingPage?.content?.footerBlocks.some(b => b.id === block.id)) context = 'footer';
-    
-    setInteractionState({ 
-        type: 'move', 
-        block, 
-        initialMouse: { x: e.clientX, y: e.clientY }, 
-        initialLayout: block.layout.desktop,
-        targetContext: context
-    });
+    setInteractionState({ type: 'move', block, initialMouse: { x: e.clientX, y: e.clientY }, initialLayout: block.layout.desktop, targetContext: context });
   };
 
-  const handleResizeStart = (e: React.MouseEvent, block: PageBlock, direction: string) => {
-     e.preventDefault();
-     e.stopPropagation();
-     let context: 'main' | 'footer' = 'main';
-     if (editingPage?.content?.footerBlocks.some(b => b.id === block.id)) context = 'footer';
-
-    setInteractionState({ 
-        type: 'resize', 
-        block, 
-        resizeDirection: direction, 
-        initialMouse: { x: e.clientX, y: e.clientY }, 
-        initialLayout: block.layout.desktop,
-        targetContext: context
-    });
+  const handleResizeStart = (e: React.MouseEvent, block: PageBlock, direction: string, context: typeof interactionState.targetContext) => {
+     e.preventDefault(); e.stopPropagation();
+    setInteractionState({ type: 'resize', block, resizeDirection: direction, initialMouse: { x: e.clientX, y: e.clientY }, initialLayout: block.layout.desktop, targetContext: context });
   };
   
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
         if (!interactionState || !editingPage?.content) return;
         
-        let currentContext: 'main' | 'footer' = 'main';
-        const footerRect = footerCanvasRef.current?.getBoundingClientRect();
-
-        if (footerRect && e.clientY > footerRect.top && e.clientY < footerRect.bottom) {
-            currentContext = 'footer';
-        }
-        
-        const canvasEl = getCanvasForContext(currentContext);
+        const currentContext = getCanvasContextFromEvent(e);
+        const canvasEl = canvasRefs[currentContext].current;
         if (!canvasEl) return;
         
+        let grid: GridSettings;
+        if(currentContext === 'main' || currentContext === 'footer') {
+            grid = editingPage.content.gridSettings.desktop;
+        } else {
+            grid = editingPage.content.fixedContainers[currentContext].gridSettings;
+        }
+
         const canvasRect = canvasEl.getBoundingClientRect();
-        const grid = editingPage.content.gridSettings.desktop;
         const cellWidth = (canvasRect.width - (grid.columns - 1) * grid.gap) / grid.columns;
         const cellHeight = grid.rowHeight;
 
@@ -714,8 +726,9 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
             const finalContext = interactionState.targetContext;
             updateEditingPage(draft => {
                 if(!draft.content) return;
-                const key = `${finalContext}Blocks` as const;
-                draft.content[key].push(interactionState.block);
+                if (finalContext === 'main') draft.content.mainBlocks.push(interactionState.block);
+                else if (finalContext === 'footer') draft.content.footerBlocks.push(interactionState.block);
+                else draft.content.fixedContainers[finalContext].blocks.push(interactionState.block);
             });
             setSelectedBlock(interactionState.block);
             setActiveTab('inspector');
@@ -733,7 +746,7 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
         window.removeEventListener('mousemove', handleMouseMove);
         window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [interactionState, editingPage?.content?.gridSettings]);
+  }, [interactionState, editingPage?.content]);
 
   const hasUnsavedChanges = useMemo(() => JSON.stringify(editingPage) !== JSON.stringify(savedPage), [editingPage, savedPage]);
 
@@ -784,37 +797,36 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
     if (status === 'loading' || !editingPage || !editingPage.content) return <div className="text-center p-8">Carregando editor...</div>;
     const pageStyle = { backgroundColor: editingPage.content.settings.backgroundColor || '#0f172a' };
     
-    const gridSettings = editingPage.content.gridSettings.desktop;
-    
-    const GridCanvas = ({ blocks, canvasRef, context }: { blocks: PageBlock[], canvasRef: React.RefObject<HTMLDivElement>, context: 'main' | 'footer' }) => {
-        const gridStyle = {
-            display: 'grid',
-            gridTemplateColumns: `repeat(${gridSettings.columns}, 1fr)`,
-            gridAutoRows: `${gridSettings.rowHeight}px`,
-            gap: `${gridSettings.gap}px`,
-        };
+    const FixedContainerEditor: React.FC<{ container: FixedContainer }> = ({ container }) => {
+        if (!container.enabled) return null;
+        const { id, size, isCollapsed, blocks, gridSettings } = container;
+        const isVertical = id === 'left' || id === 'right';
+        const style: React.CSSProperties = { transition: 'all 0.3s ease-in-out' };
+        if (isVertical) {
+            style.width = isCollapsed ? 30 : size;
+        } else {
+            style.height = isCollapsed ? 30 : size;
+        }
+        
         return (
-            <div 
-              ref={canvasRef} 
-              style={gridStyle} 
-              className="relative bg-slate-900/50 rounded-lg border border-dashed border-slate-700 min-h-[200px] p-2"
-              onMouseDown={(e) => { 
-                if (e.target === e.currentTarget) {
-                    setSelectedBlock(null);
-                    setActiveTab('components');
-                }
-              }}
-            >
-                {blocks.map(block => (
-                    <Block 
-                        key={block.id} 
-                        block={block}
-                        gridSettings={gridSettings}
-                        isSelected={selectedBlock?.id === block.id}
-                        onMouseDown={handleBlockMouseDown}
-                        onResizeStart={handleResizeStart}
-                    />
-                ))}
+            <div style={style} className={`bg-slate-800/50 flex-shrink-0 relative border-slate-700 ${id === 'top' && 'border-b'} ${id === 'bottom' && 'border-t'} ${id === 'left' && 'border-r'} ${id === 'right' && 'border-l'}`}>
+                <div className="w-full h-full"
+                    onClick={(e) => { e.stopPropagation(); setSelectedContainerId(id); setSelectedBlock(null); setActiveTab('inspector'); }}
+                >
+                    {!isCollapsed && (
+                        <div ref={canvasRefs[id]} className="w-full h-full p-2 relative bg-slate-900/10"
+                            onMouseDown={(e) => { if (e.target === e.currentTarget) { setSelectedBlock(null); setSelectedContainerId(null); } }}
+                        >
+                            {blocks.map(block => (
+                                <Block key={block.id} block={block} gridSettings={gridSettings} isSelected={selectedBlock?.id === block.id} onMouseDown={(e, b) => handleBlockMouseDown(e, b, id)} onResizeStart={(e, b, dir) => handleResizeStart(e, b, dir, id)} />
+                            ))}
+                        </div>
+                    )}
+                </div>
+                <button onClick={() => handleUpdateFixedContainer(id, 'isCollapsed', !isCollapsed)} className="absolute bg-cyan-600 hover:bg-cyan-500 text-white w-6 h-6 rounded-full flex items-center justify-center z-20"
+                    style={ id === 'top' ? { bottom: -12, left: '50%', transform: 'translateX(-50%)' } : id === 'bottom' ? { top: -12, left: '50%', transform: 'translateX(-50%)' } : id === 'left' ? { right: -12, top: '50%', transform: 'translateY(-50%)' } : { left: -12, top: '50%', transform: 'translateY(-50%)' } }>
+                    {isCollapsed ? <PanelOpenIcon className="w-4 h-4" /> : <PanelCloseIcon className="w-4 h-4" />}
+                </button>
             </div>
         );
     };
@@ -827,11 +839,11 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
                 {(['components', 'inspector'] as const).map(tab => ( <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 p-3 text-sm font-semibold capitalize ${activeTab === tab ? 'bg-slate-900 text-cyan-400' : 'text-slate-400 hover:bg-slate-700'}`}>{tab}</button>))}
               </div>
               <div className="flex-grow overflow-y-auto">
-                 {activeTab === 'inspector' && <InspectorPanel selectedBlock={selectedBlock} pageData={editingPage.content} onUpdateBlock={updateBlock} onUpdatePageSettings={(f, v) => updateEditingPage(d => d.content && (d.content.settings[f] = v))} onUpdateGridSettings={(f,v) => updateEditingPage(d => d.content && (d.content.gridSettings.desktop[f] = v))} onZIndexChange={handleZIndexChange} />}
+                 {activeTab === 'inspector' && <InspectorPanel selectedBlock={selectedBlock} selectedContainerId={selectedContainerId} pageData={editingPage.content} onUpdateBlock={updateBlock} onUpdatePageSettings={(f, v) => updateEditingPage(d => d.content && (d.content.settings[f] = v))} onUpdateGridSettings={(f,v) => updateEditingPage(d => d.content && (d.content.gridSettings.desktop[f] = v))} onUpdateFixedContainer={handleUpdateFixedContainer} onZIndexChange={handleZIndexChange} />}
                  {activeTab === 'components' && (
                     <div className="p-4 grid grid-cols-2 gap-2">
                         <h3 className="text-lg font-bold text-cyan-400 mb-2 col-span-2">Componentes</h3>
-                        <p className="text-xs text-slate-500 mb-2 col-span-2">Arraste um componente para a página.</p>
+                        <p className="text-xs text-slate-500 mb-2 col-span-2">Arraste um componente para a página ou para um painel ativo.</p>
                         {componentList.map(({ type, label, Icon }) => (
                             <div key={type} onMouseDown={(e) => handleNewBlockDragStart(e, type)} className="w-full flex flex-col items-center justify-center gap-2 p-3 bg-slate-700 rounded-md text-center cursor-grab aspect-square">
                                 <Icon className="w-6 h-6 text-cyan-400"/> <span className="text-xs">{label}</span>
@@ -848,18 +860,30 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
           </div>
         </aside>
 
-        <div className="flex-1 relative flex flex-col">
+        <div className="flex-1 relative flex flex-col min-w-0">
            <button onClick={() => setIsPanelOpen(!isPanelOpen)} className={`absolute top-4 bg-slate-800 hover:bg-cyan-600 text-white p-2 rounded-r-lg z-30 transition-all ${isPanelOpen ? '-left-px' : 'left-0'}`}><ChevronRightIcon className="w-5 h-5"/></button>
-            <main className="flex-1 overflow-auto p-4 space-y-4" style={pageStyle}>
-              <div className="p-2">
-                 <h3 className="text-center text-xs font-semibold uppercase text-slate-500 mb-2">Página Principal</h3>
-                <GridCanvas blocks={editingPage.content.mainBlocks} canvasRef={mainCanvasRef} context="main" />
-              </div>
-              <div className="p-2 border-t-2 border-dashed border-slate-700/50">
-                 <h3 className="text-center text-xs font-semibold uppercase text-slate-500 mb-2">Rodapé</h3>
-                <GridCanvas blocks={editingPage.content.footerBlocks} canvasRef={footerCanvasRef} context="footer"/>
-              </div>
-            </main>
+            <div className="flex-1 flex min-h-0">
+                <FixedContainerEditor container={editingPage.content.fixedContainers.left} />
+                <div className="flex-1 flex flex-col min-w-0 min-h-0">
+                    <FixedContainerEditor container={editingPage.content.fixedContainers.top} />
+                    <main className="flex-1 overflow-auto p-4 space-y-4" style={pageStyle} onMouseDown={() => { setSelectedBlock(null); setSelectedContainerId(null); }}>
+                      <div className="p-2">
+                         <h3 className="text-center text-xs font-semibold uppercase text-slate-500 mb-2">Página Principal</h3>
+                        <div ref={canvasRefs.main} className="relative bg-slate-900/50 rounded-lg border border-dashed border-slate-700 min-h-[200px] p-2" style={{ display: 'grid', gridTemplateColumns: `repeat(${editingPage.content.gridSettings.desktop.columns}, 1fr)`, gridAutoRows: `${editingPage.content.gridSettings.desktop.rowHeight}px`, gap: `${editingPage.content.gridSettings.desktop.gap}px` }}>
+                            {editingPage.content.mainBlocks.map(block => <Block key={block.id} block={block} gridSettings={editingPage.content.gridSettings.desktop} isSelected={selectedBlock?.id === block.id} onMouseDown={(e,b) => handleBlockMouseDown(e,b,'main')} onResizeStart={(e,b,dir) => handleResizeStart(e,b,dir,'main')} />)}
+                        </div>
+                      </div>
+                      <div className="p-2 border-t-2 border-dashed border-slate-700/50">
+                         <h3 className="text-center text-xs font-semibold uppercase text-slate-500 mb-2">Rodapé</h3>
+                        <div ref={canvasRefs.footer} className="relative bg-slate-900/50 rounded-lg border border-dashed border-slate-700 min-h-[100px] p-2" style={{ display: 'grid', gridTemplateColumns: `repeat(${editingPage.content.gridSettings.desktop.columns}, 1fr)`, gridAutoRows: `${editingPage.content.gridSettings.desktop.rowHeight}px`, gap: `${editingPage.content.gridSettings.desktop.gap}px` }}>
+                             {editingPage.content.footerBlocks.map(block => <Block key={block.id} block={block} gridSettings={editingPage.content.gridSettings.desktop} isSelected={selectedBlock?.id === block.id} onMouseDown={(e,b) => handleBlockMouseDown(e,b,'footer')} onResizeStart={(e,b,dir) => handleResizeStart(e,b,dir,'footer')} />)}
+                        </div>
+                      </div>
+                    </main>
+                    <FixedContainerEditor container={editingPage.content.fixedContainers.bottom} />
+                </div>
+                <FixedContainerEditor container={editingPage.content.fixedContainers.right} />
+            </div>
         </div>
         
         {interactionState?.type === 'new' && (

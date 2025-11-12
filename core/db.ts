@@ -1,12 +1,12 @@
+// FIX: Add a triple-slash directive to include Node.js type definitions. This resolves errors related to 'process.exit'.
 /// <reference types="node" />
 
-// FIX: Add reference to node types to resolve errors with process.exit
 // core/db.ts - Gerenciador de Conexão com o Banco de Dados
 
 import { Pool } from 'pg';
 import dotenv from 'dotenv';
 import { ROLE_PERMISSIONS, APP_MODULES } from '../constants';
-import { UserRole, TextStyles } from '../types';
+import { UserRole, TextStyles, SiteData } from '../types';
 
 dotenv.config();
 
@@ -102,7 +102,7 @@ export const initializeDatabase = async () => {
         const pagesCheck = await client.query('SELECT COUNT(*) FROM pages');
         if (parseInt(pagesCheck.rows[0].count, 10) === 0) {
             const defaultTextStyles: TextStyles = { textColor: '#cbd5e1', textAlign: 'left', fontWeight: 'normal', fontStyle: 'normal', fontFamily: 'sans-serif', fontSize: 16};
-             const initialContent = {
+             const initialContent: SiteData = {
                 settings: {
                     brandName: "Mundo Moto",
                     backgroundColor: "#0f172a"
@@ -110,36 +110,21 @@ export const initializeDatabase = async () => {
                 gridSettings: {
                     desktop: { columns: 48, rowHeight: 10, gap: 8 }
                 },
-                // FIX: Merged headerBlocks and contentBlocks into mainBlocks
+                fixedContainers: {
+                    top: { id: 'top', enabled: true, isCollapsed: false, size: 80, blocks: [
+                        { id: "header_brand", type: "text", layout: { desktop: { colStart: 2, colEnd: 8, rowStart: 2, rowEnd: 7, alignSelf: 'center', justifySelf: 'start', positioning: 'grid' } }, styles: { backgroundColor: "transparent" }, content: { heading: { text: "Mundo Moto", styles: { ...defaultTextStyles, textColor: "#f1f5f9", fontWeight: 'bold', fontSize: 24 } }, body: { text: "", styles: defaultTextStyles } } },
+                        { id: "header_menu_1", type: "menu", layout: { desktop: { colStart: 12, colEnd: 24, rowStart: 2, rowEnd: 7, alignSelf: 'center', justifySelf: 'end', positioning: 'grid' } }, styles: { backgroundColor: "transparent" }, content: { items: [ { id: "item1", label: "Home", link: "#/home" }, { id: "item2", label: "Sobre", link: "#/sobre" }, { id: "item3", label: "Contato", link: "#/contato" } ] } }
+                    ], gridSettings: { columns: 24, rowHeight: 10, gap: 4 } },
+                    bottom: { id: 'bottom', enabled: false, isCollapsed: false, size: 60, blocks: [], gridSettings: { columns: 24, rowHeight: 10, gap: 4 } },
+                    left: { id: 'left', enabled: false, isCollapsed: false, size: 200, blocks: [], gridSettings: { columns: 12, rowHeight: 10, gap: 4 } },
+                    right: { id: 'right', enabled: false, isCollapsed: false, size: 200, blocks: [], gridSettings: { columns: 12, rowHeight: 10, gap: 4 } },
+                },
                 mainBlocks: [
-                    {
-                        id: "header_brand",
-                        type: "text",
-                        layout: { desktop: { colStart: 2, colEnd: 12, rowStart: 2, rowEnd: 6, alignSelf: 'center', justifySelf: 'start' } },
-                        styles: { backgroundColor: "transparent", zIndex: 1 },
-                        content: {
-                            heading: { text: "Mundo Moto", styles: { ...defaultTextStyles, textColor: "#f1f5f9", fontWeight: 'bold', fontSize: 24 } },
-                            body: { text: "", styles: defaultTextStyles }
-                        }
-                    },
-                    {
-                        id: "header_menu_1",
-                        type: "menu",
-                        layout: { desktop: { colStart: 20, colEnd: 48, rowStart: 2, rowEnd: 6, alignSelf: 'center', justifySelf: 'end' } },
-                        styles: { backgroundColor: "transparent", zIndex: 1 },
-                        content: {
-                            items: [
-                                { id: "item1", label: "Home", link: "#/home" },
-                                { id: "item2", label: "Sobre", link: "#/sobre" },
-                                { id: "item3", label: "Contato", link: "#/contato" }
-                            ]
-                        }
-                    },
                     {
                         id: "block_1",
                         type: "hero",
-                        layout: { desktop: { colStart: 5, colEnd: 45, rowStart: 5, rowEnd: 28, alignSelf: 'stretch', justifySelf: 'stretch' } },
-                        styles: { backgroundColor: "#1e293b", opacity: 1, zIndex: 1 },
+                        layout: { desktop: { colStart: 5, colEnd: 45, rowStart: 5, rowEnd: 28, alignSelf: 'stretch', justifySelf: 'stretch', positioning: 'grid' } },
+                        styles: { backgroundColor: "#1e293b", zIndex: 1 },
                         content: {
                             title: { text: "Bem-vindo ao Mundo Moto", styles: { ...defaultTextStyles, textColor: '#ffffff', textAlign: 'center', fontWeight: 'bold', fontSize: 48 } },
                             subtitle: { text: "Sua parada única para as melhores motos do planeta. Comece sua aventura hoje.", styles: { ...defaultTextStyles, textColor: '#ffffff', textAlign: 'center', fontSize: 18 } },
@@ -151,8 +136,8 @@ export const initializeDatabase = async () => {
                     {
                         id: "block_2",
                         type: "text",
-                        layout: { desktop: { colStart: 8, colEnd: 42, rowStart: 32, rowEnd: 52, alignSelf: 'start', justifySelf: 'stretch' } },
-                        styles: { backgroundColor: "transparent", opacity: 1, zIndex: 1 },
+                        layout: { desktop: { colStart: 8, colEnd: 42, rowStart: 32, rowEnd: 52, alignSelf: 'start', justifySelf: 'stretch', positioning: 'grid' } },
+                        styles: { backgroundColor: "transparent", zIndex: 1 },
                         content: {
                             heading: { text: "Sobre Nossa Paixão", styles: { ...defaultTextStyles, fontWeight: 'bold', fontSize: 32 } },
                             body: { text: "Nós vivemos e respiramos motocicletas. Nossa missão é fornecer aos entusiastas máquinas de alta qualidade e serviço incomparável. Cada moto em nossa coleção é escolhida a dedo e inspecionada para garantir que atenda aos nossos altos padrões de desempenho e confiabilidade.", styles: {...defaultTextStyles, fontSize: 16 } }
@@ -163,8 +148,8 @@ export const initializeDatabase = async () => {
                     {
                         id: "footer_block_1",
                         type: "text",
-                        layout: { desktop: { colStart: 1, colEnd: 49, rowStart: 2, rowEnd: 6, alignSelf: 'center', justifySelf: 'center' } },
-                        styles: { backgroundColor: "transparent", opacity: 1, zIndex: 1 },
+                        layout: { desktop: { colStart: 1, colEnd: 49, rowStart: 2, rowEnd: 6, alignSelf: 'center', justifySelf: 'center', positioning: 'grid' } },
+                        styles: { backgroundColor: "transparent" },
                         content: {
                             heading: { text: "", styles: defaultTextStyles },
                             body: { text: "© 2024 Mundo Moto. Todos os direitos reservados.", styles: { ...defaultTextStyles, textColor: '#64748b', textAlign: 'center', fontSize: 14 } }

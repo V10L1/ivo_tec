@@ -136,6 +136,25 @@ export interface SiteSettings {
   backgroundColor: string;
 }
 
+// Novo: Define um contêiner fixo (cabeçalho, rodapé, barra lateral)
+export interface FixedContainer {
+  id: 'top' | 'bottom' | 'left' | 'right';
+  enabled: boolean;
+  isCollapsed: boolean;
+  size: number; // Altura para topo/rodapé, Largura para laterais (em px)
+  blocks: PageBlock[];
+  gridSettings: GridSettings;
+}
+
+// Novo: Estrutura para todos os contêineres fixos
+export interface FixedContainers {
+  top: FixedContainer;
+  bottom: FixedContainer;
+  left: FixedContainer;
+  right: FixedContainer;
+}
+
+
 // Representa o objeto de conteúdo JSONB dentro de cada página
 export interface SiteData {
   settings: SiteSettings;
@@ -143,6 +162,7 @@ export interface SiteData {
     desktop: GridSettings;
     // Futuramente: tablet: GridSettings; mobile: GridSettings;
   };
+  fixedContainers: FixedContainers;
   mainBlocks: PageBlock[];
   footerBlocks: PageBlock[];
 }

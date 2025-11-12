@@ -12,6 +12,12 @@ const defaultNewPageContent: SiteData = {
   gridSettings: {
     desktop: { columns: 48, rowHeight: 10, gap: 8 }
   },
+  fixedContainers: {
+      top: { id: 'top', enabled: false, isCollapsed: false, size: 60, blocks: [], gridSettings: { columns: 24, rowHeight: 10, gap: 4 } },
+      bottom: { id: 'bottom', enabled: false, isCollapsed: false, size: 60, blocks: [], gridSettings: { columns: 24, rowHeight: 10, gap: 4 } },
+      left: { id: 'left', enabled: false, isCollapsed: false, size: 200, blocks: [], gridSettings: { columns: 12, rowHeight: 10, gap: 4 } },
+      right: { id: 'right', enabled: false, isCollapsed: false, size: 200, blocks: [], gridSettings: { columns: 12, rowHeight: 10, gap: 4 } },
+  },
   mainBlocks: [],
   footerBlocks: [],
 };
