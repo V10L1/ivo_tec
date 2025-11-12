@@ -1,3 +1,4 @@
+
 // api/site/site.routes.ts
 import express, { Request, Response } from 'express';
 import { pool } from '../../core/db';
@@ -90,6 +91,43 @@ router.post('/pages', verifyToken, checkModulePermission('SITE'), async (req: Re
         res.status(500).json({ message: 'Falha ao criar página' });
     }
 });
+
+// Duplicar uma página
+router.post('/pages/duplicate/:id', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
+    const { id } = req.params;
+    try {
+        const originalPageResult = await pool.query('SELECT * FROM pages WHERE id = $1', [id]);
+        if (originalPageResult.rows.length === 0) {
+            return res.status(404).json({ message: 'Página original não encontrada.' });
+        }
+        const originalPage = originalPageResult.rows[0];
+
+        let newSlug = `${originalPage.slug}-copia`;
+        let slugExists = true;
+        let counter = 1;
+        while (slugExists) {
+            const slugCheck = await pool.query('SELECT 1 FROM pages WHERE slug = $1', [newSlug]);
+            if (slugCheck.rows.length === 0) {
+                slugExists = false;
+            } else {
+                newSlug = `${originalPage.slug}-copia-${counter++}`;
+            }
+        }
+        
+        const newTitle = `Cópia de ${originalPage.title}`;
+
+        const result = await pool.query(
+            'INSERT INTO pages (title, slug, is_homepage, is_published, content) VALUES ($1, $2, FALSE, FALSE, $3) RETURNING *',
+            [newTitle, newSlug, originalPage.content]
+        );
+
+        res.status(201).json(result.rows[0]);
+    } catch (error) {
+        console.error('Erro ao duplicar página:', error);
+        res.status(500).json({ message: 'Falha ao duplicar página' });
+    }
+});
+
 
 // Obter dados de uma página específica para edição
 router.get('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
