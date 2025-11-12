@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Page } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRouter } from '../../App';
-import { PlusCircleIcon, EditIcon, Trash2Icon, CopyIcon, StarIcon } from '../../components/icons/Icons';
+import { PlusCircleIcon, EditIcon, Trash2Icon, CopyIcon, GlobeIcon } from '../../components/icons/Icons';
 
 type PageSummary = Pick<Page, 'id' | 'title' | 'slug' | 'is_homepage' | 'is_published' | 'updated_at'>;
 
@@ -64,11 +64,7 @@ const PageManager: React.FC = () => {
         }
     };
 
-    const handleDeletePage = async (pageId: string, isHomepage: boolean) => {
-        if (isHomepage) {
-            handleFeedback('error', 'Não é possível excluir a página inicial.');
-            return;
-        }
+    const handleDeletePage = async (pageId: string) => {
         if (!window.confirm('Você tem certeza que deseja excluir esta página? Esta ação é irreversível.')) return;
         setStatus('submitting');
         try {
@@ -131,27 +127,10 @@ const PageManager: React.FC = () => {
                 throw new Error(data.message || 'Falha ao alterar o status.');
             }
             handleFeedback('success', 'Status da página alterado com sucesso!');
-            await fetchPages();
-        } catch (error: any) {
-            handleFeedback('error', error.message);
-        } finally {
-            setStatus('idle');
-        }
-    };
-
-    const handleSetHomepage = async (pageId: string) => {
-        setStatus('submitting');
-        try {
-            const response = await fetch(`/api/site/pages/${pageId}/set-homepage`, {
-                method: 'PATCH',
-                headers: { 'Authorization': `Bearer ${token}` },
-            });
-            const data = await response.json();
-            if (!response.ok) {
-                throw new Error(data.message || 'Falha ao definir como página inicial.');
-            }
-            handleFeedback('success', 'Página inicial definida com sucesso!');
-            await fetchPages();
+            // Update local state for immediate feedback before refetching
+            setPages(prevPages => prevPages.map(p => 
+                p.id === page.id ? { ...p, is_published: !p.is_published } : p
+            ));
         } catch (error: any) {
             handleFeedback('error', error.message);
         } finally {
@@ -198,21 +177,10 @@ const PageManager: React.FC = () => {
                 {pages.map(page => (
                     <div key={page.id} className="bg-slate-800 rounded-lg border border-slate-700 flex flex-col justify-between">
                         <div className="p-4">
-                            <div className="flex justify-between items-start">
-                                <div className="flex-1 min-w-0">
-                                    <h4 className="font-bold text-lg text-slate-100 truncate">{page.title}</h4>
-                                    <p className="text-sm text-slate-400 truncate">/{page.slug}</p>
-                                </div>
-                                <button
-                                    onClick={() => handleSetHomepage(page.id)}
-                                    disabled={page.is_homepage || status === 'submitting'}
-                                    title={page.is_homepage ? "Esta é a página inicial" : "Definir como página inicial"}
-                                    className="p-1 text-slate-400 disabled:text-yellow-400 disabled:cursor-default hover:text-yellow-400 transition-colors"
-                                >
-                                    <StarIcon className="w-5 h-5" filled={page.is_homepage} />
-                                </button>
-                            </div>
+                            <h4 className="font-bold text-lg text-slate-100 truncate">{page.title}</h4>
+                            <p className="text-sm text-slate-400 truncate">/{page.slug}</p>
                             <div className="flex items-center gap-4 mt-2 text-xs">
+                                {page.is_homepage && <span className="bg-cyan-500/20 text-cyan-400 px-2 py-1 rounded-full">Página Inicial</span>}
                                 <button 
                                     onClick={() => handleToggleStatus(page)}
                                     disabled={page.is_homepage || status === 'submitting'}
@@ -225,7 +193,7 @@ const PageManager: React.FC = () => {
                         </div>
                         <div className="p-2 bg-slate-800/50 border-t border-slate-700 flex justify-end gap-2">
                              <button onClick={() => handleDuplicatePage(page.id)} title="Duplicar" className="p-2 text-slate-400 hover:text-cyan-400 hover:bg-slate-700 rounded-md disabled:opacity-50" disabled={status === 'submitting'}><CopyIcon className="w-4 h-4" /></button>
-                             <button onClick={() => handleDeletePage(page.id, page.is_homepage)} title={page.is_homepage ? "Não é possível excluir a página inicial" : "Excluir"} className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed" disabled={status === 'submitting' || page.is_homepage}><Trash2Icon className="w-4 h-4" /></button>
+                             <button onClick={() => handleDeletePage(page.id)} title="Excluir" className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded-md disabled:opacity-50" disabled={status === 'submitting'}><Trash2Icon className="w-4 h-4" /></button>
                              <button onClick={() => handleEditPage(page)} className="bg-slate-700 hover:bg-cyan-600 text-slate-200 hover:text-white font-semibold py-1 px-3 rounded-md flex items-center gap-2 disabled:opacity-50" disabled={status === 'submitting'}><EditIcon className="w-4 h-4" /> Editar</button>
                         </div>
                     </div>
