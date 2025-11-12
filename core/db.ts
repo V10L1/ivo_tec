@@ -1,12 +1,10 @@
-/// <reference types="node" />
 
-// FIX: Add reference to node types to resolve errors with process.exit
 // core/db.ts - Gerenciador de Conexão com o Banco de Dados
 
 import { Pool } from 'pg';
 import dotenv from 'dotenv';
 import { ROLE_PERMISSIONS, APP_MODULES } from '../constants';
-import { UserRole, TextStyles } from '../types';
+import { UserRole, TextStyles, FixedContainer } from '../types';
 
 dotenv.config();
 
@@ -102,6 +100,8 @@ export const initializeDatabase = async () => {
         const pagesCheck = await client.query('SELECT COUNT(*) FROM pages');
         if (parseInt(pagesCheck.rows[0].count, 10) === 0) {
             const defaultTextStyles: TextStyles = { textColor: '#cbd5e1', textAlign: 'left', fontWeight: 'normal', fontStyle: 'normal', fontFamily: 'sans-serif', fontSize: 16};
+            const defaultFixedContainer: FixedContainer = { enabled: false, size: 60, isCollapsed: false, blocks: [] };
+            
              const initialContent = {
                 settings: {
                     brandName: "Mundo Moto",
@@ -110,31 +110,13 @@ export const initializeDatabase = async () => {
                 gridSettings: {
                     desktop: { columns: 48, rowHeight: 10, gap: 8 }
                 },
-                // FIX: Merged headerBlocks and contentBlocks into mainBlocks
+                fixedContainers: {
+                    top: { ...defaultFixedContainer, size: 80 },
+                    left: { ...defaultFixedContainer, size: 240 },
+                    right: { ...defaultFixedContainer, size: 240 },
+                    bottom: { ...defaultFixedContainer, size: 60 },
+                },
                 mainBlocks: [
-                    {
-                        id: "header_brand",
-                        type: "text",
-                        layout: { desktop: { colStart: 2, colEnd: 12, rowStart: 2, rowEnd: 6, alignSelf: 'center', justifySelf: 'start' } },
-                        styles: { backgroundColor: "transparent", zIndex: 1 },
-                        content: {
-                            heading: { text: "Mundo Moto", styles: { ...defaultTextStyles, textColor: "#f1f5f9", fontWeight: 'bold', fontSize: 24 } },
-                            body: { text: "", styles: defaultTextStyles }
-                        }
-                    },
-                    {
-                        id: "header_menu_1",
-                        type: "menu",
-                        layout: { desktop: { colStart: 20, colEnd: 48, rowStart: 2, rowEnd: 6, alignSelf: 'center', justifySelf: 'end' } },
-                        styles: { backgroundColor: "transparent", zIndex: 1 },
-                        content: {
-                            items: [
-                                { id: "item1", label: "Home", link: "#/home" },
-                                { id: "item2", label: "Sobre", link: "#/sobre" },
-                                { id: "item3", label: "Contato", link: "#/contato" }
-                            ]
-                        }
-                    },
                     {
                         id: "block_1",
                         type: "hero",

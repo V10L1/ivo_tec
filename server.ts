@@ -1,6 +1,4 @@
-/// <reference types="node" />
 
-// FIX: Add reference to node types to resolve errors with process and __dirname
 // server.ts - O Orquestrador Principal
 
 import express, { Request, Response } from 'express';
@@ -15,7 +13,6 @@ import { initializeDatabase, pool } from './core/db';
 // Carrega as variáveis de ambiente antes de qualquer outra coisa
 dotenv.config();
 
-// FIX: Explicitly type the express app to resolve middleware type conflicts.
 const app: express.Express = express();
 const PORT = process.env.PORT || 8069;
 
@@ -37,23 +34,18 @@ app.get('/api/health', async (req: Request, res: Response) => {
 
 // --- Carregador de Módulos Dinâmico ---
 const loadApiModules = async () => {
-    // O diretório 'api' de origem onde os arquivos manifest.json residem.
     const sourceApiDir = path.join(process.cwd(), 'api');
-    // O diretório 'api' compilado onde os arquivos de rota .js residem.
     const compiledApiDir = path.join(__dirname, 'api');
     try {
-        // Lemos o diretório de origem para encontrar as pastas dos módulos.
         const moduleFolders = await fs.readdir(sourceApiDir, { withFileTypes: true });
 
         for (const folder of moduleFolders) {
             if (folder.isDirectory()) {
-                // Lemos o manifest do diretório de origem.
                 const manifestPath = path.join(sourceApiDir, folder.name, 'manifest.json');
                 try {
                     const manifestContent = await fs.readFile(manifestPath, 'utf-8');
                     const manifest = JSON.parse(manifestContent);
                     
-                    // Importamos as rotas do diretório COMPILADO.
                     const routesPath = path.join(compiledApiDir, folder.name, manifest.routesFile);
                     const { default: router } = await import(routesPath);
                     
@@ -92,17 +84,11 @@ const serveFrontend = () => {
 
 // --- Início do Servidor ---
 const startServer = async () => {
-    // 1. Garante que o banco de dados e as tabelas estão prontos
     const dbInitialized = await initializeDatabase();
     
     if (dbInitialized) {
-        // 2. Carrega todos os módulos da API dinamicamente
         await loadApiModules();
-
-        // 3. Configura o serviço de arquivos do frontend
         serveFrontend();
-
-        // 4. Inicia o servidor
         app.listen(PORT, () => {
             console.log(`Servidor unificado e modular está rodando em http://localhost:${PORT}`);
         });

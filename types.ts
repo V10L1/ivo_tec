@@ -101,7 +101,6 @@ export interface BlockLayout {
   rowEnd: number;
   alignSelf: 'start' | 'center' | 'end' | 'stretch';
   justifySelf: 'start' | 'center' | 'end' | 'stretch';
-  positioning?: 'grid' | 'fixed-top' | 'fixed-left' | 'fixed-right' | 'fixed-bottom';
 }
 
 export type PageBlock = {
@@ -136,6 +135,23 @@ export interface SiteSettings {
   backgroundColor: string;
 }
 
+export interface FixedContainer {
+  enabled: boolean;
+  size: number; // height for top/bottom, width for left/right in pixels
+  isCollapsed: boolean; // default state for public view
+  blocks: PageBlock[];
+}
+
+export type FixedContainerPosition = 'top' | 'left' | 'right' | 'bottom';
+
+export interface FixedContainers {
+  top: FixedContainer;
+  left: FixedContainer;
+  right: FixedContainer;
+  bottom: FixedContainer;
+}
+
+
 // Representa o objeto de conteúdo JSONB dentro de cada página
 export interface SiteData {
   settings: SiteSettings;
@@ -143,6 +159,7 @@ export interface SiteData {
     desktop: GridSettings;
     // Futuramente: tablet: GridSettings; mobile: GridSettings;
   };
+  fixedContainers: FixedContainers;
   mainBlocks: PageBlock[];
   footerBlocks: PageBlock[];
 }

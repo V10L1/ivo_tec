@@ -1,6 +1,4 @@
-/// <reference types="node" />
 
-// FIX: Add reference to node types to resolve errors with process.exit
 // core/auth.middleware.ts - Middlewares de Autênticação e Autorização
 
 import { Request, Response, NextFunction } from 'express';
@@ -15,7 +13,6 @@ if (!JWT_SECRET) {
     process.exit(1);
 }
 
-// Augment Express's Request type to include the user property for authenticated routes.
 declare global {
     namespace Express {
         interface Request {
@@ -29,7 +26,6 @@ declare global {
     }
 }
 
-// FIX: Add explicit types for req, res, and next.
 export const verifyToken = (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -47,7 +43,6 @@ export const verifyToken = (req: Request, res: Response, next: NextFunction) => 
     });
 };
 
-// FIX: Add explicit types for req, res, and next.
 export const isDeveloper = (req: Request, res: Response, next: NextFunction) => {
     if (req.user?.role !== UserRole.DEVELOPER) {
         return res.status(403).json({ message: 'Acesso negado. Apenas desenvolvedores.' });
@@ -56,7 +51,6 @@ export const isDeveloper = (req: Request, res: Response, next: NextFunction) => 
 };
 
 export const checkModulePermission = (requiredPermission: AppKey) => {
-    // FIX: Add explicit types for req, res, and next.
     return async (req: Request, res: Response, next: NextFunction) => {
         if (!req.user) {
             return res.status(401).json({ message: 'Não autenticado' });

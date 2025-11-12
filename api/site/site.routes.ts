@@ -2,15 +2,22 @@
 import express, { Request, Response } from 'express';
 import { pool } from '../../core/db';
 import { verifyToken, checkModulePermission } from '../../core/auth.middleware';
-import { SiteData } from '../../types';
+import { SiteData, FixedContainer } from '../../types';
 
 const router = express.Router();
 
-// FIX: Replaced `headerBlocks` and `contentBlocks` with `mainBlocks` to match SiteData type
+const defaultFixedContainer: FixedContainer = { enabled: false, size: 60, isCollapsed: false, blocks: [] };
+
 const defaultNewPageContent: SiteData = {
   settings: { brandName: 'Nova Página', backgroundColor: '#0f172a' },
   gridSettings: {
     desktop: { columns: 48, rowHeight: 10, gap: 8 }
+  },
+  fixedContainers: {
+      top: { ...defaultFixedContainer, size: 80 },
+      left: { ...defaultFixedContainer, size: 240 },
+      right: { ...defaultFixedContainer, size: 240 },
+      bottom: { ...defaultFixedContainer, size: 60 },
   },
   mainBlocks: [],
   footerBlocks: [],
@@ -19,7 +26,6 @@ const defaultNewPageContent: SiteData = {
 // --- Rotas Públicas (sem autenticação) ---
 
 // Obter página pela Home
-// FIX: Use direct Request and Response types from express.
 router.get('/pages/public/home', async (req: Request, res: Response) => {
     try {
         res.setHeader('Cache-Control', 'no-store');
@@ -35,7 +41,6 @@ router.get('/pages/public/home', async (req: Request, res: Response) => {
 });
 
 // Obter página pelo slug
-// FIX: Use direct Request and Response types from express.
 router.get('/pages/public/slug/:slug', async (req: Request, res: Response) => {
     try {
         res.setHeader('Cache-Control', 'no-store');
@@ -55,7 +60,6 @@ router.get('/pages/public/slug/:slug', async (req: Request, res: Response) => {
 // --- Rotas de Administração (requerem autenticação e permissão) ---
 
 // Listar todas as páginas
-// FIX: Use direct Request and Response types from express.
 router.get('/pages', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
     try {
         const result = await pool.query('SELECT id, title, slug, is_homepage, is_published, updated_at FROM pages ORDER BY title');
@@ -67,7 +71,6 @@ router.get('/pages', verifyToken, checkModulePermission('SITE'), async (req: Req
 });
 
 // Criar uma nova página
-// FIX: Use direct Request and Response types from express.
 router.post('/pages', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
     const { title, slug } = req.body;
     if (!title || !slug) {
@@ -89,7 +92,6 @@ router.post('/pages', verifyToken, checkModulePermission('SITE'), async (req: Re
 });
 
 // Obter dados de uma página específica para edição
-// FIX: Use direct Request and Response types from express.
 router.get('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
@@ -105,7 +107,6 @@ router.get('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req:
 });
 
 // Atualizar uma página
-// FIX: Use direct Request and Response types from express.
 router.put('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
     const { id } = req.params;
     const { title, slug, is_published, content } = req.body;
@@ -133,7 +134,6 @@ router.put('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req:
 });
 
 // Excluir uma página
-// FIX: Use direct Request and Response types from express.
 router.delete('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
     const { id } = req.params;
     try {

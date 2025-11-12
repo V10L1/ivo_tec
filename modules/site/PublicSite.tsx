@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Page, PageBlock, SiteData, TextStyles, ContainerStyles } from '../../types';
+import { Page, PageBlock, SiteData, TextStyles, ContainerStyles, FixedContainer, GridSettings, FixedContainerPosition } from '../../types';
 
 const defaultContainerStyles: ContainerStyles = {
     backgroundColor: '#1e293b', // slate-800
@@ -36,7 +36,6 @@ const getYouTubeEmbedUrl = (url: string, autoplay?: boolean, controls?: boolean)
 
 const hexToRgba = (hex: string, alpha: number = 1): string => {
     if (!hex || !/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)) {
-        // Return a default color if hex is invalid to avoid breaking the UI
         return `rgba(30, 41, 59, ${alpha})`; // slate-800
     }
     let c = hex.substring(1).split('');
@@ -49,41 +48,6 @@ const hexToRgba = (hex: string, alpha: number = 1): string => {
     const b = i & 255;
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
-
-const getFixedPositionStyles = (
-    block: PageBlock,
-    gridSettings: SiteData['gridSettings']['desktop']
-): React.CSSProperties => {
-    const { layout } = block;
-    const { desktop: l } = layout;
-    const positioning = l.positioning || 'grid';
-
-    if (positioning === 'grid') return {};
-
-    const colWidthPercent = 100 / gridSettings.columns;
-    const width = `${(l.colEnd - l.colStart) * colWidthPercent}%`;
-    const height = `${(l.rowEnd - l.rowStart) * gridSettings.rowHeight + (l.rowEnd - l.rowStart - 1) * gridSettings.gap}px`;
-    const left = `${(l.colStart - 1) * colWidthPercent}%`;
-    const top = `${(l.rowStart - 1) * (gridSettings.rowHeight + gridSettings.gap)}px`;
-    
-    const baseStyle: React.CSSProperties = {
-        position: 'fixed',
-        zIndex: block.styles?.zIndex || 100
-    };
-
-    switch(positioning) {
-        case 'fixed-top':
-            return { ...baseStyle, top: 0, left, width, height };
-        case 'fixed-bottom':
-            return { ...baseStyle, bottom: 0, left, width, height };
-        case 'fixed-left':
-            return { ...baseStyle, left: 0, top, width, height };
-        case 'fixed-right':
-            return { ...baseStyle, right: 0, top, width, height };
-    }
-    return {};
-};
-
 
 const createTextStyle = (textStyles?: TextStyles, textOpacity: number = 1): React.CSSProperties => {
     if (!textStyles) return {};
@@ -156,7 +120,6 @@ const BlockRenderer: React.FC<{ block: PageBlock }> = ({ block }) => {
                 </div>
             );
         case 'menu':
-            // Menu items don't have individual styles in this setup, they can be styled globally or via container
             return (
                  <nav style={inlineStyle} className={`${commonClasses} flex-row items-center justify-center gap-6 ${borderRadiusClass}`}>
                     {block.content.items.map(item => (
@@ -193,9 +156,10 @@ const BlockRenderer: React.FC<{ block: PageBlock }> = ({ block }) => {
 interface GridCanvasProps {
     blocks: PageBlock[] | undefined;
     gridSettings: SiteData['gridSettings']['desktop'] | undefined;
+    className?: string;
 }
 
-const GridCanvas: React.FC<GridCanvasProps> = ({ blocks = [], gridSettings }) => {
+const GridCanvas: React.FC<GridCanvasProps> = ({ blocks = [], gridSettings, className = "" }) => {
     if (!gridSettings) return null;
 
     const gridStyle = {
@@ -206,7 +170,7 @@ const GridCanvas: React.FC<GridCanvasProps> = ({ blocks = [], gridSettings }) =>
     };
 
     return (
-        <div className="container mx-auto px-4 py-8" style={gridStyle}>
+        <div className={`w-full h-full p-4 ${className}`} style={gridStyle}>
             {blocks.map(block => {
                 const { desktop: layout } = block.layout;
                 const blockStyle = {
@@ -227,6 +191,62 @@ const GridCanvas: React.FC<GridCanvasProps> = ({ blocks = [], gridSettings }) =>
     );
 };
 
+// --- Renderizador de Contêiner Fixo ---
+interface FixedContainerRendererProps {
+    position: FixedContainerPosition;
+    config: FixedContainer;
+    gridSettings: GridSettings;
+    isCollapsed: boolean;
+    onToggle: () => void;
+}
+
+const FixedContainerRenderer: React.FC<FixedContainerRendererProps> = ({ position, config, gridSettings, isCollapsed, onToggle }) => {
+    const isHorizontal = position === 'top' || position === 'bottom';
+    
+    const containerStyle: React.CSSProperties = {
+        position: 'fixed',
+        zIndex: 1000,
+        backgroundColor: '#1e293b', // bg-slate-800
+        transition: 'all 0.3s ease-in-out',
+        ...(isHorizontal ? {
+            left: 0, right: 0, height: `${config.size}px`,
+            transform: isCollapsed ? `translateY(${position === 'top' ? '-100%' : '100%'})` : 'translateY(0)'
+        } : {
+            top: 0, bottom: 0, width: `${config.size}px`,
+            transform: isCollapsed ? `translateX(${position === 'left' ? '-100%' : '100%'})` : 'translateX(0)'
+        }),
+        ...(position === 'top' && { top: 0 }),
+        ...(position === 'bottom' && { bottom: 0 }),
+        ...(position === 'left' && { left: 0 }),
+        ...(position === 'right' && { right: 0 }),
+    };
+
+    const toggleStyle: React.CSSProperties = {
+        position: 'absolute',
+        zIndex: 1010,
+        backgroundColor: '#334155', // bg-slate-700
+    };
+
+    if (isHorizontal) {
+        toggleStyle.left = '50%';
+        toggleStyle.transform = 'translateX(-50%)';
+        if (position === 'top') { toggleStyle.bottom = '-16px'; } else { toggleStyle.top = '-16px'; }
+    } else {
+        toggleStyle.top = '50%';
+        toggleStyle.transform = 'translateY(-50%)';
+        if (position === 'left') { toggleStyle.right = '-16px'; } else { toggleStyle.left = '-16px'; }
+    }
+
+    return (
+        <div style={containerStyle} className="shadow-lg border-slate-700 border">
+            <GridCanvas blocks={config.blocks} gridSettings={gridSettings} />
+            <button onClick={onToggle} style={toggleStyle} className="w-8 h-8 rounded-full flex items-center justify-center text-white hover:bg-cyan-600">
+                {isCollapsed ? '+' : '-'}
+            </button>
+        </div>
+    );
+};
+
 
 interface PublicSiteProps {
   slug: string;
@@ -235,6 +255,7 @@ interface PublicSiteProps {
 const PublicSite: React.FC<PublicSiteProps> = ({ slug }) => {
   const [page, setPage] = useState<Page | null>(null);
   const [status, setStatus] = useState<'loading' | 'success' | 'not_found' | 'error'>('loading');
+  const [collapsedStates, setCollapsedStates] = useState({ top: false, left: false, right: false, bottom: false });
 
   useEffect(() => {
     const fetchContent = async () => {
@@ -249,6 +270,14 @@ const PublicSite: React.FC<PublicSiteProps> = ({ slug }) => {
             if (!response.ok) throw new Error('A resposta da rede não foi ok');
             const data: Page = await response.json();
             setPage(data);
+            if (data.content?.fixedContainers) {
+                setCollapsedStates({
+                    top: data.content.fixedContainers.top.isCollapsed,
+                    left: data.content.fixedContainers.left.isCollapsed,
+                    right: data.content.fixedContainers.right.isCollapsed,
+                    bottom: data.content.fixedContainers.bottom.isCollapsed,
+                });
+            }
             setStatus('success');
         } catch (error) {
             console.error("Falha ao buscar o conteúdo da página:", error);
@@ -258,16 +287,18 @@ const PublicSite: React.FC<PublicSiteProps> = ({ slug }) => {
     fetchContent();
   }, [slug]);
 
+  const handleToggleCollapse = (position: FixedContainerPosition) => {
+    setCollapsedStates(prev => ({ ...prev, [position]: !prev[position] }));
+  };
+
   useEffect(() => {
     if (page?.content?.settings.brandName) {
       document.title = page.content.settings.brandName;
     }
-    // Cleanup function to reset title when component unmounts
     return () => {
       document.title = 'Painel de Administração Modular';
     };
   }, [page]);
-
 
   const siteSettings = page?.content?.settings;
   const pageStyle = {
@@ -297,33 +328,32 @@ const PublicSite: React.FC<PublicSiteProps> = ({ slug }) => {
   
   const mainBlocks = page.content.mainBlocks || [];
   const gridSettings = page.content.gridSettings.desktop;
-  
-  const fixedBlocks = mainBlocks.filter(b => b.layout.desktop.positioning && b.layout.desktop.positioning !== 'grid');
-  const gridBlocks = mainBlocks.filter(b => !b.layout.desktop.positioning || b.layout.desktop.positioning === 'grid');
+  const containers = page.content.fixedContainers;
 
+  const mainContentStyle: React.CSSProperties = {
+      paddingTop: (containers?.top?.enabled && !collapsedStates.top) ? `${containers.top.size}px` : 0,
+      paddingBottom: (containers?.bottom?.enabled && !collapsedStates.bottom) ? `${containers.bottom.size}px` : 0,
+      paddingLeft: (containers?.left?.enabled && !collapsedStates.left) ? `${containers.left.size}px` : 0,
+      paddingRight: (containers?.right?.enabled && !collapsedStates.right) ? `${containers.right.size}px` : 0,
+      transition: 'padding 0.3s ease-in-out',
+  };
 
   return (
     <div className="min-h-screen text-slate-100 font-sans relative" style={pageStyle}>
-      {/* Renderizar Blocos com Posicionamento Fixo */}
-      {fixedBlocks.map(block => (
-        <div key={block.id} style={getFixedPositionStyles(block, gridSettings)}>
-            <BlockRenderer block={block} />
-        </div>
-      ))}
+      {containers?.top?.enabled && <FixedContainerRenderer position="top" config={containers.top} gridSettings={gridSettings} isCollapsed={collapsedStates.top} onToggle={() => handleToggleCollapse('top')} />}
+      {containers?.left?.enabled && <FixedContainerRenderer position="left" config={containers.left} gridSettings={gridSettings} isCollapsed={collapsedStates.left} onToggle={() => handleToggleCollapse('left')} />}
+      {containers?.right?.enabled && <FixedContainerRenderer position="right" config={containers.right} gridSettings={gridSettings} isCollapsed={collapsedStates.right} onToggle={() => handleToggleCollapse('right')} />}
+      {containers?.bottom?.enabled && <FixedContainerRenderer position="bottom" config={containers.bottom} gridSettings={gridSettings} isCollapsed={collapsedStates.bottom} onToggle={() => handleToggleCollapse('bottom')} />}
 
-      {/* Conteúdo Principal Rolável */}
-      <div className="relative">
-        <main>
-            <GridCanvas blocks={gridBlocks} gridSettings={gridSettings} />
+      <div className="relative" style={mainContentStyle}>
+        <main className="container mx-auto px-4 py-8">
+            <GridCanvas blocks={mainBlocks} gridSettings={gridSettings} />
         </main>
         
         {page.content.footerBlocks.length > 0 && (
-            <>
-                <div className="container mx-auto px-4"><hr className="border-slate-800 my-8" /></div>
-                <footer>
-                    <GridCanvas blocks={page.content.footerBlocks} gridSettings={gridSettings} />
-                </footer>
-            </>
+            <footer className="container mx-auto px-4 py-8 border-t border-slate-800">
+                <GridCanvas blocks={page.content.footerBlocks} gridSettings={gridSettings} />
+            </footer>
         )}
       </div>
     </div>
