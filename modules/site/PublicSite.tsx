@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Page, PageBlock, SiteData, TextStyles } from '../../types';
+import { Page, PageBlock, SiteData, TextStyles, ContainerStyles } from '../../types';
+
+const defaultContainerStyles: ContainerStyles = {
+    backgroundColor: '#1e293b', // slate-800
+    backgroundOpacity: 1,
+    textOpacity: 1,
+    borderRadius: 'medium',
+    zIndex: 0,
+};
 
 const getYouTubeEmbedUrl = (url: string, autoplay?: boolean, controls?: boolean) => {
     let videoId;
@@ -26,7 +34,24 @@ const getYouTubeEmbedUrl = (url: string, autoplay?: boolean, controls?: boolean)
     }
 };
 
-const createTextStyle = (textStyles?: TextStyles): React.CSSProperties => {
+const hexToRgba = (hex: string, alpha: number = 1): string => {
+    if (!hex || !/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)) {
+        // Return a default color if hex is invalid to avoid breaking the UI
+        return `rgba(30, 41, 59, ${alpha})`; // slate-800
+    }
+    let c = hex.substring(1).split('');
+    if (c.length === 3) {
+        c = [c[0], c[0], c[1], c[1], c[2], c[2]];
+    }
+    const i = parseInt(c.join(''), 16);
+    const r = (i >> 16) & 255;
+    const g = (i >> 8) & 255;
+    const b = i & 255;
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
+
+const createTextStyle = (textStyles?: TextStyles, textOpacity: number = 1): React.CSSProperties => {
     if (!textStyles) return {};
     return {
         color: textStyles.textColor,
@@ -35,27 +60,39 @@ const createTextStyle = (textStyles?: TextStyles): React.CSSProperties => {
         fontStyle: textStyles.fontStyle,
         fontFamily: textStyles.fontFamily,
         fontSize: textStyles.fontSize ? `${textStyles.fontSize}px` : undefined,
+        opacity: textOpacity,
     };
 };
+
+const getBorderRadiusClass = (radius: ContainerStyles['borderRadius']) => {
+    switch (radius) {
+        case 'full': return 'rounded-full';
+        case 'none': return 'rounded-none';
+        case 'medium':
+        default:
+            return 'rounded-lg';
+    }
+}
 
 
 // --- Renderizadores de Bloco Dinâmicos ---
 const BlockRenderer: React.FC<{ block: PageBlock }> = ({ block }) => {
     const commonClasses = "w-full h-full flex flex-col p-4";
-    const styles = block.styles || {};
+    const styles = { ...defaultContainerStyles, ...(block.styles || {}) };
+    const borderRadiusClass = getBorderRadiusClass(styles.borderRadius);
+    
     const inlineStyle: React.CSSProperties = {
-        backgroundColor: styles.backgroundColor,
-        opacity: styles.opacity,
+        backgroundColor: styles.backgroundOpacity !== 1 ? hexToRgba(styles.backgroundColor || '#000000', styles.backgroundOpacity) : styles.backgroundColor,
     };
 
     switch (block.type) {
         case 'hero':
             return (
-                <div style={inlineStyle} className={`${commonClasses} text-center items-center justify-center rounded-lg`}>
-                    <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-4" style={createTextStyle(block.content.title.styles)}>{block.content.title.text}</h1>
-                    <p className="text-md md:text-lg text-slate-300 max-w-2xl mx-auto mb-6" style={createTextStyle(block.content.subtitle.styles)}>{block.content.subtitle.text}</p>
+                <div style={inlineStyle} className={`${commonClasses} text-center items-center justify-center ${borderRadiusClass}`}>
+                    <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-4" style={createTextStyle(block.content.title.styles, styles.textOpacity)}>{block.content.title.text}</h1>
+                    <p className="text-md md:text-lg text-slate-300 max-w-2xl mx-auto mb-6" style={createTextStyle(block.content.subtitle.styles, styles.textOpacity)}>{block.content.subtitle.text}</p>
                     {block.content.ctaEnabled && (
-                         <a href={block.content.ctaLink} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-8 rounded-full text-lg transition-transform transform hover:scale-105">
+                         <a href={block.content.ctaLink} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-8 rounded-full text-lg transition-transform transform hover:scale-105" style={{ opacity: styles.textOpacity }}>
                             {block.content.ctaText}
                         </a>
                     )}
@@ -63,23 +100,23 @@ const BlockRenderer: React.FC<{ block: PageBlock }> = ({ block }) => {
             );
         case 'text':
             return (
-                 <div style={inlineStyle} className={`${commonClasses} text-left`}>
-                    <h2 className="text-3xl font-bold mb-4" style={createTextStyle(block.content.heading.styles)}>{block.content.heading.text}</h2>
-                    <p className="text-slate-400 whitespace-pre-wrap leading-relaxed" style={createTextStyle(block.content.body.styles)}>{block.content.body.text}</p>
+                 <div style={inlineStyle} className={`${commonClasses} text-left ${borderRadiusClass}`}>
+                    <h2 className="text-3xl font-bold mb-4" style={createTextStyle(block.content.heading.styles, styles.textOpacity)}>{block.content.heading.text}</h2>
+                    <p className="text-slate-400 whitespace-pre-wrap leading-relaxed" style={createTextStyle(block.content.body.styles, styles.textOpacity)}>{block.content.body.text}</p>
                 </div>
             );
         case 'image':
             return (
-                <img src={block.content.imageUrl} alt={block.content.altText} className="w-full h-full object-cover rounded-lg shadow-lg" style={{opacity: styles.opacity}}/>
+                <img src={block.content.imageUrl} alt={block.content.altText} className={`w-full h-full object-cover shadow-lg ${borderRadiusClass}`} style={{opacity: styles.backgroundOpacity}}/>
             );
         case 'button':
              const buttonCombinedStyles: React.CSSProperties = {
                 ...inlineStyle,
-                ...createTextStyle(block.content.text.styles)
+                ...createTextStyle(block.content.text.styles, styles.textOpacity)
              };
             return (
                  <div className={`${commonClasses} items-center justify-center`}>
-                    <a href={block.content.link} className="text-white font-bold py-3 px-8 rounded-lg inline-block transition-colors" style={buttonCombinedStyles}>
+                    <a href={block.content.link} className={`text-white font-bold py-3 px-8 inline-block transition-colors ${borderRadiusClass}`} style={buttonCombinedStyles}>
                         {block.content.text.text}
                     </a>
                 </div>
@@ -87,9 +124,9 @@ const BlockRenderer: React.FC<{ block: PageBlock }> = ({ block }) => {
         case 'menu':
             // Menu items don't have individual styles in this setup, they can be styled globally or via container
             return (
-                 <nav style={inlineStyle} className={`${commonClasses} flex-row items-center justify-center gap-6`}>
+                 <nav style={inlineStyle} className={`${commonClasses} flex-row items-center justify-center gap-6 ${borderRadiusClass}`}>
                     {block.content.items.map(item => (
-                        <a key={item.id} href={item.link} className="text-slate-300 hover:text-cyan-400 font-medium transition-colors">
+                        <a key={item.id} href={item.link} className="text-slate-300 hover:text-cyan-400 font-medium transition-colors" style={{ opacity: styles.textOpacity }}>
                             {item.label}
                         </a>
                     ))}
@@ -98,7 +135,7 @@ const BlockRenderer: React.FC<{ block: PageBlock }> = ({ block }) => {
         case 'video':
             const embedUrl = getYouTubeEmbedUrl(block.content.videoUrl, block.content.autoplay, block.content.controls);
             return embedUrl ? (
-                <div className="w-full h-full rounded-lg overflow-hidden">
+                <div className={`w-full h-full overflow-hidden ${borderRadiusClass}`}>
                     <iframe
                         width="100%"
                         height="100%"
@@ -111,9 +148,9 @@ const BlockRenderer: React.FC<{ block: PageBlock }> = ({ block }) => {
                 </div>
             ) : <div className="p-4 text-red-400">URL de vídeo inválida. Use um link do YouTube.</div>;
         case 'divider':
-            return <div className="flex items-center justify-center w-full h-full"><hr className="w-full border-slate-700" style={{borderColor: styles.backgroundColor}}/></div>;
+            return <div className="flex items-center justify-center w-full h-full"><hr className="w-full border-slate-700" style={{borderColor: styles.backgroundColor, opacity: styles.backgroundOpacity}}/></div>;
         case 'spacer':
-            return <div style={inlineStyle}></div>; // Spacer is just for layout
+            return <div style={inlineStyle} className={borderRadiusClass}></div>; // Spacer is just for layout
         default:
             return <div className="p-4 bg-red-900 rounded-lg">Bloco desconhecido</div>;
     }

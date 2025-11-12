@@ -1,3 +1,6 @@
+// FIX: Add reference to node types to resolve errors with process.exit
+/// <reference types="node" />
+
 // core/db.ts - Gerenciador de Conexão com o Banco de Dados
 
 import { Pool } from 'pg';

@@ -85,7 +85,9 @@ export interface SpacerBlockContent {
 // Styles for the block container
 export interface ContainerStyles {
   backgroundColor?: string;
-  opacity?: number; // 0 to 1
+  backgroundOpacity?: number; // 0 to 1
+  textOpacity?: number; // 0 to 1
+  borderRadius?: 'none' | 'medium' | 'full';
   zIndex?: number;
 }
 

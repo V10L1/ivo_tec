@@ -2,14 +2,39 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Page, SiteData, PageBlock, SiteSettings, HeroBlockContent, TextBlockContent, ImageBlockContent, ButtonBlockContent, MenuBlockContent, VideoBlockContent, MenuItem, GridSettings, BlockLayout, ContainerStyles, TextStyles, StyledText } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 // FIX: Added GridIcon and new layer icons to imports
-import { PlusCircleIcon, SettingsIcon, Trash2Icon, MotorcycleIcon, TypeIcon, ImageIcon, CodeIcon, ChevronLeftIcon, ChevronRightIcon, SaveIcon, ArrowLeftIcon, FilePlusIcon, EditIcon, LayoutIcon, MenuIcon, PointerIcon, AlignStartVerticalIcon, AlignCenterVerticalIcon, AlignEndVerticalIcon, AlignStartHorizontalIcon, AlignCenterHorizontalIcon, AlignEndHorizontalIcon, GridIcon, VideoIcon, DividerIcon, SparklesIcon, BringToFrontIcon, SendToBackIcon, BoldIcon, ItalicIcon, AlignLeftIcon, AlignCenterIcon, AlignRightIcon, AlignJustifyIcon } from '../../components/icons/Icons';
+import { PlusCircleIcon, SettingsIcon, Trash2Icon, MotorcycleIcon, TypeIcon, ImageIcon, CodeIcon, ChevronLeftIcon, ChevronRightIcon, SaveIcon, ArrowLeftIcon, FilePlusIcon, EditIcon, LayoutIcon, MenuIcon, PointerIcon, AlignStartVerticalIcon, AlignCenterVerticalIcon, AlignEndVerticalIcon, AlignStartHorizontalIcon, AlignCenterHorizontalIcon, AlignEndHorizontalIcon, GridIcon, VideoIcon, DividerIcon, SparklesIcon, BringToFrontIcon, SendToBackIcon, BoldIcon, ItalicIcon, AlignLeftIcon, AlignCenterIcon, AlignRightIcon, AlignJustifyIcon, SquareIcon, RoundedSquareIcon, CircleIcon } from '../../components/icons/Icons';
 
 // --- UTILITIES & HELPERS ---
 const generateId = (prefix = 'id') => `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
+const hexToRgba = (hex: string, alpha: number = 1): string => {
+    if (!hex || !/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)) {
+        return `rgba(30, 41, 59, ${alpha})`; // slate-800
+    }
+    let c = hex.substring(1).split('');
+    if (c.length === 3) {
+        c = [c[0], c[0], c[1], c[1], c[2], c[2]];
+    }
+    const i = parseInt(c.join(''), 16);
+    const r = (i >> 16) & 255;
+    const g = (i >> 8) & 255;
+    const b = i & 255;
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
+const getBorderRadiusClass = (radius: ContainerStyles['borderRadius']) => {
+    switch (radius) {
+        case 'full': return 'rounded-full';
+        case 'none': return 'rounded-none';
+        case 'medium':
+        default:
+            return 'rounded-lg';
+    }
+}
+
 const defaultGridSettings: GridSettings = { columns: 48, rowHeight: 10, gap: 8 };
 const defaultLayout: BlockLayout = { colStart: 1, colEnd: 13, rowStart: 1, rowEnd: 13, alignSelf: 'stretch', justifySelf: 'stretch' };
-const defaultContainerStyles: ContainerStyles = { backgroundColor: '#1e293b', opacity: 1, zIndex: 0 };
+const defaultContainerStyles: ContainerStyles = { backgroundColor: '#1e293b', backgroundOpacity: 1, textOpacity: 1, borderRadius: 'medium', zIndex: 0 };
 const defaultTextStyles: TextStyles = { textColor: '#cbd5e1', textAlign: 'left', fontWeight: 'normal', fontStyle: 'normal', fontFamily: 'sans-serif', fontSize: 16};
 
 const defaultPageContent: SiteData = {
@@ -166,7 +191,13 @@ const InspectorPanel: React.FC<{
                 <h4 className="text-md font-semibold text-slate-300 mb-2 mt-4 border-t border-slate-700 pt-4">Estilos do Contêiner</h4>
                  <div className="space-y-4">
                     <ColorField label="Cor de Fundo" value={styles.backgroundColor || '#1e293b'} onChange={v => handleStyleChange('backgroundColor', v)} />
-                    <InputField label="Opacidade" type="range" value={styles.opacity || 1} onChange={v => handleStyleChange('opacity', parseFloat(v))} min={0} max={1} step={0.05} />
+                    <InputField label="Opacidade do Fundo" type="range" value={styles.backgroundOpacity || 1} onChange={v => handleStyleChange('backgroundOpacity', parseFloat(v))} min={0} max={1} step={0.05} />
+                    <InputField label="Opacidade da Letra" type="range" value={styles.textOpacity || 1} onChange={v => handleStyleChange('textOpacity', parseFloat(v))} min={0} max={1} step={0.05} />
+                    <ButtonGroupField label="Bordas" value={styles.borderRadius || 'medium'} options={[
+                        { value: 'none', icon: SquareIcon, title: 'Quadrado' },
+                        { value: 'medium', icon: RoundedSquareIcon, title: 'Arredondado' },
+                        { value: 'full', icon: CircleIcon, title: 'Redondo' },
+                    ]} onChange={v => handleStyleChange('borderRadius', v)} />
                     <div>
                         <label className="block text-sm font-medium text-slate-400 mb-1">Camadas</label>
                         <div className="flex gap-2">
@@ -227,7 +258,7 @@ const InspectorPanel: React.FC<{
     );
 };
 
-const createTextStyle = (textStyles?: TextStyles): React.CSSProperties => {
+const createTextStyle = (textStyles?: TextStyles, textOpacity: number = 1): React.CSSProperties => {
     if (!textStyles) return {};
     return {
         color: textStyles.textColor,
@@ -236,6 +267,7 @@ const createTextStyle = (textStyles?: TextStyles): React.CSSProperties => {
         fontStyle: textStyles.fontStyle,
         fontFamily: textStyles.fontFamily,
         fontSize: textStyles.fontSize ? `${textStyles.fontSize}px` : undefined,
+        opacity: textOpacity,
     };
 };
 
@@ -244,9 +276,9 @@ const EditorBlockRenderer: React.FC<{ block: PageBlock }> = ({ block }) => {
     const commonClasses = "w-full h-full flex flex-col p-2";
     const scaleText = "text-xs md:text-sm";
     const styles = { ...defaultContainerStyles, ...block.styles };
+    const borderRadiusClass = getBorderRadiusClass(styles.borderRadius);
     const inlineStyle: React.CSSProperties = {
-        backgroundColor: styles.backgroundColor,
-        opacity: styles.opacity,
+        backgroundColor: hexToRgba(styles.backgroundColor || '#1e293b', styles.backgroundOpacity),
         zIndex: styles.zIndex,
     };
     
@@ -277,37 +309,37 @@ const EditorBlockRenderer: React.FC<{ block: PageBlock }> = ({ block }) => {
     switch (block.type) {
         case 'hero':
             return (
-                <div style={inlineStyle} className={`${commonClasses} text-center items-center justify-center rounded-lg`}>
-                    <h1 className="font-extrabold mb-1" style={createTextStyle(block.content.title.styles)}>{block.content.title.text}</h1>
-                    <p className={`max-w-2xl mx-auto mb-2`} style={createTextStyle(block.content.subtitle.styles)}>{block.content.subtitle.text}</p>
-                    {block.content.ctaEnabled && <div className="bg-cyan-600 text-white font-bold py-1 px-3 rounded-full text-xs">{block.content.ctaText}</div>}
+                <div style={inlineStyle} className={`${commonClasses} text-center items-center justify-center ${borderRadiusClass}`}>
+                    <h1 className="font-extrabold mb-1" style={createTextStyle(block.content.title.styles, styles.textOpacity)}>{block.content.title.text}</h1>
+                    <p className={`max-w-2xl mx-auto mb-2`} style={createTextStyle(block.content.subtitle.styles, styles.textOpacity)}>{block.content.subtitle.text}</p>
+                    {block.content.ctaEnabled && <div className="bg-cyan-600 text-white font-bold py-1 px-3 rounded-full text-xs" style={{opacity: styles.textOpacity}}>{block.content.ctaText}</div>}
                 </div>
             );
         case 'text':
             return (
-                 <div style={inlineStyle} className={`${commonClasses} text-left overflow-hidden`}>
-                    <h2 className="font-bold mb-1 truncate" style={createTextStyle(block.content.heading.styles)}>{block.content.heading.text}</h2>
-                    <p className={`whitespace-pre-wrap leading-relaxed`} style={createTextStyle(block.content.body.styles)}>{block.content.body.text}</p>
+                 <div style={inlineStyle} className={`${commonClasses} text-left overflow-hidden ${borderRadiusClass}`}>
+                    <h2 className="font-bold mb-1 truncate" style={createTextStyle(block.content.heading.styles, styles.textOpacity)}>{block.content.heading.text}</h2>
+                    <p className={`whitespace-pre-wrap leading-relaxed`} style={createTextStyle(block.content.body.styles, styles.textOpacity)}>{block.content.body.text}</p>
                 </div>
             );
         case 'image':
-            return <img src={block.content.imageUrl} alt={block.content.altText} className="w-full h-full object-cover rounded-lg" style={{opacity: styles.opacity}}/>;
+            return <img src={block.content.imageUrl} alt={block.content.altText} className={`w-full h-full object-cover ${borderRadiusClass}`} style={{opacity: styles.backgroundOpacity}}/>;
         case 'button':
-            return <div className={`${commonClasses} items-center justify-center`}><div className="text-white font-bold py-2 px-4 rounded-lg inline-block" style={{...inlineStyle, ...createTextStyle(block.content.text.styles)}}>{block.content.text.text}</div></div>;
+            return <div className={`${commonClasses} items-center justify-center`}><div className={`text-white font-bold py-2 px-4 inline-block ${borderRadiusClass}`} style={{...inlineStyle, ...createTextStyle(block.content.text.styles, styles.textOpacity)}}>{block.content.text.text}</div></div>;
         case 'menu':
-            return <nav style={inlineStyle} className={`${commonClasses} flex-row items-center justify-center gap-2`}><p className='text-xs'>Menu</p>{block.content.items.map(item => (<div key={item.id} className={`font-medium ${scaleText}`}>{item.label}</div>))}</nav>;
+            return <nav style={inlineStyle} className={`${commonClasses} flex-row items-center justify-center gap-2 ${borderRadiusClass}`}><p className='text-xs' style={{opacity: styles.textOpacity}}>Menu</p>{block.content.items.map(item => (<div key={item.id} className={`font-medium ${scaleText}`} style={{opacity: styles.textOpacity}}>{item.label}</div>))}</nav>;
         case 'video':
             const embedUrl = getYouTubeEmbedUrl(block.content.videoUrl, block.content.autoplay, block.content.controls);
             return (
-                <div className="w-full h-full bg-slate-900 rounded-lg flex items-center justify-center text-slate-500 relative pointer-events-none">
+                <div className={`w-full h-full bg-slate-900 ${borderRadiusClass} flex items-center justify-center text-slate-500 relative pointer-events-none`}>
                     <VideoIcon className="w-1/3 h-1/3"/>
                     {embedUrl && <iframe src={embedUrl} className="absolute inset-0 w-full h-full" title="preview"></iframe>}
                 </div>
             );
         case 'divider':
-            return <div className="flex items-center justify-center w-full h-full"><hr className="w-full border-slate-700" style={{borderColor: styles.backgroundColor}}/></div>;
+            return <div className="flex items-center justify-center w-full h-full"><hr className="w-full border-slate-700" style={{borderColor: styles.backgroundColor, opacity: styles.backgroundOpacity}}/></div>;
         case 'spacer':
-            return <div className="w-full h-full bg-slate-700/20 rounded-lg" style={inlineStyle}></div>;
+            return <div className={`w-full h-full bg-slate-700/20 ${borderRadiusClass}`} style={inlineStyle}></div>;
         default:
             return <div className="p-4 bg-red-900 rounded-lg">Bloco desconhecido</div>;
     }
@@ -323,6 +355,7 @@ const Block: React.FC<{
     onResizeStart: (e: React.MouseEvent, block: PageBlock, direction: string) => void;
 }> = ({ block, gridSettings, isSelected, onMouseDown, onResizeStart }) => {
     const layout = block.layout.desktop;
+    const borderRadiusClass = getBorderRadiusClass(block.styles?.borderRadius);
     const blockStyle = {
         gridColumn: `${layout.colStart} / ${layout.colEnd}`,
         gridRow: `${layout.rowStart} / ${layout.rowEnd}`,
@@ -337,8 +370,8 @@ const Block: React.FC<{
             className={`relative group transition-shadow duration-200 ${isSelected ? 'shadow-2xl shadow-cyan-500/30' : ''}`}
             onMouseDown={(e) => onMouseDown(e, block)}
         >
-            <div className={`absolute inset-0 ring-2 rounded-lg pointer-events-none transition-all duration-200 ${isSelected ? 'ring-cyan-500' : 'ring-transparent group-hover:ring-cyan-500/50'}`}></div>
-            <div className="w-full h-full overflow-hidden rounded-lg pointer-events-none">
+            <div className={`absolute inset-0 ring-2 pointer-events-none transition-all duration-200 ${borderRadiusClass} ${isSelected ? 'ring-cyan-500' : 'ring-transparent group-hover:ring-cyan-500/50'}`}></div>
+            <div className={`w-full h-full overflow-hidden pointer-events-none ${borderRadiusClass}`}>
                  <EditorBlockRenderer block={block} />
             </div>
             {isSelected && resizeHandles.map(dir => (
