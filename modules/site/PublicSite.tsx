@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Page, PageBlock, SiteData, TextStyles, ContainerStyles, FixedContainer } from '../../types';
+import React, { useState, useEffect } from 'react';
+import { Page, PageBlock, SiteData, TextStyles, ContainerStyles } from '../../types';
 
 const defaultContainerStyles: ContainerStyles = {
     backgroundColor: '#1e293b', // slate-800
@@ -49,6 +49,41 @@ const hexToRgba = (hex: string, alpha: number = 1): string => {
     const b = i & 255;
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
+
+const getFixedPositionStyles = (
+    block: PageBlock,
+    gridSettings: SiteData['gridSettings']['desktop']
+): React.CSSProperties => {
+    const { layout } = block;
+    const { desktop: l } = layout;
+    const positioning = l.positioning || 'grid';
+
+    if (positioning === 'grid') return {};
+
+    const colWidthPercent = 100 / gridSettings.columns;
+    const width = `${(l.colEnd - l.colStart) * colWidthPercent}%`;
+    const height = `${(l.rowEnd - l.rowStart) * gridSettings.rowHeight + (l.rowEnd - l.rowStart - 1) * gridSettings.gap}px`;
+    const left = `${(l.colStart - 1) * colWidthPercent}%`;
+    const top = `${(l.rowStart - 1) * (gridSettings.rowHeight + gridSettings.gap)}px`;
+    
+    const baseStyle: React.CSSProperties = {
+        position: 'fixed',
+        zIndex: block.styles?.zIndex || 100
+    };
+
+    switch(positioning) {
+        case 'fixed-top':
+            return { ...baseStyle, top: 0, left, width, height };
+        case 'fixed-bottom':
+            return { ...baseStyle, bottom: 0, left, width, height };
+        case 'fixed-left':
+            return { ...baseStyle, left: 0, top, width, height };
+        case 'fixed-right':
+            return { ...baseStyle, right: 0, top, width, height };
+    }
+    return {};
+};
+
 
 const createTextStyle = (textStyles?: TextStyles, textOpacity: number = 1): React.CSSProperties => {
     if (!textStyles) return {};
@@ -158,13 +193,12 @@ const BlockRenderer: React.FC<{ block: PageBlock }> = ({ block }) => {
 interface GridCanvasProps {
     blocks: PageBlock[] | undefined;
     gridSettings: SiteData['gridSettings']['desktop'] | undefined;
-    className?: string;
 }
 
-const GridCanvas: React.FC<GridCanvasProps> = ({ blocks = [], gridSettings, className = "" }) => {
+const GridCanvas: React.FC<GridCanvasProps> = ({ blocks = [], gridSettings }) => {
     if (!gridSettings) return null;
 
-    const gridStyle: React.CSSProperties = {
+    const gridStyle = {
         display: 'grid',
         gridTemplateColumns: `repeat(${gridSettings.columns}, 1fr)`,
         gridAutoRows: `${gridSettings.rowHeight}px`,
@@ -172,7 +206,7 @@ const GridCanvas: React.FC<GridCanvasProps> = ({ blocks = [], gridSettings, clas
     };
 
     return (
-        <div className={className} style={gridStyle}>
+        <div className="container mx-auto px-4 py-8" style={gridStyle}>
             {blocks.map(block => {
                 const { desktop: layout } = block.layout;
                 const blockStyle = {
@@ -189,80 +223,6 @@ const GridCanvas: React.FC<GridCanvasProps> = ({ blocks = [], gridSettings, clas
                     </div>
                 );
             })}
-        </div>
-    );
-};
-
-// --- Novo: Renderizador de Contêiner Fixo ---
-const FixedContainerRenderer: React.FC<{ container: FixedContainer }> = ({ container }) => {
-    const [isCollapsed, setIsCollapsed] = useState(container.isCollapsed);
-
-    const positionStyles: React.CSSProperties = {};
-    const sizeStyles: React.CSSProperties = {};
-    let isVertical = false;
-
-    switch (container.id) {
-        case 'top':
-            positionStyles.top = 0;
-            positionStyles.left = 0;
-            positionStyles.right = 0;
-            sizeStyles.height = isCollapsed ? 0 : container.size;
-            break;
-        case 'bottom':
-            positionStyles.bottom = 0;
-            positionStyles.left = 0;
-            positionStyles.right = 0;
-            sizeStyles.height = isCollapsed ? 0 : container.size;
-            break;
-        case 'left':
-            positionStyles.left = 0;
-            positionStyles.top = 0;
-            positionStyles.bottom = 0;
-            sizeStyles.width = isCollapsed ? 0 : container.size;
-            isVertical = true;
-            break;
-        case 'right':
-            positionStyles.right = 0;
-            positionStyles.top = 0;
-            positionStyles.bottom = 0;
-            sizeStyles.width = isCollapsed ? 0 : container.size;
-            isVertical = true;
-            break;
-    }
-
-    const toggleIcon = (
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            {isVertical ? (isCollapsed ? <polyline points="9 18 15 12 9 6"></polyline> : <polyline points="15 18 9 12 15 6"></polyline>) : (isCollapsed ? <polyline points="18 15 12 9 6 15"></polyline> : <polyline points="6 9 12 15 18 9"></polyline>)}
-        </svg>
-    );
-
-    return (
-        <div style={{
-            position: 'fixed',
-            zIndex: 1000,
-            transition: 'all 0.3s ease-in-out',
-            ...positionStyles,
-            ...sizeStyles
-        }}
-        className="bg-slate-800/80 backdrop-blur-sm border-slate-700 overflow-hidden"
-        >
-             <button
-                onClick={() => setIsCollapsed(!isCollapsed)}
-                className="absolute bg-cyan-600/80 hover:bg-cyan-500 text-white rounded-full w-8 h-8 flex items-center justify-center z-10"
-                style={ container.id === 'top' ? { bottom: '-16px', left: '50%', transform: 'translateX(-50%)' } :
-                        container.id === 'bottom' ? { top: '-16px', left: '50%', transform: 'translateX(-50%)' } :
-                        container.id === 'left' ? { right: '-16px', top: '50%', transform: 'translateY(-50%)' } :
-                        { left: '-16px', top: '50%', transform: 'translateY(-50%)' }
-                }
-                aria-label={isCollapsed ? "Expandir menu" : "Recolher menu"}
-             >
-                {toggleIcon}
-             </button>
-            <GridCanvas
-                blocks={container.blocks}
-                gridSettings={container.gridSettings}
-                className="w-full h-full p-2"
-            />
         </div>
     );
 };
@@ -314,24 +274,6 @@ const PublicSite: React.FC<PublicSiteProps> = ({ slug }) => {
     backgroundColor: siteSettings?.backgroundColor || '#0f172a' // slate-900
   };
 
-  const mainContentStyle = useMemo(() => {
-    const style: React.CSSProperties = { transition: 'padding 0.3s ease-in-out' };
-    const fixedContainers = page?.content?.fixedContainers;
-    if (fixedContainers?.top.enabled && !fixedContainers.top.isCollapsed) {
-        style.paddingTop = `${fixedContainers.top.size}px`;
-    }
-     if (fixedContainers?.bottom.enabled && !fixedContainers.bottom.isCollapsed) {
-        style.paddingBottom = `${fixedContainers.bottom.size}px`;
-    }
-     if (fixedContainers?.left.enabled && !fixedContainers.left.isCollapsed) {
-        style.paddingLeft = `${fixedContainers.left.size}px`;
-    }
-     if (fixedContainers?.right.enabled && !fixedContainers.right.isCollapsed) {
-        style.paddingRight = `${fixedContainers.right.size}px`;
-    }
-    return style;
-  }, [page?.content?.fixedContainers]);
-
   if (status === 'loading') {
     return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Carregando...</div>;
   }
@@ -356,24 +298,30 @@ const PublicSite: React.FC<PublicSiteProps> = ({ slug }) => {
   const mainBlocks = page.content.mainBlocks || [];
   const gridSettings = page.content.gridSettings.desktop;
   
+  const fixedBlocks = mainBlocks.filter(b => b.layout.desktop.positioning && b.layout.desktop.positioning !== 'grid');
+  const gridBlocks = mainBlocks.filter(b => !b.layout.desktop.positioning || b.layout.desktop.positioning === 'grid');
+
+
   return (
-    <div className="min-h-screen text-slate-100 font-sans" style={pageStyle}>
-      {/* Renderizar Contêineres Fixos */}
-       {Object.values(page.content.fixedContainers || {}).map(container =>
-         container.enabled ? <FixedContainerRenderer key={container.id} container={container} /> : null
-       )}
+    <div className="min-h-screen text-slate-100 font-sans relative" style={pageStyle}>
+      {/* Renderizar Blocos com Posicionamento Fixo */}
+      {fixedBlocks.map(block => (
+        <div key={block.id} style={getFixedPositionStyles(block, gridSettings)}>
+            <BlockRenderer block={block} />
+        </div>
+      ))}
 
       {/* Conteúdo Principal Rolável */}
-      <div className="relative" style={mainContentStyle}>
+      <div className="relative">
         <main>
-            <GridCanvas blocks={mainBlocks} gridSettings={gridSettings} className="container mx-auto px-4 py-8" />
+            <GridCanvas blocks={gridBlocks} gridSettings={gridSettings} />
         </main>
         
         {page.content.footerBlocks.length > 0 && (
             <>
                 <div className="container mx-auto px-4"><hr className="border-slate-800 my-8" /></div>
                 <footer>
-                    <GridCanvas blocks={page.content.footerBlocks} gridSettings={gridSettings} className="container mx-auto px-4 py-8" />
+                    <GridCanvas blocks={page.content.footerBlocks} gridSettings={gridSettings} />
                 </footer>
             </>
         )}
