@@ -1,3 +1,5 @@
+// FIX: Add reference to node types to resolve issues with process and __dirname
+/// <reference types="node" />
 
 // server.ts - O Orquestrador Principal
 

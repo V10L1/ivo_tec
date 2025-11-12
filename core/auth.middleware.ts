@@ -1,3 +1,5 @@
+// FIX: Add reference to node types to resolve issues with process.exit
+/// <reference types="node" />
 
 // core/auth.middleware.ts - Middlewares de Autênticação e Autorização
 

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Dashboard } from './components/Dashboard';
@@ -5,7 +6,8 @@ import { Header } from './components/Header';
 import { ModuleWrapper } from './components/ModuleWrapper';
 import { APP_MODULES } from './constants';
 import { AppKey } from './types';
-import SiteEditor from './modules/site/SiteEditor';
+// SiteEditor is no longer a separate module
+// import SiteEditor from './modules/site/SiteEditor'; 
 import StoreManager from './modules/loja/StoreManager';
 import StockControl from './modules/estoque/StockControl';
 import MessagesChat from './modules/mensagens/MessagesChat';
@@ -34,7 +36,9 @@ export const useRouter = () => {
 
 // --- Module Views ---
 const ModuleViews: Record<AppKey, React.ComponentType> = {
-  SITE: SiteEditor,
+  // FIX: Added a placeholder for SITE to satisfy the Record type. Navigation is handled specially.
+  SITE: () => null,
+  // SITE is removed, as it's now an inline editor on the public site
   STORE: StoreManager,
   STOCK: StockControl,
   MESSAGES: MessagesChat,
@@ -45,19 +49,20 @@ const ModuleViews: Record<AppKey, React.ComponentType> = {
 
 const AdminPanel = () => {
   const [activeModule, setActiveModule] = useState<AppKey | null>(null);
+  const { navigate } = useRouter();
 
   const handleSelectModule = (key: AppKey) => {
-    setActiveModule(key);
+    if (key === 'SITE') {
+        // Navigate to the homepage to use the inline editor
+        navigate('/');
+    } else {
+        setActiveModule(key);
+    }
   };
 
   const handleGoToDashboard = () => {
     setActiveModule(null);
   };
-
-  // Tratamento especial para o SiteEditor em tela cheia
-  if (activeModule === 'SITE') {
-    return <SiteEditor onBack={handleGoToDashboard} />;
-  }
 
   const ActiveModuleComponent = activeModule ? ModuleViews[activeModule] : null;
   const moduleInfo = activeModule ? APP_MODULES.find(m => m.key === activeModule) : null;
