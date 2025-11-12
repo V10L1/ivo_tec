@@ -1,6 +1,6 @@
-// FIX: Add reference to node types to resolve errors with process.exit
 /// <reference types="node" />
 
+// FIX: Add reference to node types to resolve errors with process.exit
 // core/db.ts - Gerenciador de Conexão com o Banco de Dados
 
 import { Pool } from 'pg';
@@ -110,7 +110,8 @@ export const initializeDatabase = async () => {
                 gridSettings: {
                     desktop: { columns: 48, rowHeight: 10, gap: 8 }
                 },
-                headerBlocks: [
+                // FIX: Merged headerBlocks and contentBlocks into mainBlocks
+                mainBlocks: [
                     {
                         id: "header_brand",
                         type: "text",
@@ -133,9 +134,7 @@ export const initializeDatabase = async () => {
                                 { id: "item3", label: "Contato", link: "#/contato" }
                             ]
                         }
-                    }
-                ],
-                contentBlocks: [
+                    },
                     {
                         id: "block_1",
                         type: "hero",

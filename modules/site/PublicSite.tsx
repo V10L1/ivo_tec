@@ -50,6 +50,40 @@ const hexToRgba = (hex: string, alpha: number = 1): string => {
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
+const getFixedPositionStyles = (
+    block: PageBlock,
+    gridSettings: SiteData['gridSettings']['desktop']
+): React.CSSProperties => {
+    const { layout } = block;
+    const { desktop: l } = layout;
+    const positioning = l.positioning || 'grid';
+
+    if (positioning === 'grid') return {};
+
+    const colWidthPercent = 100 / gridSettings.columns;
+    const width = `${(l.colEnd - l.colStart) * colWidthPercent}%`;
+    const height = `${(l.rowEnd - l.rowStart) * gridSettings.rowHeight + (l.rowEnd - l.rowStart - 1) * gridSettings.gap}px`;
+    const left = `${(l.colStart - 1) * colWidthPercent}%`;
+    const top = `${(l.rowStart - 1) * (gridSettings.rowHeight + gridSettings.gap)}px`;
+    
+    const baseStyle: React.CSSProperties = {
+        position: 'fixed',
+        zIndex: block.styles?.zIndex || 100
+    };
+
+    switch(positioning) {
+        case 'fixed-top':
+            return { ...baseStyle, top: 0, left, width, height };
+        case 'fixed-bottom':
+            return { ...baseStyle, bottom: 0, left, width, height };
+        case 'fixed-left':
+            return { ...baseStyle, left: 0, top, width, height };
+        case 'fixed-right':
+            return { ...baseStyle, right: 0, top, width, height };
+    }
+    return {};
+};
+
 
 const createTextStyle = (textStyles?: TextStyles, textOpacity: number = 1): React.CSSProperties => {
     if (!textStyles) return {};
@@ -260,18 +294,38 @@ const PublicSite: React.FC<PublicSiteProps> = ({ slug }) => {
         </div>
      );
   }
+  
+  const mainBlocks = page.content.mainBlocks || [];
+  const gridSettings = page.content.gridSettings.desktop;
+  
+  const fixedBlocks = mainBlocks.filter(b => b.layout.desktop.positioning && b.layout.desktop.positioning !== 'grid');
+  const gridBlocks = mainBlocks.filter(b => !b.layout.desktop.positioning || b.layout.desktop.positioning === 'grid');
+
 
   return (
-    <div className="min-h-screen text-slate-100 font-sans" style={pageStyle}>
-        <header>
-            <GridCanvas blocks={page.content.headerBlocks} gridSettings={page.content.gridSettings.desktop} />
-        </header>
+    <div className="min-h-screen text-slate-100 font-sans relative" style={pageStyle}>
+      {/* Renderizar Blocos com Posicionamento Fixo */}
+      {fixedBlocks.map(block => (
+        <div key={block.id} style={getFixedPositionStyles(block, gridSettings)}>
+            <BlockRenderer block={block} />
+        </div>
+      ))}
+
+      {/* Conteúdo Principal Rolável */}
+      <div className="relative">
         <main>
-            <GridCanvas blocks={page.content.contentBlocks} gridSettings={page.content.gridSettings.desktop} />
+            <GridCanvas blocks={gridBlocks} gridSettings={gridSettings} />
         </main>
-        <footer>
-            <GridCanvas blocks={page.content.footerBlocks} gridSettings={page.content.gridSettings.desktop} />
-        </footer>
+        
+        {page.content.footerBlocks.length > 0 && (
+            <>
+                <div className="container mx-auto px-4"><hr className="border-slate-800 my-8" /></div>
+                <footer>
+                    <GridCanvas blocks={page.content.footerBlocks} gridSettings={gridSettings} />
+                </footer>
+            </>
+        )}
+      </div>
     </div>
   );
 };

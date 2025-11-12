@@ -1,6 +1,6 @@
-// FIX: Add reference to node types to resolve errors with process and __dirname
 /// <reference types="node" />
 
+// FIX: Add reference to node types to resolve errors with process and __dirname
 // server.ts - O Orquestrador Principal
 
 import express, { Request, Response } from 'express';

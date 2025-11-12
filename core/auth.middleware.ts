@@ -1,6 +1,6 @@
-// FIX: Add reference to node types to resolve errors with process.exit
 /// <reference types="node" />
 
+// FIX: Add reference to node types to resolve errors with process.exit
 // core/auth.middleware.ts - Middlewares de Autênticação e Autorização
 
 import { Request, Response, NextFunction } from 'express';

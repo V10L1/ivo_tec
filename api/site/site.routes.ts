@@ -6,13 +6,13 @@ import { SiteData } from '../../types';
 
 const router = express.Router();
 
+// FIX: Replaced `headerBlocks` and `contentBlocks` with `mainBlocks` to match SiteData type
 const defaultNewPageContent: SiteData = {
   settings: { brandName: 'Nova Página', backgroundColor: '#0f172a' },
   gridSettings: {
     desktop: { columns: 48, rowHeight: 10, gap: 8 }
   },
-  headerBlocks: [],
-  contentBlocks: [],
+  mainBlocks: [],
   footerBlocks: [],
 };
 

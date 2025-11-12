@@ -101,6 +101,7 @@ export interface BlockLayout {
   rowEnd: number;
   alignSelf: 'start' | 'center' | 'end' | 'stretch';
   justifySelf: 'start' | 'center' | 'end' | 'stretch';
+  positioning?: 'grid' | 'fixed-top' | 'fixed-left' | 'fixed-right' | 'fixed-bottom';
 }
 
 export type PageBlock = {
@@ -142,8 +143,7 @@ export interface SiteData {
     desktop: GridSettings;
     // Futuramente: tablet: GridSettings; mobile: GridSettings;
   };
-  headerBlocks: PageBlock[];
-  contentBlocks: PageBlock[];
+  mainBlocks: PageBlock[];
   footerBlocks: PageBlock[];
 }
 

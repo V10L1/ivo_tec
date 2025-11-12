@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Page, SiteData, PageBlock, SiteSettings, HeroBlockContent, TextBlockContent, ImageBlockContent, ButtonBlockContent, MenuBlockContent, VideoBlockContent, MenuItem, GridSettings, BlockLayout, ContainerStyles, TextStyles, StyledText } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 // FIX: Added GridIcon and new layer icons to imports
-import { PlusCircleIcon, SettingsIcon, Trash2Icon, MotorcycleIcon, TypeIcon, ImageIcon, CodeIcon, ChevronLeftIcon, ChevronRightIcon, SaveIcon, ArrowLeftIcon, FilePlusIcon, EditIcon, LayoutIcon, MenuIcon, PointerIcon, AlignStartVerticalIcon, AlignCenterVerticalIcon, AlignEndVerticalIcon, AlignStartHorizontalIcon, AlignCenterHorizontalIcon, AlignEndHorizontalIcon, GridIcon, VideoIcon, DividerIcon, SparklesIcon, BringToFrontIcon, SendToBackIcon, BoldIcon, ItalicIcon, AlignLeftIcon, AlignCenterIcon, AlignRightIcon, AlignJustifyIcon, SquareIcon, RoundedSquareIcon, CircleIcon } from '../../components/icons/Icons';
+import { PlusCircleIcon, SettingsIcon, Trash2Icon, MotorcycleIcon, TypeIcon, ImageIcon, CodeIcon, ChevronLeftIcon, ChevronRightIcon, SaveIcon, ArrowLeftIcon, FilePlusIcon, EditIcon, LayoutIcon, MenuIcon, PointerIcon, AlignStartVerticalIcon, AlignCenterVerticalIcon, AlignEndVerticalIcon, AlignStartHorizontalIcon, AlignCenterHorizontalIcon, AlignEndHorizontalIcon, GridIcon, VideoIcon, DividerIcon, SparklesIcon, BringToFrontIcon, SendToBackIcon, BoldIcon, ItalicIcon, AlignLeftIcon, AlignCenterIcon, AlignRightIcon, AlignJustifyIcon, SquareIcon, RoundedSquareIcon, CircleIcon, PinIcon, PinTopIcon, PinBottomIcon, PinLeftIcon, PinRightIcon } from '../../components/icons/Icons';
 
 // --- UTILITIES & HELPERS ---
 const generateId = (prefix = 'id') => `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -33,21 +33,20 @@ const getBorderRadiusClass = (radius: ContainerStyles['borderRadius']) => {
 }
 
 const defaultGridSettings: GridSettings = { columns: 48, rowHeight: 10, gap: 8 };
-const defaultLayout: BlockLayout = { colStart: 1, colEnd: 13, rowStart: 1, rowEnd: 13, alignSelf: 'stretch', justifySelf: 'stretch' };
+const defaultLayout: BlockLayout = { colStart: 1, colEnd: 13, rowStart: 1, rowEnd: 13, alignSelf: 'stretch', justifySelf: 'stretch', positioning: 'grid' };
 const defaultContainerStyles: ContainerStyles = { backgroundColor: '#1e293b', backgroundOpacity: 1, textOpacity: 1, borderRadius: 'medium', zIndex: 0 };
 const defaultTextStyles: TextStyles = { textColor: '#cbd5e1', textAlign: 'left', fontWeight: 'normal', fontStyle: 'normal', fontFamily: 'sans-serif', fontSize: 16};
 
 const defaultPageContent: SiteData = {
   settings: { brandName: 'Nova Marca', backgroundColor: '#0f172a' },
   gridSettings: { desktop: defaultGridSettings },
-  headerBlocks: [],
-  contentBlocks: [],
+  mainBlocks: [],
   footerBlocks: [],
 };
 
 const createNewBlock = (type: PageBlock['type']): PageBlock => {
     const id = generateId('block');
-    const baseBlock = { id, layout: { desktop: defaultLayout }, styles: {...defaultContainerStyles} };
+    const baseBlock = { id, layout: { desktop: {...defaultLayout} }, styles: {...defaultContainerStyles} };
     switch (type) {
       case 'hero': return { ...baseBlock, type, content: { title: { text: 'Novo Título de Herói', styles: {...defaultTextStyles, fontSize: 48, textAlign: 'center', fontWeight: 'bold'}}, subtitle: { text: 'Um subtítulo atraente.', styles: {...defaultTextStyles, fontSize: 20, textAlign: 'center'}}, ctaText: 'Saiba Mais', ctaLink: '#', ctaEnabled: true } };
       case 'text': return { ...baseBlock, type, content: { heading: { text: 'Nova Seção', styles: {...defaultTextStyles, fontSize: 32, fontWeight: 'bold'} }, body: { text: 'Texto padrão.', styles: {...defaultTextStyles, fontSize: 16}} } };
@@ -218,6 +217,14 @@ const InspectorPanel: React.FC<{
                     <ButtonGroupField label="Alinhar Vertical" value={layout.alignSelf} options={[{value: 'start', icon: AlignStartVerticalIcon, title: 'Início'}, {value: 'center', icon: AlignCenterVerticalIcon, title: 'Centro'}, {value: 'end', icon: AlignEndVerticalIcon, title: 'Fim'}, {value: 'stretch', icon: GridIcon, title: 'Esticar'}]} onChange={v => handleLayoutChange('alignSelf', v)} />
                     <ButtonGroupField label="Alinhar Horizontal" value={layout.justifySelf} options={[{value: 'start', icon: AlignStartHorizontalIcon, title: 'Início'}, {value: 'center', icon: AlignCenterHorizontalIcon, title: 'Centro'}, {value: 'end', icon: AlignEndHorizontalIcon, title: 'Fim'}, {value: 'stretch', icon: GridIcon, title: 'Esticar'}]} onChange={v => handleLayoutChange('justifySelf', v)} />
                 </div>
+                 <h4 className="text-md font-semibold text-slate-300 mb-2 mt-4 border-t border-slate-700 pt-4">Posicionamento</h4>
+                 <ButtonGroupField label="Alinhar na Página" value={layout.positioning || 'grid'} options={[
+                    { value: 'grid', icon: GridIcon, title: 'Na Grade' },
+                    { value: 'fixed-top', icon: PinTopIcon, title: 'Fixo no Topo' },
+                    { value: 'fixed-bottom', icon: PinBottomIcon, title: 'Fixo no Rodapé' },
+                    { value: 'fixed-left', icon: PinLeftIcon, title: 'Fixo à Esquerda' },
+                    { value: 'fixed-right', icon: PinRightIcon, title: 'Fixo à Direita' },
+                ]} onChange={v => handleLayoutChange('positioning', v)} />
             </>
         )
     };
@@ -364,6 +371,21 @@ const Block: React.FC<{
         zIndex: block.styles?.zIndex || 'auto',
     };
     const resizeHandles = ['ne', 'se', 'sw', 'nw', 'n', 'e', 's', 'w'];
+    
+    const positioning = block.layout.desktop.positioning || 'grid';
+    const isFixed = positioning !== 'grid';
+
+    const getFixedLabel = () => {
+        switch (positioning) {
+            case 'fixed-top': return { icon: PinTopIcon, label: 'Fixo no Topo'};
+            case 'fixed-bottom': return { icon: PinBottomIcon, label: 'Fixo no Rodapé'};
+            case 'fixed-left': return { icon: PinLeftIcon, label: 'Fixo à Esquerda'};
+            case 'fixed-right': return { icon: PinRightIcon, label: 'Fixo à Direita'};
+            default: return null;
+        }
+    }
+    const fixedInfo = getFixedLabel();
+
     return (
         <div 
             style={blockStyle} 
@@ -374,6 +396,12 @@ const Block: React.FC<{
             <div className={`w-full h-full overflow-hidden pointer-events-none ${borderRadiusClass}`}>
                  <EditorBlockRenderer block={block} />
             </div>
+             {isFixed && fixedInfo && (
+                <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center text-center text-cyan-400 pointer-events-none z-10">
+                    <fixedInfo.icon className="w-8 h-8" />
+                    <span className="text-xs font-semibold mt-1">{fixedInfo.label}</span>
+                </div>
+            )}
             {isSelected && resizeHandles.map(dir => (
                 <div 
                     key={dir}
@@ -408,10 +436,9 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
       initialMouse: { x: number; y: number };
       initialLayout: BlockLayout;
       resizeDirection?: string;
-      targetContext: 'header' | 'content' | 'footer';
+      targetContext: 'main' | 'footer';
   } | null>(null);
-  const headerCanvasRef = useRef<HTMLDivElement>(null);
-  const contentCanvasRef = useRef<HTMLDivElement>(null);
+  const mainCanvasRef = useRef<HTMLDivElement>(null);
   const footerCanvasRef = useRef<HTMLDivElement>(null);
 
   const handleFeedback = (type: 'error' | 'success', message: string) => { setFeedback({ type, message }); setTimeout(() => setFeedback(null), 4000); };
@@ -443,12 +470,21 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
         if (!response.ok) throw new Error('Falha ao carregar os dados completos da página.');
         const fullPageData: Page = await response.json();
         
-        const content = fullPageData.content;
+        // MIGRAÇÃO DE COMPATIBILIDADE PARA TRÁS
+        const content = (fullPageData.content || {}) as any;
+        if (content.headerBlocks || content.contentBlocks) {
+            content.mainBlocks = [
+                ...(content.headerBlocks || []),
+                ...(content.contentBlocks || []),
+            ];
+            delete content.headerBlocks;
+            delete content.contentBlocks;
+        }
+
         const validatedContent: SiteData = {
           settings: content?.settings || defaultPageContent.settings,
           gridSettings: content?.gridSettings || defaultPageContent.gridSettings,
-          headerBlocks: content?.headerBlocks || [],
-          contentBlocks: content?.contentBlocks || [],
+          mainBlocks: content?.mainBlocks || [],
           footerBlocks: content?.footerBlocks || [],
         };
         fullPageData.content = validatedContent;
@@ -503,8 +539,7 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
     if (!selectedBlock) return;
     updateEditingPage(draft => {
         if (!draft.content) return;
-        draft.content.headerBlocks = draft.content.headerBlocks.filter(b => b.id !== selectedBlock.id);
-        draft.content.contentBlocks = draft.content.contentBlocks.filter(b => b.id !== selectedBlock.id);
+        draft.content.mainBlocks = draft.content.mainBlocks.filter(b => b.id !== selectedBlock.id);
         draft.content.footerBlocks = draft.content.footerBlocks.filter(b => b.id !== selectedBlock.id);
     });
     setSelectedBlock(null);
@@ -523,7 +558,7 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
   const updateBlock = (updatedBlock: PageBlock) => {
       updateEditingPage(draft => {
           if (!draft.content) return;
-          const allBlockKeys = ['headerBlocks', 'contentBlocks', 'footerBlocks'] as const;
+          const allBlockKeys = ['mainBlocks', 'footerBlocks'] as const;
           for (const key of allBlockKeys) {
               const index = draft.content[key].findIndex(b => b.id === updatedBlock.id);
               if (index !== -1) {
@@ -540,7 +575,7 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
 
       updateEditingPage(draft => {
           if (!draft.content) return;
-          const allBlocks = [ ...draft.content.headerBlocks, ...draft.content.contentBlocks, ...draft.content.footerBlocks ];
+          const allBlocks = [ ...draft.content.mainBlocks, ...draft.content.footerBlocks ];
           
           const zIndexes = allBlocks.map(b => b.styles?.zIndex || 0);
           const maxZ = Math.max(0, ...zIndexes);
@@ -549,7 +584,7 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
           const currentZ = selectedBlock.styles?.zIndex || 0;
           const newZ = direction === 'front' ? maxZ + 1 : minZ - 1;
           
-          const blockArrayKeys = ['headerBlocks', 'contentBlocks', 'footerBlocks'] as const;
+          const blockArrayKeys = ['mainBlocks', 'footerBlocks'] as const;
           for (const key of blockArrayKeys) {
               const blockIndex = draft.content[key].findIndex(b => b.id === selectedBlock.id);
               if (blockIndex !== -1) {
@@ -567,10 +602,9 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
 
 
   // --- Drag and Drop / Resize Logic ---
-   const getCanvasForContext = (context: 'header' | 'content' | 'footer') => {
-    if (context === 'header') return headerCanvasRef.current;
+   const getCanvasForContext = (context: 'main' | 'footer') => {
     if (context === 'footer') return footerCanvasRef.current;
-    return contentCanvasRef.current;
+    return mainCanvasRef.current;
    };
 
   const handleNewBlockDragStart = (e: React.MouseEvent, type: PageBlock['type']) => {
@@ -580,7 +614,7 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
         block: newBlock, 
         initialMouse: { x: e.clientX, y: e.clientY }, 
         initialLayout: newBlock.layout.desktop,
-        targetContext: 'content'
+        targetContext: 'main'
     });
   };
 
@@ -590,15 +624,13 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
     
     // Update selected block state only if it's different
     if (selectedBlock?.id !== block.id) {
-        const currentBlockInState = editingPage?.content?.contentBlocks.find(b => b.id === block.id) ||
-                                  editingPage?.content?.headerBlocks.find(b => b.id === block.id) ||
+        const currentBlockInState = editingPage?.content?.mainBlocks.find(b => b.id === block.id) ||
                                   editingPage?.content?.footerBlocks.find(b => b.id === block.id);
         setSelectedBlock(currentBlockInState || block);
         setActiveTab('inspector');
     }
 
-    let context: 'header' | 'content' | 'footer' = 'content';
-    if (editingPage?.content?.headerBlocks.some(b => b.id === block.id)) context = 'header';
+    let context: 'main' | 'footer' = 'main';
     if (editingPage?.content?.footerBlocks.some(b => b.id === block.id)) context = 'footer';
     
     setInteractionState({ 
@@ -613,8 +645,7 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
   const handleResizeStart = (e: React.MouseEvent, block: PageBlock, direction: string) => {
      e.preventDefault();
      e.stopPropagation();
-     let context: 'header' | 'content' | 'footer' = 'content';
-     if (editingPage?.content?.headerBlocks.some(b => b.id === block.id)) context = 'header';
+     let context: 'main' | 'footer' = 'main';
      if (editingPage?.content?.footerBlocks.some(b => b.id === block.id)) context = 'footer';
 
     setInteractionState({ 
@@ -631,12 +662,10 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
     const handleMouseMove = (e: MouseEvent) => {
         if (!interactionState || !editingPage?.content) return;
         
-        let currentContext: 'header' | 'content' | 'footer' = 'content';
-        const headerRect = headerCanvasRef.current?.getBoundingClientRect();
+        let currentContext: 'main' | 'footer' = 'main';
         const footerRect = footerCanvasRef.current?.getBoundingClientRect();
-        if (headerRect && e.clientY > headerRect.top && e.clientY < headerRect.bottom) {
-            currentContext = 'header';
-        } else if (footerRect && e.clientY > footerRect.top && e.clientY < footerRect.bottom) {
+
+        if (footerRect && e.clientY > footerRect.top && e.clientY < footerRect.bottom) {
             currentContext = 'footer';
         }
         
@@ -757,7 +786,7 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
     
     const gridSettings = editingPage.content.gridSettings.desktop;
     
-    const GridCanvas = ({ blocks, canvasRef, context }: { blocks: PageBlock[], canvasRef: React.RefObject<HTMLDivElement>, context: 'header' | 'content' | 'footer' }) => {
+    const GridCanvas = ({ blocks, canvasRef, context }: { blocks: PageBlock[], canvasRef: React.RefObject<HTMLDivElement>, context: 'main' | 'footer' }) => {
         const gridStyle = {
             display: 'grid',
             gridTemplateColumns: `repeat(${gridSettings.columns}, 1fr)`,
@@ -822,13 +851,9 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
         <div className="flex-1 relative flex flex-col">
            <button onClick={() => setIsPanelOpen(!isPanelOpen)} className={`absolute top-4 bg-slate-800 hover:bg-cyan-600 text-white p-2 rounded-r-lg z-30 transition-all ${isPanelOpen ? '-left-px' : 'left-0'}`}><ChevronRightIcon className="w-5 h-5"/></button>
             <main className="flex-1 overflow-auto p-4 space-y-4" style={pageStyle}>
-              <div className="p-2 border-b-2 border-dashed border-slate-700/50">
-                <h3 className="text-center text-xs font-semibold uppercase text-slate-500 mb-2">Cabeçalho</h3>
-                <GridCanvas blocks={editingPage.content.headerBlocks} canvasRef={headerCanvasRef} context="header" />
-              </div>
               <div className="p-2">
-                 <h3 className="text-center text-xs font-semibold uppercase text-slate-500 mb-2">Conteúdo da Página</h3>
-                <GridCanvas blocks={editingPage.content.contentBlocks} canvasRef={contentCanvasRef} context="content" />
+                 <h3 className="text-center text-xs font-semibold uppercase text-slate-500 mb-2">Página Principal</h3>
+                <GridCanvas blocks={editingPage.content.mainBlocks} canvasRef={mainCanvasRef} context="main" />
               </div>
               <div className="p-2 border-t-2 border-dashed border-slate-700/50">
                  <h3 className="text-center text-xs font-semibold uppercase text-slate-500 mb-2">Rodapé</h3>
