@@ -1,5 +1,10 @@
-// FIX: Add reference to node types to resolve issues with process.exit
-/// <reference types="node" />
+// HACK: Declare Node.js globals to resolve TypeScript errors when @types/node is not available.
+declare const process: {
+    env: {
+        [key: string]: string | undefined;
+    };
+    exit(code?: number): never;
+};
 
 // core/auth.middleware.ts - Middlewares de Autênticação e Autorização
 

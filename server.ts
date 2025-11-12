@@ -1,5 +1,12 @@
-// FIX: Add reference to node types to resolve issues with process and __dirname
-/// <reference types="node" />
+// HACK: Declare Node.js globals to resolve TypeScript errors when @types/node is not available.
+declare const process: {
+    env: {
+        [key: string]: string | undefined;
+    };
+    cwd(): string;
+    exit(code?: number): never;
+};
+declare const __dirname: string;
 
 // server.ts - O Orquestrador Principal
 
