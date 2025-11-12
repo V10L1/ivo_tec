@@ -60,6 +60,39 @@ router.get('/pages/public/slug/:slug', async (req: Request, res: Response) => {
 
 // --- Rotas de Administração (requerem autenticação e permissão) ---
 
+// --- Rotas para Admin visualizar QUALQUER página (publicada ou não) ---
+// Obter página HOME para admin
+router.get('/pages/admin/home', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
+    try {
+        res.setHeader('Cache-Control', 'no-store');
+        const result = await pool.query('SELECT * FROM pages WHERE is_homepage = TRUE LIMIT 1');
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Nenhuma página inicial foi encontrada.' });
+        }
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Erro ao buscar página inicial para admin:', error);
+        res.status(500).json({ message: 'Falha ao buscar o conteúdo do site' });
+    }
+});
+
+// Obter página por slug para admin
+router.get('/pages/admin/slug/:slug', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
+    try {
+        res.setHeader('Cache-Control', 'no-store');
+        const { slug } = req.params;
+        const result = await pool.query('SELECT * FROM pages WHERE slug = $1', [slug]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Página não encontrada.' });
+        }
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Erro ao buscar página por slug para admin:', error);
+        res.status(500).json({ message: 'Falha ao buscar o conteúdo do site' });
+    }
+});
+
+
 // Listar todas as páginas
 router.get('/pages', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
     try {
@@ -188,6 +221,39 @@ router.delete('/pages/:id', verifyToken, checkModulePermission('SITE'), async (r
     } catch (error) {
         console.error('Erro ao excluir página:', error);
         res.status(500).json({ message: 'Falha ao excluir a página' });
+    }
+});
+
+// Alternar status de publicação da página
+router.patch('/pages/:id/status', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { is_published } = req.body;
+
+    if (typeof is_published !== 'boolean') {
+        return res.status(400).json({ message: 'O status de publicação é obrigatório e deve ser um booleano.' });
+    }
+
+    try {
+        // Impedir que a página inicial seja despublicada
+        if (is_published === false) {
+             const pageCheck = await pool.query('SELECT is_homepage FROM pages WHERE id = $1', [id]);
+             if (pageCheck.rows.length > 0 && pageCheck.rows[0].is_homepage) {
+                 return res.status(403).json({ message: 'Não é possível despublicar a página inicial.' });
+             }
+        }
+
+        const result = await pool.query(
+            'UPDATE pages SET is_published = $1 WHERE id = $2 RETURNING id, is_published',
+            [is_published, id]
+        );
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ message: 'Página não encontrada.' });
+        }
+        res.status(200).json(result.rows[0]);
+    } catch (error) {
+        console.error('Erro ao alterar status da página:', error);
+        res.status(500).json({ message: 'Falha ao alterar o status da página' });
     }
 });
 

@@ -109,6 +109,34 @@ const PageManager: React.FC = () => {
         const path = page.is_homepage ? '/' : `/${page.slug}`;
         navigate(path);
     };
+
+    const handleToggleStatus = async (page: PageSummary) => {
+        if (page.is_homepage) {
+            handleFeedback('error', 'A página inicial não pode ser despublicada.');
+            return;
+        }
+        setStatus('submitting');
+        try {
+            const response = await fetch(`/api/site/pages/${page.id}/status`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ is_published: !page.is_published })
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.message || 'Falha ao alterar o status.');
+            }
+            handleFeedback('success', 'Status da página alterado com sucesso!');
+            // Update local state for immediate feedback before refetching
+            setPages(prevPages => prevPages.map(p => 
+                p.id === page.id ? { ...p, is_published: !p.is_published } : p
+            ));
+        } catch (error: any) {
+            handleFeedback('error', error.message);
+        } finally {
+            setStatus('idle');
+        }
+    };
     
     const generateSlug = (title: string) => {
         return title
@@ -153,9 +181,14 @@ const PageManager: React.FC = () => {
                             <p className="text-sm text-slate-400 truncate">/{page.slug}</p>
                             <div className="flex items-center gap-4 mt-2 text-xs">
                                 {page.is_homepage && <span className="bg-cyan-500/20 text-cyan-400 px-2 py-1 rounded-full">Página Inicial</span>}
-                                <span className={`${page.is_published ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'} px-2 py-1 rounded-full`}>
+                                <button 
+                                    onClick={() => handleToggleStatus(page)}
+                                    disabled={page.is_homepage || status === 'submitting'}
+                                    title={page.is_homepage ? "A página inicial não pode ser despublicada" : "Alterar status"}
+                                    className={`${page.is_published ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'} px-2 py-1 rounded-full transition-colors ${page.is_homepage ? 'cursor-not-allowed opacity-70' : 'hover:bg-slate-700'}`}
+                                >
                                     {page.is_published ? 'Publicada' : 'Rascunho'}
-                                </span>
+                                </button>
                             </div>
                         </div>
                         <div className="p-2 bg-slate-800/50 border-t border-slate-700 flex justify-end gap-2">
