@@ -151,7 +151,7 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
     const GridCanvas = ({ blocks, context, className = "" }: { blocks: PageBlock[]; context: EditorContext; className?: string; }) => {
         const grid = gridSettings.desktop;
         const gridStyle = { display: 'grid', gridTemplateColumns: `repeat(${grid.columns}, 1fr)`, gridAutoRows: `${grid.rowHeight}px`, gap: `${grid.gap}px`,};
-        const editorClasses = isEditMode ? 'bg-slate-900/50 rounded-lg border border-dashed border-slate-700 min-h-[100px] p-2' : '';
+        const editorClasses = isEditMode ? '' : '';
         return ( <div ref={canvasRefs[context]} style={gridStyle} className={`relative w-full h-full ${editorClasses} ${className}`} onMouseDown={(e) => { if (isEditMode && e.target === e.currentTarget) { setSelectedBlock(null); setSelectedContainerId(null); setActiveTab('components'); } }} > {blocks.map(block => isEditMode ? <InteractiveBlock key={block.id} block={block} isSelected={selectedBlock?.id === block.id} onMouseDown={(e) => handleBlockMouseDown(e, block, context)} onResizeStart={(e, dir) => handleResizeStart(e, block, dir, context)} /> : <div key={block.id} style={{ gridColumn: `${block.layout.desktop.colStart} / ${block.layout.desktop.colEnd}`, gridRow: `${block.layout.desktop.rowStart} / ${block.layout.desktop.rowEnd}`, alignSelf: block.layout.desktop.alignSelf, justifySelf: block.layout.desktop.justifySelf, zIndex: block.styles?.zIndex || 'auto', position: 'relative' }}><BlockRenderer block={block} onToggleContainer={handleToggleContainer} /></div>)} </div> );
     };
 
