@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Page, PageBlock, SiteData } from '../../types';
+import { Page, PageBlock, SiteData, TextStyles } from '../../types';
 
 const getYouTubeEmbedUrl = (url: string, autoplay?: boolean, controls?: boolean) => {
     let videoId;
@@ -26,6 +26,19 @@ const getYouTubeEmbedUrl = (url: string, autoplay?: boolean, controls?: boolean)
     }
 };
 
+const createTextStyle = (textStyles?: TextStyles): React.CSSProperties => {
+    if (!textStyles) return {};
+    return {
+        color: textStyles.textColor,
+        textAlign: textStyles.textAlign,
+        fontWeight: textStyles.fontWeight,
+        fontStyle: textStyles.fontStyle,
+        fontFamily: textStyles.fontFamily,
+        fontSize: textStyles.fontSize ? `${textStyles.fontSize}px` : undefined,
+    };
+};
+
+
 // --- Renderizadores de Bloco Dinâmicos ---
 const BlockRenderer: React.FC<{ block: PageBlock }> = ({ block }) => {
     const commonClasses = "w-full h-full flex flex-col p-4";
@@ -39,8 +52,8 @@ const BlockRenderer: React.FC<{ block: PageBlock }> = ({ block }) => {
         case 'hero':
             return (
                 <div style={inlineStyle} className={`${commonClasses} text-center items-center justify-center rounded-lg`}>
-                    <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-4" style={block.content.title.styles}>{block.content.title.text}</h1>
-                    <p className="text-md md:text-lg text-slate-300 max-w-2xl mx-auto mb-6" style={block.content.subtitle.styles}>{block.content.subtitle.text}</p>
+                    <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-4" style={createTextStyle(block.content.title.styles)}>{block.content.title.text}</h1>
+                    <p className="text-md md:text-lg text-slate-300 max-w-2xl mx-auto mb-6" style={createTextStyle(block.content.subtitle.styles)}>{block.content.subtitle.text}</p>
                     {block.content.ctaEnabled && (
                          <a href={block.content.ctaLink} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-8 rounded-full text-lg transition-transform transform hover:scale-105">
                             {block.content.ctaText}
@@ -51,8 +64,8 @@ const BlockRenderer: React.FC<{ block: PageBlock }> = ({ block }) => {
         case 'text':
             return (
                  <div style={inlineStyle} className={`${commonClasses} text-left`}>
-                    <h2 className="text-3xl font-bold mb-4" style={block.content.heading.styles}>{block.content.heading.text}</h2>
-                    <p className="text-slate-400 whitespace-pre-wrap leading-relaxed" style={block.content.body.styles}>{block.content.body.text}</p>
+                    <h2 className="text-3xl font-bold mb-4" style={createTextStyle(block.content.heading.styles)}>{block.content.heading.text}</h2>
+                    <p className="text-slate-400 whitespace-pre-wrap leading-relaxed" style={createTextStyle(block.content.body.styles)}>{block.content.body.text}</p>
                 </div>
             );
         case 'image':
@@ -62,7 +75,7 @@ const BlockRenderer: React.FC<{ block: PageBlock }> = ({ block }) => {
         case 'button':
              const buttonCombinedStyles: React.CSSProperties = {
                 ...inlineStyle,
-                ...block.content.text.styles
+                ...createTextStyle(block.content.text.styles)
              };
             return (
                  <div className={`${commonClasses} items-center justify-center`}>

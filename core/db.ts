@@ -1,11 +1,4 @@
 // core/db.ts - Gerenciador de Conexão com o Banco de Dados
-// FIX: Replaced the failing Node.js type reference with explicit ambient declarations for `process` and `__dirname` to resolve errors when @types/node is missing.
-declare var process: {
-    env: { [key: string]: string | undefined };
-    cwd(): string;
-    exit(code?: number): never;
-};
-declare var __dirname: string;
 
 import { Pool } from 'pg';
 import dotenv from 'dotenv';
@@ -105,7 +98,7 @@ export const initializeDatabase = async () => {
         // Inserir página inicial padrão se não houver nenhuma
         const pagesCheck = await client.query('SELECT COUNT(*) FROM pages');
         if (parseInt(pagesCheck.rows[0].count, 10) === 0) {
-            const defaultTextStyles: TextStyles = { textColor: '#cbd5e1', textAlign: 'left', fontWeight: 'normal', fontStyle: 'normal', fontFamily: 'sans-serif'};
+            const defaultTextStyles: TextStyles = { textColor: '#cbd5e1', textAlign: 'left', fontWeight: 'normal', fontStyle: 'normal', fontFamily: 'sans-serif', fontSize: 16};
              const initialContent = {
                 settings: {
                     brandName: "Mundo Moto",
@@ -121,7 +114,7 @@ export const initializeDatabase = async () => {
                         layout: { desktop: { colStart: 2, colEnd: 12, rowStart: 2, rowEnd: 6, alignSelf: 'center', justifySelf: 'start' } },
                         styles: { backgroundColor: "transparent", zIndex: 1 },
                         content: {
-                            heading: { text: "Mundo Moto", styles: { ...defaultTextStyles, textColor: "#f1f5f9", fontWeight: 'bold' } },
+                            heading: { text: "Mundo Moto", styles: { ...defaultTextStyles, textColor: "#f1f5f9", fontWeight: 'bold', fontSize: 24 } },
                             body: { text: "", styles: defaultTextStyles }
                         }
                     },
@@ -146,8 +139,8 @@ export const initializeDatabase = async () => {
                         layout: { desktop: { colStart: 5, colEnd: 45, rowStart: 5, rowEnd: 28, alignSelf: 'stretch', justifySelf: 'stretch' } },
                         styles: { backgroundColor: "#1e293b", opacity: 1, zIndex: 1 },
                         content: {
-                            title: { text: "Bem-vindo ao Mundo Moto", styles: { ...defaultTextStyles, textColor: '#ffffff', textAlign: 'center', fontWeight: 'bold' } },
-                            subtitle: { text: "Sua parada única para as melhores motos do planeta. Comece sua aventura hoje.", styles: { ...defaultTextStyles, textColor: '#ffffff', textAlign: 'center' } },
+                            title: { text: "Bem-vindo ao Mundo Moto", styles: { ...defaultTextStyles, textColor: '#ffffff', textAlign: 'center', fontWeight: 'bold', fontSize: 48 } },
+                            subtitle: { text: "Sua parada única para as melhores motos do planeta. Comece sua aventura hoje.", styles: { ...defaultTextStyles, textColor: '#ffffff', textAlign: 'center', fontSize: 18 } },
                             ctaText: "Explorar Coleção",
                             ctaLink: "#",
                             ctaEnabled: true
@@ -159,8 +152,8 @@ export const initializeDatabase = async () => {
                         layout: { desktop: { colStart: 8, colEnd: 42, rowStart: 32, rowEnd: 52, alignSelf: 'start', justifySelf: 'stretch' } },
                         styles: { backgroundColor: "transparent", opacity: 1, zIndex: 1 },
                         content: {
-                            heading: { text: "Sobre Nossa Paixão", styles: { ...defaultTextStyles, fontWeight: 'bold' } },
-                            body: { text: "Nós vivemos e respiramos motocicletas. Nossa missão é fornecer aos entusiastas máquinas de alta qualidade e serviço incomparável. Cada moto em nossa coleção é escolhida a dedo e inspecionada para garantir que atenda aos nossos altos padrões de desempenho e confiabilidade.", styles: defaultTextStyles }
+                            heading: { text: "Sobre Nossa Paixão", styles: { ...defaultTextStyles, fontWeight: 'bold', fontSize: 32 } },
+                            body: { text: "Nós vivemos e respiramos motocicletas. Nossa missão é fornecer aos entusiastas máquinas de alta qualidade e serviço incomparável. Cada moto em nossa coleção é escolhida a dedo e inspecionada para garantir que atenda aos nossos altos padrões de desempenho e confiabilidade.", styles: {...defaultTextStyles, fontSize: 16 } }
                         }
                     }
                 ],
@@ -172,7 +165,7 @@ export const initializeDatabase = async () => {
                         styles: { backgroundColor: "transparent", opacity: 1, zIndex: 1 },
                         content: {
                             heading: { text: "", styles: defaultTextStyles },
-                            body: { text: "© 2024 Mundo Moto. Todos os direitos reservados.", styles: { ...defaultTextStyles, textColor: '#64748b', textAlign: 'center' } }
+                            body: { text: "© 2024 Mundo Moto. Todos os direitos reservados.", styles: { ...defaultTextStyles, textColor: '#64748b', textAlign: 'center', fontSize: 14 } }
                         }
                     }
                 ]

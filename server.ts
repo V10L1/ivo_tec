@@ -1,11 +1,4 @@
 // server.ts - O Orquestrador Principal
-// FIX: Replaced the failing Node.js type reference with explicit ambient declarations for `process` and `__dirname` to resolve errors when @types/node is missing.
-declare var process: {
-    env: { [key: string]: string | undefined };
-    cwd(): string;
-    exit(code?: number): never;
-};
-declare var __dirname: string;
 
 import express, { Request, Response } from 'express';
 import cors from 'cors';

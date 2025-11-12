@@ -23,6 +23,7 @@ export interface TextStyles {
   fontWeight?: 'normal' | 'bold';
   fontStyle?: 'normal' | 'italic';
   fontFamily?: string;
+  fontSize?: number;
 }
 
 // Represents a piece of text with its own styling

@@ -10,7 +10,7 @@ const generateId = (prefix = 'id') => `${prefix}_${Date.now()}_${Math.random().t
 const defaultGridSettings: GridSettings = { columns: 48, rowHeight: 10, gap: 8 };
 const defaultLayout: BlockLayout = { colStart: 1, colEnd: 13, rowStart: 1, rowEnd: 13, alignSelf: 'stretch', justifySelf: 'stretch' };
 const defaultContainerStyles: ContainerStyles = { backgroundColor: '#1e293b', opacity: 1, zIndex: 0 };
-const defaultTextStyles: TextStyles = { textColor: '#cbd5e1', textAlign: 'left', fontWeight: 'normal', fontStyle: 'normal', fontFamily: 'sans-serif'};
+const defaultTextStyles: TextStyles = { textColor: '#cbd5e1', textAlign: 'left', fontWeight: 'normal', fontStyle: 'normal', fontFamily: 'sans-serif', fontSize: 16};
 
 const defaultPageContent: SiteData = {
   settings: { brandName: 'Nova Marca', backgroundColor: '#0f172a' },
@@ -24,10 +24,10 @@ const createNewBlock = (type: PageBlock['type']): PageBlock => {
     const id = generateId('block');
     const baseBlock = { id, layout: { desktop: defaultLayout }, styles: {...defaultContainerStyles} };
     switch (type) {
-      case 'hero': return { ...baseBlock, type, content: { title: { text: 'Novo Título de Herói', styles: {...defaultTextStyles, textAlign: 'center', fontWeight: 'bold'}}, subtitle: { text: 'Um subtítulo atraente.', styles: {...defaultTextStyles, textAlign: 'center'}}, ctaText: 'Saiba Mais', ctaLink: '#', ctaEnabled: true } };
-      case 'text': return { ...baseBlock, type, content: { heading: { text: 'Nova Seção', styles: {...defaultTextStyles, fontWeight: 'bold'} }, body: { text: 'Texto padrão.', styles: {...defaultTextStyles}} } };
+      case 'hero': return { ...baseBlock, type, content: { title: { text: 'Novo Título de Herói', styles: {...defaultTextStyles, fontSize: 48, textAlign: 'center', fontWeight: 'bold'}}, subtitle: { text: 'Um subtítulo atraente.', styles: {...defaultTextStyles, fontSize: 20, textAlign: 'center'}}, ctaText: 'Saiba Mais', ctaLink: '#', ctaEnabled: true } };
+      case 'text': return { ...baseBlock, type, content: { heading: { text: 'Nova Seção', styles: {...defaultTextStyles, fontSize: 32, fontWeight: 'bold'} }, body: { text: 'Texto padrão.', styles: {...defaultTextStyles, fontSize: 16}} } };
       case 'image': return { ...baseBlock, type, content: { imageUrl: 'https://via.placeholder.com/600x400.png/1e293b/94a3b8?text=Imagem', altText: 'Imagem de Exemplo' } };
-      case 'button': return { ...baseBlock, type, content: { text: { text: 'Clique Aqui', styles: {...defaultTextStyles, textAlign: 'center'}}, link: '#' } };
+      case 'button': return { ...baseBlock, type, content: { text: { text: 'Clique Aqui', styles: {...defaultTextStyles, fontSize: 16, textAlign: 'center'}}, link: '#' } };
       case 'menu': return { ...baseBlock, type, content: { items: [{ id: generateId('menuitem'), label: 'Home', link: '#/'}, { id: generateId('menuitem'), label: 'Sobre', link: '#/sobre'}] } };
       case 'video': return { ...baseBlock, type, content: { videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', autoplay: false, controls: true } };
       case 'divider': return { ...baseBlock, type, content: {} };
@@ -58,19 +58,20 @@ const ToggleField: React.FC<{ label: string; checked: boolean; onChange: (checke
 const ButtonGroupField: React.FC<{ label?: string; value: any; options: { value: any; icon: React.FC<{className?: string}>; title: string }[]; onChange: (value: any) => void; isToggle?: boolean }> = ({ label, value, options, onChange, isToggle=false }) => (<div>{label && <label className="block text-sm font-medium text-slate-400 mb-1">{label}</label>}<div className="flex rounded-md bg-slate-900 border border-slate-700 p-1">{options.map(opt => <button key={opt.value} title={opt.title} onClick={() => onChange(isToggle ? (value === opt.value ? undefined : opt.value) : opt.value)} className={`flex-1 p-1 rounded ${value === opt.value ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:bg-slate-700'}`}><opt.icon className="w-4 h-4 mx-auto"/></button>)}</div></div>);
 
 const RichTextToolbar: React.FC<{ styles: TextStyles, onStyleChange: (field: keyof TextStyles, value: any) => void }> = ({ styles, onStyleChange }) => (
-    <div className="p-2 bg-slate-800 rounded-md border border-slate-600 space-y-2">
+    <div className="p-2 bg-slate-800 rounded-md border border-slate-600 space-y-3">
+        <select value={styles.fontFamily || 'sans-serif'} onChange={e => onStyleChange('fontFamily', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs">
+            <option value="sans-serif">Sans-serif</option>
+            <option value="serif">Serif</option>
+            <option value="monospace">Monospace</option>
+            <option value="cursive">Cursive</option>
+        </select>
         <div className="grid grid-cols-2 gap-2">
-            <select value={styles.fontFamily || 'sans-serif'} onChange={e => onStyleChange('fontFamily', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs col-span-2">
-                <option value="sans-serif">Sans-serif</option>
-                <option value="serif">Serif</option>
-                <option value="monospace">Monospace</option>
-                <option value="cursive">Cursive</option>
-            </select>
             <ColorField label="Cor" value={styles.textColor || '#cbd5e1'} onChange={v => onStyleChange('textColor', v)} />
-             <div className="grid grid-cols-2 gap-1">
-                <ButtonGroupField value={styles.fontWeight} options={[{ value: 'bold', icon: BoldIcon, title: 'Negrito'}]} onChange={v => onStyleChange('fontWeight', v)} isToggle />
-                <ButtonGroupField value={styles.fontStyle} options={[{ value: 'italic', icon: ItalicIcon, title: 'Itálico'}]} onChange={v => onStyleChange('fontStyle', v)} isToggle />
-            </div>
+            <InputField label="Tamanho (px)" type="number" value={styles.fontSize || 16} onChange={v => onStyleChange('fontSize', parseInt(v) || 16)} />
+        </div>
+        <div className="grid grid-cols-2 gap-1">
+            <ButtonGroupField value={styles.fontWeight} options={[{ value: 'bold', icon: BoldIcon, title: 'Negrito'}]} onChange={v => onStyleChange('fontWeight', v)} isToggle />
+            <ButtonGroupField value={styles.fontStyle} options={[{ value: 'italic', icon: ItalicIcon, title: 'Itálico'}]} onChange={v => onStyleChange('fontStyle', v)} isToggle />
         </div>
          <ButtonGroupField label="Alinhamento" value={styles.textAlign} options={[
             { value: 'left', icon: AlignLeftIcon, title: 'Esquerda' },
@@ -226,6 +227,18 @@ const InspectorPanel: React.FC<{
     );
 };
 
+const createTextStyle = (textStyles?: TextStyles): React.CSSProperties => {
+    if (!textStyles) return {};
+    return {
+        color: textStyles.textColor,
+        textAlign: textStyles.textAlign,
+        fontWeight: textStyles.fontWeight,
+        fontStyle: textStyles.fontStyle,
+        fontFamily: textStyles.fontFamily,
+        fontSize: textStyles.fontSize ? `${textStyles.fontSize}px` : undefined,
+    };
+};
+
 // --- Renderizador de Bloco para o Editor (WYSIWYG) ---
 const EditorBlockRenderer: React.FC<{ block: PageBlock }> = ({ block }) => {
     const commonClasses = "w-full h-full flex flex-col p-2";
@@ -265,22 +278,22 @@ const EditorBlockRenderer: React.FC<{ block: PageBlock }> = ({ block }) => {
         case 'hero':
             return (
                 <div style={inlineStyle} className={`${commonClasses} text-center items-center justify-center rounded-lg`}>
-                    <h1 className="text-lg md:text-xl font-extrabold mb-1" style={block.content.title.styles}>{block.content.title.text}</h1>
-                    <p className={`max-w-2xl mx-auto mb-2 ${scaleText}`} style={block.content.subtitle.styles}>{block.content.subtitle.text}</p>
+                    <h1 className="font-extrabold mb-1" style={createTextStyle(block.content.title.styles)}>{block.content.title.text}</h1>
+                    <p className={`max-w-2xl mx-auto mb-2`} style={createTextStyle(block.content.subtitle.styles)}>{block.content.subtitle.text}</p>
                     {block.content.ctaEnabled && <div className="bg-cyan-600 text-white font-bold py-1 px-3 rounded-full text-xs">{block.content.ctaText}</div>}
                 </div>
             );
         case 'text':
             return (
                  <div style={inlineStyle} className={`${commonClasses} text-left overflow-hidden`}>
-                    <h2 className="text-md font-bold mb-1 truncate" style={block.content.heading.styles}>{block.content.heading.text}</h2>
-                    <p className={`whitespace-pre-wrap leading-relaxed ${scaleText}`} style={block.content.body.styles}>{block.content.body.text}</p>
+                    <h2 className="font-bold mb-1 truncate" style={createTextStyle(block.content.heading.styles)}>{block.content.heading.text}</h2>
+                    <p className={`whitespace-pre-wrap leading-relaxed`} style={createTextStyle(block.content.body.styles)}>{block.content.body.text}</p>
                 </div>
             );
         case 'image':
             return <img src={block.content.imageUrl} alt={block.content.altText} className="w-full h-full object-cover rounded-lg" style={{opacity: styles.opacity}}/>;
         case 'button':
-            return <div className={`${commonClasses} items-center justify-center`}><div className="text-white font-bold py-2 px-4 rounded-lg inline-block text-sm" style={{...inlineStyle, ...block.content.text.styles}}>{block.content.text.text}</div></div>;
+            return <div className={`${commonClasses} items-center justify-center`}><div className="text-white font-bold py-2 px-4 rounded-lg inline-block" style={{...inlineStyle, ...createTextStyle(block.content.text.styles)}}>{block.content.text.text}</div></div>;
         case 'menu':
             return <nav style={inlineStyle} className={`${commonClasses} flex-row items-center justify-center gap-2`}><p className='text-xs'>Menu</p>{block.content.items.map(item => (<div key={item.id} className={`font-medium ${scaleText}`}>{item.label}</div>))}</nav>;
         case 'video':
