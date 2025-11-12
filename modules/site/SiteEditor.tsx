@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Page, SiteData, PageBlock, SiteSettings, HeroBlockContent, TextBlockContent, ImageBlockContent, ButtonBlockContent, MenuBlockContent, VideoBlockContent, MenuItem, GridSettings, BlockLayout, BlockStyles } from '../../types';
+import { Page, SiteData, PageBlock, SiteSettings, HeroBlockContent, TextBlockContent, ImageBlockContent, ButtonBlockContent, MenuBlockContent, VideoBlockContent, MenuItem, GridSettings, BlockLayout, ContainerStyles, TextStyles, StyledText } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 // FIX: Added GridIcon and new layer icons to imports
 import { PlusCircleIcon, SettingsIcon, Trash2Icon, MotorcycleIcon, TypeIcon, ImageIcon, CodeIcon, ChevronLeftIcon, ChevronRightIcon, SaveIcon, ArrowLeftIcon, FilePlusIcon, EditIcon, LayoutIcon, MenuIcon, PointerIcon, AlignStartVerticalIcon, AlignCenterVerticalIcon, AlignEndVerticalIcon, AlignStartHorizontalIcon, AlignCenterHorizontalIcon, AlignEndHorizontalIcon, GridIcon, VideoIcon, DividerIcon, SparklesIcon, BringToFrontIcon, SendToBackIcon, BoldIcon, ItalicIcon, AlignLeftIcon, AlignCenterIcon, AlignRightIcon, AlignJustifyIcon } from '../../components/icons/Icons';
@@ -9,7 +9,8 @@ const generateId = (prefix = 'id') => `${prefix}_${Date.now()}_${Math.random().t
 
 const defaultGridSettings: GridSettings = { columns: 48, rowHeight: 10, gap: 8 };
 const defaultLayout: BlockLayout = { colStart: 1, colEnd: 13, rowStart: 1, rowEnd: 13, alignSelf: 'stretch', justifySelf: 'stretch' };
-const defaultStyles: BlockStyles = { backgroundColor: '#1e293b', opacity: 1, textColor: '#cbd5e1', zIndex: 0, textAlign: 'left', fontWeight: 'normal', fontStyle: 'normal', fontFamily: 'sans-serif'};
+const defaultContainerStyles: ContainerStyles = { backgroundColor: '#1e293b', opacity: 1, zIndex: 0 };
+const defaultTextStyles: TextStyles = { textColor: '#cbd5e1', textAlign: 'left', fontWeight: 'normal', fontStyle: 'normal', fontFamily: 'sans-serif'};
 
 const defaultPageContent: SiteData = {
   settings: { brandName: 'Nova Marca', backgroundColor: '#0f172a' },
@@ -21,19 +22,19 @@ const defaultPageContent: SiteData = {
 
 const createNewBlock = (type: PageBlock['type']): PageBlock => {
     const id = generateId('block');
-    const baseBlock = { id, layout: { desktop: defaultLayout }, styles: {...defaultStyles} };
+    const baseBlock = { id, layout: { desktop: defaultLayout }, styles: {...defaultContainerStyles} };
     switch (type) {
-      case 'hero': return { ...baseBlock, type, content: { title: 'Novo Título de Herói', subtitle: 'Um subtítulo atraente.', ctaText: 'Saiba Mais', ctaLink: '#', ctaEnabled: true } };
-      case 'text': return { ...baseBlock, type, content: { heading: 'Nova Seção', body: 'Texto padrão.' } };
+      case 'hero': return { ...baseBlock, type, content: { title: { text: 'Novo Título de Herói', styles: {...defaultTextStyles, textAlign: 'center', fontWeight: 'bold'}}, subtitle: { text: 'Um subtítulo atraente.', styles: {...defaultTextStyles, textAlign: 'center'}}, ctaText: 'Saiba Mais', ctaLink: '#', ctaEnabled: true } };
+      case 'text': return { ...baseBlock, type, content: { heading: { text: 'Nova Seção', styles: {...defaultTextStyles, fontWeight: 'bold'} }, body: { text: 'Texto padrão.', styles: {...defaultTextStyles}} } };
       case 'image': return { ...baseBlock, type, content: { imageUrl: 'https://via.placeholder.com/600x400.png/1e293b/94a3b8?text=Imagem', altText: 'Imagem de Exemplo' } };
-      case 'button': return { ...baseBlock, type, content: { text: 'Clique Aqui', link: '#' } };
+      case 'button': return { ...baseBlock, type, content: { text: { text: 'Clique Aqui', styles: {...defaultTextStyles, textAlign: 'center'}}, link: '#' } };
       case 'menu': return { ...baseBlock, type, content: { items: [{ id: generateId('menuitem'), label: 'Home', link: '#/'}, { id: generateId('menuitem'), label: 'Sobre', link: '#/sobre'}] } };
       case 'video': return { ...baseBlock, type, content: { videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', autoplay: false, controls: true } };
       case 'divider': return { ...baseBlock, type, content: {} };
       case 'spacer': return { ...baseBlock, type, content: {} };
       default: {
         const _: never = type;
-        return { ...baseBlock, type: 'text', content: { heading: 'Bloco Desconhecido', body: '' } };
+        return { ...baseBlock, type: 'text', content: { heading: { text: 'Bloco Desconhecido', styles: defaultTextStyles }, body: { text: '', styles: defaultTextStyles } } };
       }
     }
 };
@@ -54,19 +55,22 @@ const InputField: React.FC<{ label: string; value: string | number; onChange: (v
 const TextareaField: React.FC<{ label: string; value: string; onChange: (value: string) => void }> = ({ label, value, onChange }) => ( <div> <label className="block text-sm font-medium text-slate-400 mb-1">{label}</label> <textarea value={value} onChange={e => onChange(e.target.value)} rows={5} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-sm" /> </div> );
 const ColorField: React.FC<{ label: string; value: string; onChange: (value: string) => void }> = ({ label, value, onChange }) => ( <div> <label className="block text-sm font-medium text-slate-400 mb-1">{label}</label> <div className="flex items-center gap-2"> <input type="color" value={value} onChange={e => onChange(e.target.value)} className="w-8 h-8 p-0 border-none rounded bg-slate-900" /> <input value={value} onChange={e => onChange(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-sm" /> </div> </div> );
 const ToggleField: React.FC<{ label: string; checked: boolean; onChange: (checked: boolean) => void; }> = ({ label, checked, onChange }) => ( <div className="flex items-center justify-between"> <label className="text-sm font-medium text-slate-400">{label}</label> <button onClick={() => onChange(!checked)} className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${checked ? 'bg-cyan-600' : 'bg-slate-700'}`}> <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'}`} /> </button> </div>);
-const ButtonGroupField: React.FC<{ label: string; value: any; options: { value: any; icon: React.FC<{className?: string}>; title: string }[]; onChange: (value: any) => void; isToggle?: boolean }> = ({ label, value, options, onChange, isToggle=false }) => (<div><label className="block text-sm font-medium text-slate-400 mb-1">{label}</label><div className="flex rounded-md bg-slate-900 border border-slate-700 p-1">{options.map(opt => <button key={opt.value} title={opt.title} onClick={() => onChange(isToggle ? (value === opt.value ? 'normal' : opt.value) : opt.value)} className={`flex-1 p-1 rounded ${value === opt.value ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:bg-slate-700'}`}><opt.icon className="w-4 h-4 mx-auto"/></button>)}</div></div>);
+const ButtonGroupField: React.FC<{ label?: string; value: any; options: { value: any; icon: React.FC<{className?: string}>; title: string }[]; onChange: (value: any) => void; isToggle?: boolean }> = ({ label, value, options, onChange, isToggle=false }) => (<div>{label && <label className="block text-sm font-medium text-slate-400 mb-1">{label}</label>}<div className="flex rounded-md bg-slate-900 border border-slate-700 p-1">{options.map(opt => <button key={opt.value} title={opt.title} onClick={() => onChange(isToggle ? (value === opt.value ? undefined : opt.value) : opt.value)} className={`flex-1 p-1 rounded ${value === opt.value ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:bg-slate-700'}`}><opt.icon className="w-4 h-4 mx-auto"/></button>)}</div></div>);
 
-const RichTextToolbar: React.FC<{ styles: BlockStyles, onStyleChange: (field: keyof BlockStyles, value: any) => void }> = ({ styles, onStyleChange }) => (
-    <div className="p-2 bg-slate-900 rounded-md border border-slate-700 space-y-2">
-        <select value={styles.fontFamily || 'sans-serif'} onChange={e => onStyleChange('fontFamily', e.target.value)} className="w-full bg-slate-800 border border-slate-600 rounded p-1 text-xs">
-            <option value="sans-serif">Sans-serif</option>
-            <option value="serif">Serif</option>
-            <option value="monospace">Monospace</option>
-            <option value="cursive">Cursive</option>
-        </select>
+const RichTextToolbar: React.FC<{ styles: TextStyles, onStyleChange: (field: keyof TextStyles, value: any) => void }> = ({ styles, onStyleChange }) => (
+    <div className="p-2 bg-slate-800 rounded-md border border-slate-600 space-y-2">
         <div className="grid grid-cols-2 gap-2">
-            <ButtonGroupField label="Estilo" value={styles.fontWeight} options={[{ value: 'bold', icon: BoldIcon, title: 'Negrito'}]} onChange={v => onStyleChange('fontWeight', v)} isToggle />
-            <ButtonGroupField label="" value={styles.fontStyle} options={[{ value: 'italic', icon: ItalicIcon, title: 'Itálico'}]} onChange={v => onStyleChange('fontStyle', v)} isToggle />
+            <select value={styles.fontFamily || 'sans-serif'} onChange={e => onStyleChange('fontFamily', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs col-span-2">
+                <option value="sans-serif">Sans-serif</option>
+                <option value="serif">Serif</option>
+                <option value="monospace">Monospace</option>
+                <option value="cursive">Cursive</option>
+            </select>
+            <ColorField label="Cor" value={styles.textColor || '#cbd5e1'} onChange={v => onStyleChange('textColor', v)} />
+             <div className="grid grid-cols-2 gap-1">
+                <ButtonGroupField value={styles.fontWeight} options={[{ value: 'bold', icon: BoldIcon, title: 'Negrito'}]} onChange={v => onStyleChange('fontWeight', v)} isToggle />
+                <ButtonGroupField value={styles.fontStyle} options={[{ value: 'italic', icon: ItalicIcon, title: 'Itálico'}]} onChange={v => onStyleChange('fontStyle', v)} isToggle />
+            </div>
         </div>
          <ButtonGroupField label="Alinhamento" value={styles.textAlign} options={[
             { value: 'left', icon: AlignLeftIcon, title: 'Esquerda' },
@@ -76,6 +80,32 @@ const RichTextToolbar: React.FC<{ styles: BlockStyles, onStyleChange: (field: ke
          ]} onChange={v => onStyleChange('textAlign', v)} />
     </div>
 );
+
+const RichTextInputWithToolbar: React.FC<{
+    label: string;
+    value: StyledText;
+    onChange: (value: StyledText) => void;
+    isTextarea?: boolean;
+}> = ({ label, value, onChange, isTextarea = false }) => {
+    const handleStyleChange = (field: keyof TextStyles, styleValue: any) => {
+        onChange({ ...value, styles: { ...(value.styles || defaultTextStyles), [field]: styleValue } });
+    };
+    const handleTextChange = (text: string) => {
+        onChange({ ...value, text });
+    };
+
+    return (
+        <div className="space-y-2">
+            <label className="block text-sm font-medium text-slate-400">{label}</label>
+            <RichTextToolbar styles={value.styles || defaultTextStyles} onStyleChange={handleStyleChange} />
+            {isTextarea ? (
+                <textarea value={value.text} onChange={e => handleTextChange(e.target.value)} rows={5} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-sm" />
+            ) : (
+                <input value={value.text} onChange={e => handleTextChange(e.target.value)} type="text" className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-sm" />
+            )}
+        </div>
+    );
+};
 
 
 const InspectorPanel: React.FC<{
@@ -101,9 +131,9 @@ const InspectorPanel: React.FC<{
         handleUpdate({ ...selectedBlock, layout: { ...selectedBlock.layout, desktop: newLayout } });
     };
 
-    const handleStyleChange = (field: keyof BlockStyles, value: string | number) => {
+    const handleStyleChange = (field: keyof ContainerStyles, value: string | number) => {
         if (!selectedBlock) return;
-        const newStyles = { ...defaultStyles, ...selectedBlock.styles, [field]: value };
+        const newStyles = { ...defaultContainerStyles, ...selectedBlock.styles, [field]: value };
         handleUpdate({ ...selectedBlock, styles: newStyles });
     };
 
@@ -111,16 +141,15 @@ const InspectorPanel: React.FC<{
         if (!selectedBlock) return null;
         
         const layout = selectedBlock.layout.desktop;
-        const styles = { ...defaultStyles, ...selectedBlock.styles };
+        const styles = { ...defaultContainerStyles, ...selectedBlock.styles };
         
         let contentInspector;
-        const hasRichText = ['hero', 'text', 'button', 'menu'].includes(selectedBlock.type);
 
         switch (selectedBlock.type) {
-            case 'hero': { const handleContentChange = (field: keyof HeroBlockContent, value: string | boolean) => { handleUpdate({ ...selectedBlock, content: { ...selectedBlock.content, [field]: value } }); }; contentInspector = <> <InputField label="Título" value={selectedBlock.content.title} onChange={v => handleContentChange('title', v)} /> <TextareaField label="Subtítulo" value={selectedBlock.content.subtitle} onChange={v => handleContentChange('subtitle', v)} /> <ToggleField label="Botão Ativo" checked={selectedBlock.content.ctaEnabled} onChange={v => handleContentChange('ctaEnabled', v)} /> {selectedBlock.content.ctaEnabled && <> <InputField label="Texto do Botão" value={selectedBlock.content.ctaText} onChange={v => handleContentChange('ctaText', v)} /> <InputField label="Link do Botão" value={selectedBlock.content.ctaLink} onChange={v => handleContentChange('ctaLink', v)} /> </>} </>; break; }
-            case 'text': { const handleContentChange = (field: keyof TextBlockContent, value: string) => { handleUpdate({ ...selectedBlock, content: { ...selectedBlock.content, [field]: value } }); }; contentInspector = <> <InputField label="Cabeçalho" value={selectedBlock.content.heading} onChange={v => handleContentChange('heading', v)} /> <TextareaField label="Corpo do Texto" value={selectedBlock.content.body} onChange={v => handleContentChange('body', v)} /> </>; break; }
+            case 'hero': { const handleContentChange = (field: keyof HeroBlockContent, value: any) => { handleUpdate({ ...selectedBlock, content: { ...selectedBlock.content, [field]: value } }); }; contentInspector = <> <RichTextInputWithToolbar label="Título" value={selectedBlock.content.title} onChange={v => handleContentChange('title', v)} /> <RichTextInputWithToolbar label="Subtítulo" value={selectedBlock.content.subtitle} onChange={v => handleContentChange('subtitle', v)} isTextarea/> <ToggleField label="Botão Ativo" checked={selectedBlock.content.ctaEnabled} onChange={v => handleContentChange('ctaEnabled', v)} /> {selectedBlock.content.ctaEnabled && <> <InputField label="Texto do Botão" value={selectedBlock.content.ctaText} onChange={v => handleContentChange('ctaText', v)} /> <InputField label="Link do Botão" value={selectedBlock.content.ctaLink} onChange={v => handleContentChange('ctaLink', v)} /> </>} </>; break; }
+            case 'text': { const handleContentChange = (field: keyof TextBlockContent, value: StyledText) => { handleUpdate({ ...selectedBlock, content: { ...selectedBlock.content, [field]: value } }); }; contentInspector = <> <RichTextInputWithToolbar label="Cabeçalho" value={selectedBlock.content.heading} onChange={v => handleContentChange('heading', v)} /> <RichTextInputWithToolbar label="Corpo do Texto" value={selectedBlock.content.body} onChange={v => handleContentChange('body', v)} isTextarea /> </>; break; }
             case 'image': { const handleContentChange = (field: keyof ImageBlockContent, value: string) => { handleUpdate({ ...selectedBlock, content: { ...selectedBlock.content, [field]: value } }); }; contentInspector = <> <InputField label="URL da Imagem" value={selectedBlock.content.imageUrl} onChange={v => handleContentChange('imageUrl', v)} /> <InputField label="Texto Alternativo" value={selectedBlock.content.altText} onChange={v => handleContentChange('altText', v)} /> </>; break; }
-            case 'button': { const handleContentChange = (field: keyof ButtonBlockContent, value: string) => { handleUpdate({ ...selectedBlock, content: { ...selectedBlock.content, [field]: value } }); }; contentInspector = <> <InputField label="Texto do Botão" value={selectedBlock.content.text} onChange={v => handleContentChange('text', v)} /> <InputField label="Link" value={selectedBlock.content.link} onChange={v => handleContentChange('link', v)} /> </>; break; }
+            case 'button': { const handleContentChange = (field: keyof ButtonBlockContent, value: any) => { handleUpdate({ ...selectedBlock, content: { ...selectedBlock.content, [field]: value } }); }; contentInspector = <> <RichTextInputWithToolbar label="Texto do Botão" value={selectedBlock.content.text} onChange={v => handleContentChange('text', v)} /> <InputField label="Link" value={selectedBlock.content.link} onChange={v => handleContentChange('link', v)} /> </>; break; }
             case 'menu': { const menuContent = selectedBlock.content; const handleItemChange = (itemId: string, field: 'label' | 'link', value: string) => { const newItems = menuContent.items.map(item => item.id === itemId ? { ...item, [field]: value } : item); handleUpdate({ ...selectedBlock, content: { ...menuContent, items: newItems }}); }; contentInspector = <> <h4 className="text-md font-semibold text-slate-300 mb-2">Itens do Menu</h4> {menuContent.items.map(item => ( <div key={item.id} className="p-2 border border-slate-700 rounded mb-2 space-y-2"> <InputField label="Rótulo" value={item.label} onChange={v => handleItemChange(item.id, 'label', v)} /> <InputField label="Link" value={item.link} onChange={v => handleItemChange(item.id, 'link', v)} /> </div> ))} </>; break; }
             case 'video': { const handleContentChange = (field: keyof VideoBlockContent, value: string | boolean) => { handleUpdate({ ...selectedBlock, content: { ...(selectedBlock.content as VideoBlockContent), [field]: value } }); }; const videoContent = selectedBlock.content; contentInspector = <> <InputField label="URL do Vídeo (YouTube)" value={videoContent.videoUrl} onChange={v => handleContentChange('videoUrl', v)} /> <ToggleField label="Autoplay (com mudo)" checked={videoContent.autoplay || false} onChange={v => handleContentChange('autoplay', v)} /> <ToggleField label="Mostrar Controles" checked={videoContent.controls !== false} onChange={v => handleContentChange('controls', v)} /> </>; break; }
             case 'divider':
@@ -133,11 +162,9 @@ const InspectorPanel: React.FC<{
                 <h4 className="text-md font-semibold text-slate-300 mb-2 mt-4 border-t border-slate-700 pt-4">Conteúdo</h4>
                 {contentInspector}
                 
-                <h4 className="text-md font-semibold text-slate-300 mb-2 mt-4 border-t border-slate-700 pt-4">Estilos</h4>
+                <h4 className="text-md font-semibold text-slate-300 mb-2 mt-4 border-t border-slate-700 pt-4">Estilos do Contêiner</h4>
                  <div className="space-y-4">
-                    {hasRichText && <RichTextToolbar styles={styles} onStyleChange={handleStyleChange} />}
                     <ColorField label="Cor de Fundo" value={styles.backgroundColor || '#1e293b'} onChange={v => handleStyleChange('backgroundColor', v)} />
-                    <ColorField label="Cor do Texto" value={styles.textColor || '#cbd5e1'} onChange={v => handleStyleChange('textColor', v)} />
                     <InputField label="Opacidade" type="range" value={styles.opacity || 1} onChange={v => handleStyleChange('opacity', parseFloat(v))} min={0} max={1} step={0.05} />
                     <div>
                         <label className="block text-sm font-medium text-slate-400 mb-1">Camadas</label>
@@ -203,21 +230,13 @@ const InspectorPanel: React.FC<{
 const EditorBlockRenderer: React.FC<{ block: PageBlock }> = ({ block }) => {
     const commonClasses = "w-full h-full flex flex-col p-2";
     const scaleText = "text-xs md:text-sm";
-    const styles = { ...defaultStyles, ...block.styles };
-    const inlineStyle = {
+    const styles = { ...defaultContainerStyles, ...block.styles };
+    const inlineStyle: React.CSSProperties = {
         backgroundColor: styles.backgroundColor,
         opacity: styles.opacity,
         zIndex: styles.zIndex,
     };
     
-    const textStyles: React.CSSProperties = {
-        color: styles.textColor,
-        textAlign: styles.textAlign,
-        fontWeight: styles.fontWeight,
-        fontStyle: styles.fontStyle,
-        fontFamily: styles.fontFamily,
-    };
-
     const getYouTubeEmbedUrl = (url: string, autoplay?: boolean, controls?: boolean) => {
         try {
             let videoId;
@@ -246,24 +265,24 @@ const EditorBlockRenderer: React.FC<{ block: PageBlock }> = ({ block }) => {
         case 'hero':
             return (
                 <div style={inlineStyle} className={`${commonClasses} text-center items-center justify-center rounded-lg`}>
-                    <h1 className="text-lg md:text-xl font-extrabold mb-1" style={textStyles}>{block.content.title}</h1>
-                    <p className={`max-w-2xl mx-auto mb-2 ${scaleText}`} style={textStyles}>{block.content.subtitle}</p>
-                    {block.content.ctaEnabled && <div className="bg-cyan-600 text-white font-bold py-1 px-3 rounded-full text-xs" style={{...textStyles, backgroundColor: styles.backgroundColor}}>{block.content.ctaText}</div>}
+                    <h1 className="text-lg md:text-xl font-extrabold mb-1" style={block.content.title.styles}>{block.content.title.text}</h1>
+                    <p className={`max-w-2xl mx-auto mb-2 ${scaleText}`} style={block.content.subtitle.styles}>{block.content.subtitle.text}</p>
+                    {block.content.ctaEnabled && <div className="bg-cyan-600 text-white font-bold py-1 px-3 rounded-full text-xs">{block.content.ctaText}</div>}
                 </div>
             );
         case 'text':
             return (
                  <div style={inlineStyle} className={`${commonClasses} text-left overflow-hidden`}>
-                    <h2 className="text-md font-bold mb-1 truncate" style={textStyles}>{block.content.heading}</h2>
-                    <p className={`whitespace-pre-wrap leading-relaxed ${scaleText}`} style={textStyles}>{block.content.body}</p>
+                    <h2 className="text-md font-bold mb-1 truncate" style={block.content.heading.styles}>{block.content.heading.text}</h2>
+                    <p className={`whitespace-pre-wrap leading-relaxed ${scaleText}`} style={block.content.body.styles}>{block.content.body.text}</p>
                 </div>
             );
         case 'image':
             return <img src={block.content.imageUrl} alt={block.content.altText} className="w-full h-full object-cover rounded-lg" style={{opacity: styles.opacity}}/>;
         case 'button':
-            return <div className={`${commonClasses} items-center justify-center`}><div className="text-white font-bold py-2 px-4 rounded-lg inline-block text-sm" style={{...inlineStyle, ...textStyles}}>{block.content.text}</div></div>;
+            return <div className={`${commonClasses} items-center justify-center`}><div className="text-white font-bold py-2 px-4 rounded-lg inline-block text-sm" style={{...inlineStyle, ...block.content.text.styles}}>{block.content.text.text}</div></div>;
         case 'menu':
-            return <nav style={inlineStyle} className={`${commonClasses} flex-row items-center justify-center gap-2`}><p className='text-xs'>Menu</p>{block.content.items.map(item => (<div key={item.id} className={`font-medium ${scaleText}`} style={textStyles}>{item.label}</div>))}</nav>;
+            return <nav style={inlineStyle} className={`${commonClasses} flex-row items-center justify-center gap-2`}><p className='text-xs'>Menu</p>{block.content.items.map(item => (<div key={item.id} className={`font-medium ${scaleText}`}>{item.label}</div>))}</nav>;
         case 'video':
             const embedUrl = getYouTubeEmbedUrl(block.content.videoUrl, block.content.autoplay, block.content.controls);
             return (

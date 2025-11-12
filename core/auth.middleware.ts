@@ -1,5 +1,11 @@
 // core/auth.middleware.ts - Middlewares de Autênticação e Autorização
-/// <reference types="node" />
+// FIX: Replaced the failing Node.js type reference with explicit ambient declarations for `process` and `__dirname` to resolve errors when @types/node is missing.
+declare var process: {
+    env: { [key: string]: string | undefined };
+    cwd(): string;
+    exit(code?: number): never;
+};
+declare var __dirname: string;
 
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';

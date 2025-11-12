@@ -16,19 +16,35 @@ export interface AppModule {
   Icon: React.ComponentType<{ className?: string }>;
 }
 
+// Rich text styles for individual text elements
+export interface TextStyles {
+  textColor?: string;
+  textAlign?: 'left' | 'center' | 'right' | 'justify';
+  fontWeight?: 'normal' | 'bold';
+  fontStyle?: 'normal' | 'italic';
+  fontFamily?: string;
+}
+
+// Represents a piece of text with its own styling
+export interface StyledText {
+  text: string;
+  styles: TextStyles;
+}
+
+
 // --- Tipos de Conteúdo do Construtor de Páginas ---
 
 export interface HeroBlockContent {
-  title: string;
-  subtitle: string;
+  title: StyledText;
+  subtitle: StyledText;
   ctaText: string;
   ctaLink: string;
   ctaEnabled: boolean;
 }
 
 export interface TextBlockContent {
-  heading: string;
-  body: string;
+  heading: StyledText;
+  body: StyledText;
 }
 
 export interface ImageBlockContent {
@@ -37,7 +53,7 @@ export interface ImageBlockContent {
 }
 
 export interface ButtonBlockContent {
-  text: string;
+  text: StyledText;
   link: string;
 }
 
@@ -65,16 +81,11 @@ export interface SpacerBlockContent {
   // No content needed, layout controls height
 }
 
-export interface BlockStyles {
+// Styles for the block container
+export interface ContainerStyles {
   backgroundColor?: string;
   opacity?: number; // 0 to 1
-  textColor?: string;
   zIndex?: number;
-  // Rich text styles
-  textAlign?: 'left' | 'center' | 'right' | 'justify';
-  fontWeight?: 'normal' | 'bold';
-  fontStyle?: 'normal' | 'italic';
-  fontFamily?: string;
 }
 
 
@@ -95,7 +106,7 @@ export type PageBlock = {
     desktop: BlockLayout;
     // Futuramente: tablet: BlockLayout; mobile: BlockLayout;
   };
-  styles?: BlockStyles;
+  styles?: ContainerStyles;
 } & (
   | { type: 'hero'; content: HeroBlockContent }
   | { type: 'text'; content: TextBlockContent }
