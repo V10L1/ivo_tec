@@ -208,7 +208,7 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
             <div className={`flex flex-1 w-full relative overflow-hidden ${isEditMode ? 'flex-row' : 'flex-col'}`}>
                 {isEditMode && (
                     <>
-                        <aside className={`fixed top-0 bottom-0 left-0 flex-shrink-0 bg-slate-800/80 backdrop-blur-sm border-r border-slate-700 transition-transform duration-300 ease-in-out w-full max-w-sm z-40 ${isPanelOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                        <aside className={`fixed top-0 bottom-0 left-0 flex-shrink-0 bg-slate-800/80 backdrop-blur-sm border-r border-slate-700 transition-transform duration-300 ease-in-out w-full max-w-sm z-[9001] ${isPanelOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                             <div className="h-full flex flex-col">
                                 <div className="flex-shrink-0 border-b border-slate-700 flex"> <button onClick={() => setActiveTab('components')} className={`flex-1 p-3 text-sm font-semibold capitalize ${activeTab === 'components' ? 'bg-slate-900 text-cyan-400' : 'text-slate-400 hover:bg-slate-700'}`}>Componentes</button> <button onClick={() => setActiveTab('inspector')} className={`flex-1 p-3 text-sm font-semibold capitalize ${activeTab === 'inspector' ? 'bg-slate-900 text-cyan-400' : 'text-slate-400 hover:bg-slate-700'}`}>Inspector</button> </div>
                                 <div className="flex-grow overflow-y-auto">
@@ -221,7 +221,7 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
                          <button 
                             onClick={() => setIsPanelOpen(!isPanelOpen)}
                             title={isPanelOpen ? "Recolher Painel" : "Expandir Painel"}
-                            className="fixed top-1/2 -translate-y-1/2 w-6 h-20 bg-slate-800 hover:bg-cyan-600 text-white z-40 transition-transform duration-300 ease-in-out flex items-center justify-center rounded-r-lg border-y border-r border-slate-700"
+                            className="fixed top-1/2 -translate-y-1/2 w-6 h-20 bg-slate-800 hover:bg-cyan-600 text-white z-[9002] transition-transform duration-300 ease-in-out flex items-center justify-center rounded-r-lg border-y border-r border-slate-700"
                             style={{ transform: `translateX(${isPanelOpen ? '24rem' : '0px'})` }}
                         >
                             <ChevronLeftIcon className={`w-5 h-5 transition-transform duration-300 ${isPanelOpen ? 'transform rotate-0' : 'transform rotate-180'}`} />
