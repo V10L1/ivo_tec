@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Page, SiteData, PageBlock, SiteSettings, HeroBlockContent, TextBlockContent, ImageBlockContent, ButtonBlockContent, MenuBlockContent, VideoBlockContent, MenuItem, GridSettings, BlockLayout, ContainerStyles, TextStyles, StyledText, FixedContainer, FixedContainerPosition } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
@@ -12,7 +13,8 @@ const generateId = (prefix = 'id') => `${prefix}_${Date.now()}_${Math.random().t
 const hexToRgba = (hex: string, alpha: number = 1): string => { if (!hex || !/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)) { return `rgba(30, 41, 59, ${alpha})`; } let c = hex.substring(1).split(''); if (c.length === 3) { c = [c[0], c[0], c[1], c[1], c[2], c[2]]; } const i = parseInt(c.join(''), 16); return `rgba(${(i >> 16) & 255}, ${(i >> 8) & 255}, ${i & 255}, ${alpha})`; };
 const getBorderRadiusClass = (radius: ContainerStyles['borderRadius']) => { switch (radius) { case 'full': return 'rounded-full'; case 'none': return 'rounded-none'; case 'medium': default: return 'rounded-lg'; } }
 const createTextStyle = (textStyles?: TextStyles, textOpacity: number = 1): React.CSSProperties => { if (!textStyles) return {}; return { color: textStyles.textColor, textAlign: textStyles.textAlign, fontWeight: textStyles.fontWeight, fontStyle: textStyles.fontStyle, fontFamily: textStyles.fontFamily, fontSize: textStyles.fontSize ? `${textStyles.fontSize}px` : undefined, opacity: textOpacity, }; };
-const getYouTubeEmbedUrl = (url: string, autoplay?: boolean, controls?: boolean) => { try { let videoId; if (url.includes('youtube.com/watch')) { videoId = new URL(url).searchParams.get('v'); } else if (url.includes('youtu.be/')) { videoId = new URL(url).pathname.split('/').pop(); } if (!videoId) return null; const embedUrl = new URL(`https://www.youtube.com/embed/${videoId}`); if (autoplay) { embedUrl.searchParams.set('autoplay', '1'); embedUrl.searchParams.set('mute', '1'); } if (controls === false) { embedUrl.searchParams.set('controls', '0'); } return embedUrl.toString(); } catch { return null; } };
+// FIX: Added a parameter to the catch block to support older TypeScript configurations and align with project standards, which likely resolves the misleading type error.
+const getYouTubeEmbedUrl = (url: string, autoplay?: boolean, controls?: boolean) => { try { let videoId; if (url.includes('youtube.com/watch')) { videoId = new URL(url).searchParams.get('v'); } else if (url.includes('youtu.be/')) { videoId = new URL(url).pathname.split('/').pop(); } if (!videoId) return null; const embedUrl = new URL(`https://www.youtube.com/embed/${videoId}`); if (autoplay) { embedUrl.searchParams.set('autoplay', '1'); embedUrl.searchParams.set('mute', '1'); } if (controls === false) { embedUrl.searchParams.set('controls', '0'); } return embedUrl.toString(); } catch (error) { return null; } };
 
 const defaultGridSettings: GridSettings = { columns: 48, rowHeight: 10, gap: 8 };
 const defaultLayout: BlockLayout = { colStart: 1, colEnd: 13, rowStart: 1, rowEnd: 13, alignSelf: 'stretch', justifySelf: 'stretch' };
@@ -284,6 +286,23 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
 
     const { settings, gridSettings, fixedContainers, mainBlocks, footerBlocks } = pageData.content;
     const grid = gridSettings.desktop;
+    
+    // --- Consistent Grid and Block Styling Logic ---
+    const gridStyles: React.CSSProperties = {
+        display: 'grid',
+        gridTemplateColumns: `repeat(${grid.columns}, 1fr)`,
+        gridAutoRows: `${grid.rowHeight}px`,
+        gap: `${grid.gap}px`,
+    };
+
+    const blockWrapperStyle = (block: PageBlock): React.CSSProperties => ({
+        gridColumn: `${block.layout.desktop.colStart} / ${block.layout.desktop.colEnd}`,
+        gridRow: `${block.layout.desktop.rowStart} / ${block.layout.desktop.rowEnd}`,
+        alignSelf: block.layout.desktop.alignSelf,
+        justifySelf: block.layout.desktop.justifySelf,
+        zIndex: block.styles?.zIndex || 'auto',
+    });
+
 
     const FixedContainerRenderer: React.FC<{ position: FixedContainerPosition }> = ({ position }) => {
         const container = fixedContainers[position];
@@ -312,12 +331,12 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
                 <div 
                     ref={canvasRefs[position]}
                     className={`relative w-full h-full ${isEditMode ? 'p-2 border border-dashed border-slate-700' : ''}`}
-                    style={isEditMode ? { display: 'grid', gridTemplateColumns: `repeat(${grid.columns}, 1fr)`, gridAutoRows: `${grid.rowHeight}px`, gap: `${grid.gap}px` } : {}}
+                    style={gridStyles}
                     onClick={isEditMode ? () => {setSelectedContainerId(position); setSelectedBlock(null); setActiveTab('inspector')} : undefined}
                 >
                     {isEditMode 
                         ? container.blocks.map(block => <InteractiveBlock key={block.id} block={block} isSelected={selectedBlock?.id === block.id} onMouseDown={(e) => handleBlockMouseDown(e, block, position)} onResizeStart={(e, dir) => handleResizeStart(e, block, dir, position)} />)
-                        : container.blocks.map(block => <div key={block.id} style={{ gridColumn: `${block.layout.desktop.colStart} / ${block.layout.desktop.colEnd}`, gridRow: `${block.layout.desktop.rowStart} / ${block.layout.desktop.rowEnd}`}}><BlockRenderer block={block} onToggleContainer={handleToggleContainer}/></div>)}
+                        : container.blocks.map(block => <div key={block.id} style={blockWrapperStyle(block)}><BlockRenderer block={block} onToggleContainer={handleToggleContainer}/></div>)}
                 </div>
                 {container.collapsible && (
                     <button onClick={() => handleToggleContainer(position)} className={`absolute ${buttonPositionClass} bg-slate-700 hover:bg-cyan-600 text-white w-8 h-8 rounded-full flex items-center justify-center z-50 transition-colors`}>
@@ -411,17 +430,17 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
             {(['top', 'left', 'right', 'bottom'] as FixedContainerPosition[]).map(pos => <FixedContainerRenderer key={pos} position={pos} />)}
             
             {/* --- MAIN CONTENT AREA --- */}
-            <main ref={canvasRefs.main} className={`relative mx-auto max-w-screen-2xl transition-all duration-300 ${isEditMode ? 'p-2' : ''}`} style={isEditMode ? { display: 'grid', gridTemplateColumns: `repeat(${grid.columns}, 1fr)`, gridAutoRows: `${grid.rowHeight}px`, gap: `${grid.gap}px` } : {}} onClick={isEditMode ? () => {setSelectedBlock(null); setSelectedContainerId(null)}: undefined}>
+            <main ref={canvasRefs.main} className={`relative mx-auto max-w-screen-2xl transition-all duration-300 ${isEditMode ? 'p-2' : ''}`} style={gridStyles} onClick={isEditMode ? () => {setSelectedBlock(null); setSelectedContainerId(null)}: undefined}>
                 {isEditMode 
                     ? mainBlocks.map(block => <InteractiveBlock key={block.id} block={block} isSelected={selectedBlock?.id === block.id} onMouseDown={(e) => handleBlockMouseDown(e, block, 'main')} onResizeStart={(e, dir) => handleResizeStart(e, block, dir, 'main')} />)
-                    : mainBlocks.map(block => <div key={block.id} style={{ gridColumn: `${block.layout.desktop.colStart} / ${block.layout.desktop.colEnd}`, gridRow: `${block.layout.desktop.rowStart} / ${block.layout.desktop.rowEnd}`}}><BlockRenderer block={block} onToggleContainer={handleToggleContainer}/></div>)}
+                    : mainBlocks.map(block => <div key={block.id} style={blockWrapperStyle(block)}><BlockRenderer block={block} onToggleContainer={handleToggleContainer}/></div>)}
             </main>
             
             {/* --- FOOTER CONTENT AREA --- */}
-            <footer ref={canvasRefs.footer} className={`relative mx-auto max-w-screen-2xl transition-all duration-300 ${isEditMode ? 'mt-8 p-2 border-t-2 border-dashed border-slate-700' : ''}`} style={isEditMode ? { display: 'grid', gridTemplateColumns: `repeat(${grid.columns}, 1fr)`, gridAutoRows: `${grid.rowHeight}px`, gap: `${grid.gap}px` } : {}}>
+            <footer ref={canvasRefs.footer} className={`relative mx-auto max-w-screen-2xl transition-all duration-300 ${isEditMode ? 'mt-8 p-2 border-t-2 border-dashed border-slate-700' : 'mt-8'}`} style={gridStyles}>
                  {isEditMode 
                     ? footerBlocks.map(block => <InteractiveBlock key={block.id} block={block} isSelected={selectedBlock?.id === block.id} onMouseDown={(e) => handleBlockMouseDown(e, block, 'footer')} onResizeStart={(e, dir) => handleResizeStart(e, block, dir, 'footer')} />)
-                    : footerBlocks.map(block => <div key={block.id} style={{ gridColumn: `${block.layout.desktop.colStart} / ${block.layout.desktop.colEnd}`, gridRow: `${block.layout.desktop.rowStart} / ${block.layout.desktop.rowEnd}`}}><BlockRenderer block={block} onToggleContainer={handleToggleContainer}/></div>)}
+                    : footerBlocks.map(block => <div key={block.id} style={blockWrapperStyle(block)}><BlockRenderer block={block} onToggleContainer={handleToggleContainer}/></div>)}
             </footer>
              
             {/* Feedback Message */}
