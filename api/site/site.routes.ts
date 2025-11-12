@@ -257,5 +257,36 @@ router.patch('/pages/:id/status', verifyToken, checkModulePermission('SITE'), as
     }
 });
 
+// Definir uma página como a página inicial
+router.patch('/pages/:id/set-homepage', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // Desmarcar a página inicial atual
+        await client.query('UPDATE pages SET is_homepage = FALSE WHERE is_homepage = TRUE');
+
+        // Marcar a nova página inicial e garantir que ela esteja publicada
+        const result = await client.query(
+            'UPDATE pages SET is_homepage = TRUE, is_published = TRUE WHERE id = $1 RETURNING id, is_homepage, is_published',
+            [id]
+        );
+
+        if (result.rowCount === 0) {
+            throw new Error('Página não encontrada.');
+        }
+
+        await client.query('COMMIT');
+        res.status(200).json(result.rows[0]);
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Erro ao definir a página inicial:', error);
+        res.status(500).json({ message: 'Falha ao definir a página inicial' });
+    } finally {
+        client.release();
+    }
+});
+
 
 export default router;
