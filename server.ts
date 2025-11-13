@@ -1,3 +1,5 @@
+
+
 // HACK: Declare Node.js globals to resolve TypeScript errors when @types/node is not available.
 declare const process: {
     env: {
@@ -9,7 +11,8 @@ declare const process: {
 declare const __dirname: string;
 
 // server.ts - O Orquestrador Principal
-import express, { Request, Response, NextFunction } from 'express';
+// @google/genai-fix: Use fully qualified 'express' types to avoid conflicts with global DOM types.
+import * as express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -21,14 +24,14 @@ import { initializeDatabase, pool } from './core/db';
 // Carrega as variáveis de ambiente antes de qualquer outra coisa
 dotenv.config();
 
-const app: express.Express = express();
+const app = express();
 const PORT = process.env.PORT || 8069;
 
 app.use(cors());
 app.use(express.json());
 
 // --- Rota de Verificação de Saúde ---
-app.get('/api/health', async (req: Request, res: Response) => {
+app.get('/api/health', async (req: express.Request, res: express.Response) => {
     try {
         const client = await pool.connect();
         await client.query('SELECT 1');
@@ -59,8 +62,7 @@ const loadApiModules = async () => {
                     
                     // Constrói o caminho absoluto para o arquivo de rotas compilado
                     // manifest.routesFile é algo como './usuario.routes.js'
-                    const relativeRoutesPath = path.join('api', moduleName, manifest.routesFile);
-                    const absoluteRoutesPath = path.resolve(compiledBaseDir, relativeRoutesPath);
+                    const absoluteRoutesPath = path.resolve(compiledBaseDir, 'api', moduleName, manifest.routesFile);
 
                     const { default: router } = await import(absoluteRoutesPath);
                     
@@ -71,7 +73,7 @@ const loadApiModules = async () => {
                          console.warn(`[Module Loader] Módulo '${moduleName}' em '${absoluteRoutesPath}' não possui uma exportação padrão.`);
                     }
                 } catch (e: any) {
-                    console.error(`[Module Loader] Falha ao carregar o módulo '${moduleName}'. Verifique o manifest.json e o arquivo de rotas.`, e.message);
+                    console.error(`[Module Loader] Falha ao carregar o módulo '${moduleName}'. Verifique o manifest.json e o arquivo de rotas.`, e);
                 }
             }
         }
@@ -91,8 +93,7 @@ const serveFrontend = () => {
     app.use(express.static(staticRootPath));
 
     // Rota "catch-all" melhorada para lidar com APIs não encontradas
-    // @google/genai-fix: Add explicit Request, Response, and NextFunction types to the middleware to resolve type conflicts.
-    app.use((req: Request, res: Response, next: NextFunction) => {
+    app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
         if (req.path.startsWith('/api/')) {
             // Se chegou até aqui, é uma rota de API que não foi encontrada.
             return res.status(404).json({ message: `Endpoint da API não encontrado: ${req.method} ${req.path}` });

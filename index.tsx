@@ -1,3 +1,4 @@
+
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
@@ -18,16 +19,12 @@ const renderApp = () => {
   // Qualquer outra rota é considerada uma página pública.
   if (hash.startsWith('#/administrator') || hash.startsWith('#/register') || hash.startsWith('#/forgot-password') || hash === '#/initial-setup') {
     root.render(
-      <React.StrictMode>
-        <App />
-      </React.StrictMode>
+      <App />
     );
   } else {
     // Para todas as outras rotas, carregamos o site público.
     root.render(
-      <React.StrictMode>
-        <PublicSiteLoader />
-      </React.StrictMode>
+      <PublicSiteLoader />
     );
   }
 };
