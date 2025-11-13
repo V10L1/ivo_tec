@@ -11,7 +11,7 @@ declare const process: {
 import { Pool } from 'pg';
 import dotenv from 'dotenv';
 import { ROLE_PERMISSIONS, APP_MODULES } from '../constants';
-import { UserRole, TextStyles, FixedContainer } from '../types';
+import { UserRole, TextStyles, FixedContainer, BlockLayout, AnimationSettings, ThemeSettings } from '../types';
 
 dotenv.config();
 
@@ -71,7 +71,7 @@ export const initializeDatabase = async () => {
             console.log("Permissões padrão inseridas com sucesso.");
         }
 
-        // Tabela de Páginas (Nova estrutura CMS)
+        // Tabela de Páginas (Nova estrutura CMS com SEO)
         await client.query(`
             CREATE TABLE IF NOT EXISTS pages (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -80,6 +80,9 @@ export const initializeDatabase = async () => {
                 is_homepage BOOLEAN DEFAULT FALSE,
                 is_published BOOLEAN DEFAULT TRUE,
                 content JSONB,
+                meta_title VARCHAR(255),
+                meta_description TEXT,
+                social_image_url VARCHAR(2048),
                 created_at TIMESTAMptz DEFAULT NOW(),
                 updated_at TIMESTAMPTZ DEFAULT NOW()
             );
@@ -108,12 +111,20 @@ export const initializeDatabase = async () => {
         if (parseInt(pagesCheck.rows[0].count, 10) === 0) {
             const defaultTextStyles: TextStyles = { textColor: '#cbd5e1', textAlign: 'left', fontWeight: 'normal', fontStyle: 'normal', fontFamily: 'sans-serif', fontSize: 16};
             const defaultFixedContainer: Omit<FixedContainer, 'blocks'> = { enabled: false, size: 60, isCollapsed: false, collapsible: true, toggleButtonPosition: 'center' };
-            
+            const defaultResponsiveLayout: { desktop: BlockLayout; tablet: BlockLayout; mobile: BlockLayout } = {
+                desktop: { colStart: 1, colEnd: 13, rowStart: 1, rowEnd: 10, alignSelf: 'stretch', justifySelf: 'stretch' },
+                tablet: { colStart: 1, colEnd: 9, rowStart: 1, rowEnd: 10, alignSelf: 'stretch', justifySelf: 'stretch' },
+                mobile: { colStart: 1, colEnd: 5, rowStart: 1, rowEnd: 10, alignSelf: 'stretch', justifySelf: 'stretch' },
+            };
+            const defaultAnimation: AnimationSettings = { type: 'none', delay: 0, duration: 1000 };
+            const defaultTheme: ThemeSettings = { primaryColor: '#0891b2', secondaryColor: '#64748b', headingFont: 'sans-serif', bodyFont: 'sans-serif' };
+
              const initialContent = {
                 settings: {
                     brandName: "Mundo Moto",
                     backgroundColor: "#0f172a"
                 },
+                theme: defaultTheme,
                 fixedContainers: {
                     top: { ...defaultFixedContainer, size: 80, blocks: [] },
                     left: { ...defaultFixedContainer, size: 240, blocks: [] },
@@ -129,67 +140,27 @@ export const initializeDatabase = async () => {
                             {
                                 id: "block_1",
                                 type: "hero",
-                                layout: { desktop: { colStart: 2, colEnd: 12, rowStart: 2, rowEnd: 10, alignSelf: 'stretch', justifySelf: 'stretch' } },
+                                layout: { 
+                                    desktop: { colStart: 2, colEnd: 12, rowStart: 2, rowEnd: 10, alignSelf: 'stretch', justifySelf: 'stretch' },
+                                    tablet: { colStart: 1, colEnd: 9, rowStart: 2, rowEnd: 12, alignSelf: 'stretch', justifySelf: 'stretch' },
+                                    mobile: { colStart: 1, colEnd: 5, rowStart: 2, rowEnd: 15, alignSelf: 'stretch', justifySelf: 'stretch' },
+                                },
+                                animation: { ...defaultAnimation, type: 'fadeInUp' },
                                 styles: { backgroundColor: "#1e293b", backgroundOpacity: 1, textOpacity: 1, borderRadius: 'medium', zIndex: 1 },
                                 content: {
                                     title: { text: "Bem-vindo ao Mundo Moto", styles: { ...defaultTextStyles, textColor: '#ffffff', textAlign: 'center', fontWeight: 'bold', fontSize: 48 } },
                                     subtitle: { text: "Sua parada única para as melhores motos do planeta. Comece sua aventura hoje.", styles: { ...defaultTextStyles, textColor: '#ffffff', textAlign: 'center', fontSize: 18 } },
                                     ctaText: "Explorar Coleção", ctaLink: "#", ctaEnabled: true
                                 }
-                            },
-                            {
-                                id: "block_button_1",
-                                type: "button",
-                                layout: { desktop: { colStart: 6, colEnd: 8, rowStart: 11, rowEnd: 12, alignSelf: 'start', justifySelf: 'center' } },
-                                styles: { backgroundColor: "#0891b2", backgroundOpacity: 1, textOpacity: 1, borderRadius: 'medium', zIndex: 1 },
-                                content: {
-                                   text: { text: 'Nossa História', styles: {...defaultTextStyles, textAlign: 'center'}},
-                                   actionType: 'link', linkUrl: '#/sobre', actionTarget: null
-                                }
-                            },
-                        ]
-                    },
-                    {
-                        id: 'section_2',
-                        styles: { backgroundColor: '#1e293b', backgroundOpacity: 0.5 },
-                        gridSettings: { columns: 12, rowHeight: 20, gap: 16 },
-                        blocks: [
-                            {
-                                id: "block_2",
-                                type: "text",
-                                layout: { desktop: { colStart: 3, colEnd: 11, rowStart: 2, rowEnd: 8, alignSelf: 'start', justifySelf: 'stretch' } },
-                                styles: { backgroundColor: "transparent", backgroundOpacity: 1, textOpacity: 1, borderRadius: 'medium', zIndex: 1 },
-                                content: {
-                                    heading: { text: "Sobre Nossa Paixão", styles: { ...defaultTextStyles, fontWeight: 'bold', fontSize: 32 } },
-                                    body: { text: "Nós vivemos e respiramos motocicletas. Nossa missão é fornecer aos entusiastas máquinas de alta qualidade e serviço incomparável. Cada moto em nossa coleção é escolhida a dedo e inspecionada para garantir que atenda aos nossos altos padrões de desempenho e confiabilidade.", styles: {...defaultTextStyles, fontSize: 16 } }
-                                }
                             }
                         ]
                     }
                 ],
-                footerSections: [
-                    {
-                        id: 'footer_section_1',
-                        styles: { backgroundColor: 'transparent', backgroundOpacity: 1 },
-                        gridSettings: { columns: 12, rowHeight: 20, gap: 16 },
-                        blocks: [
-                            {
-                                id: "footer_block_1",
-                                type: "text",
-                                layout: { desktop: { colStart: 1, colEnd: 13, rowStart: 2, rowEnd: 3, alignSelf: 'center', justifySelf: 'center' } },
-                                styles: { backgroundColor: "transparent", backgroundOpacity: 1, textOpacity: 1, borderRadius: 'medium', zIndex: 1 },
-                                content: {
-                                    heading: { text: "", styles: defaultTextStyles },
-                                    body: { text: "© 2024 Mundo Moto. Todos os direitos reservados.", styles: { ...defaultTextStyles, textColor: '#64748b', textAlign: 'center', fontSize: 14 } }
-                                }
-                            }
-                        ]
-                    }
-                ]
+                footerSections: []
              };
              await client.query(
-                'INSERT INTO pages (title, slug, is_homepage, content) VALUES ($1, $2, $3, $4)',
-                ['Página Inicial', 'home', true, JSON.stringify(initialContent)]
+                'INSERT INTO pages (title, slug, is_homepage, content, meta_title, meta_description) VALUES ($1, $2, $3, $4, $5, $6)',
+                ['Página Inicial', 'home', true, JSON.stringify(initialContent), 'Mundo Moto - Página Inicial', 'As melhores motos do planeta estão aqui.']
              );
              console.log("Página inicial padrão criada.");
         }

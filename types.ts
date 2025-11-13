@@ -105,12 +105,22 @@ export interface BlockLayout {
   justifySelf: 'start' | 'center' | 'end' | 'stretch';
 }
 
+export type AnimationType = 'none' | 'fadeIn' | 'fadeInUp' | 'fadeInLeft' | 'fadeInRight' | 'zoomIn';
+
+export interface AnimationSettings {
+    type: AnimationType;
+    delay: number; // in ms
+    duration: number; // in ms
+}
+
 export type PageBlock = {
   id: string;
   layout: {
     desktop: BlockLayout;
-    // Futuramente: tablet: BlockLayout; mobile: BlockLayout;
+    tablet: BlockLayout;
+    mobile: BlockLayout;
   };
+  animation: AnimationSettings;
   styles?: ContainerStyles;
 } & (
   | { type: 'hero'; content: HeroBlockContent }
@@ -135,6 +145,13 @@ export interface GridSettings {
 export interface SiteSettings {
   brandName: string;
   backgroundColor: string;
+}
+
+export interface ThemeSettings {
+    primaryColor: string;
+    secondaryColor: string;
+    headingFont: string;
+    bodyFont: string;
 }
 
 export interface FixedContainer {
@@ -165,6 +182,7 @@ export interface Section {
 // Representa o objeto de conteúdo JSONB dentro de cada página
 export interface SiteData {
   settings: SiteSettings;
+  theme: ThemeSettings;
   fixedContainers: FixedContainers;
   sections: Section[];
   footerSections: Section[];
@@ -180,4 +198,8 @@ export interface Page {
   content: SiteData | null;
   created_at: string;
   updated_at: string;
+  // SEO Fields
+  metaTitle: string | null;
+  metaDescription: string | null;
+  socialImageUrl: string | null;
 }
