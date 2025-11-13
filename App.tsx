@@ -1,20 +1,17 @@
 
-
-
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Dashboard } from './components/Dashboard';
 import { Header } from './components/Header';
 import { ModuleWrapper } from './components/ModuleWrapper';
 import { APP_MODULES } from './constants';
 import { AppKey } from './types';
-import PageManager from './modules/site/PageManager'; // Import the new PageManager
+import PageManager from './modules/site/PageManager';
 import StoreManager from './modules/loja/StoreManager';
 import StockControl from './modules/estoque/StockControl';
 import MessagesChat from './modules/mensagens/MessagesChat';
 import SupportTickets from './modules/suporte/SupportTickets';
 import UserManagement from './modules/usuario/UserManagement';
-// import PublicSite from './modules/site/PublicSite';
 import Login from './modules/usuario/Login';
 import InitialSetup from './modules/usuario/InitialSetup';
 import ForgotPassword from './modules/usuario/ForgotPassword';
@@ -22,14 +19,9 @@ import Register from './modules/usuario/Register';
 import AppsManager from './modules/apps/AppsManager';
 import { RouterProvider } from './contexts/RouterContext';
 
-// FIX: Simplify lazy import. The complex `.then()` is no longer needed after fixing circular dependencies
-// and may be the cause of the bundler error.
-// @google/genai-fix: Correctly wrap the dynamic import for React.lazy to ensure the 'default' export is resolved.
-const PublicSite = React.lazy(() => import('./modules/site/PublicSite').then(module => ({ default: module.default })));
-
 // --- Module Views ---
 const ModuleViews: Record<AppKey, React.ComponentType> = {
-  SITE: PageManager, // SITE now points to the PageManager
+  SITE: PageManager,
   STORE: StoreManager,
   STOCK: StockControl,
   MESSAGES: MessagesChat,
@@ -73,7 +65,6 @@ const AppContent: React.FC = () => {
   
   const getPathFromHash = () => {
     const hash = window.location.hash.substring(1);
-    // Remove query parameters from the hash to get only the path
     const pathOnly = hash.split('?')[0];
     return pathOnly || '/';
   };
@@ -84,7 +75,6 @@ const AppContent: React.FC = () => {
 
   const navigate = (newPath: string) => {
     window.location.hash = newPath;
-    // We only set the path part, without query params, to the state
     setPath(newPath.split('?')[0] || '/');
   };
 
@@ -110,13 +100,11 @@ const AppContent: React.FC = () => {
         setNeedsSetup(null);
       }
     };
-    if (path.startsWith('/administrator') || path.startsWith('/register')) {
-        checkSetupStatus();
-    }
+    checkSetupStatus();
   }, [path]);
 
 
-  if (needsSetup === null && (path.startsWith('/administrator') || path.startsWith('/register'))) {
+  if (needsSetup === null) {
       if (setupError) {
           return (
               <div className="min-h-screen flex items-center justify-center bg-slate-900 text-red-400 text-center p-4">
@@ -142,14 +130,8 @@ const AppContent: React.FC = () => {
       content = isAuthenticated ? <AdminPanel /> : <Login />;
     }
   } else {
-    // Roteamento dinâmico para páginas públicas
-    const slug = path === '/' ? 'home' : path.substring(1);
-    // FIX: Pass navigate prop to PublicSite to break circular dependency
-    content = (
-      <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Carregando conteúdo...</div>}>
-        <PublicSite slug={slug} navigate={navigate} />
-      </Suspense>
-    );
+    // Redireciona para o login se a rota for desconhecida dentro do escopo do admin
+    content = needsSetup ? <InitialSetup /> : <Login />;
   }
 
   return (

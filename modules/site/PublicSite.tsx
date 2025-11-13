@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Page, SiteData, PageBlock, SiteSettings, HeroBlockContent, TextBlockContent, ImageBlockContent, ButtonBlockContent, MenuBlockContent, VideoBlockContent, MenuItem, GridSettings, BlockLayout, ContainerStyles, TextStyles, StyledText, FixedContainer, FixedContainerPosition, Section, AnimationSettings, AnimationType, ThemeSettings } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
@@ -82,7 +81,7 @@ const BlockRenderer: React.FC<{ block: PageBlock; theme: ThemeSettings; viewport
 const InteractiveBlock: React.FC<{ block: PageBlock; theme: ThemeSettings; viewport: Viewport; isSelected: boolean; onMouseDown: (e: React.MouseEvent) => void; onResizeStart: (e: React.MouseEvent, direction: string) => void; onInlineUpdate: (field: string, subfield: 'text' | keyof TextStyles, value: any) => void; onInlineSelect: () => void; }> = ({ block, theme, viewport, isSelected, onMouseDown, onResizeStart, onInlineUpdate, onInlineSelect }) => { const layout = block.layout[viewport]; const borderRadiusClass = getBorderRadiusClass(block.styles?.borderRadius); const blockStyle = { gridColumn: `${layout.colStart} / ${layout.colEnd}`, gridRow: `${layout.rowStart} / ${layout.rowEnd}`, alignSelf: layout.alignSelf, justifySelf: layout.justifySelf, zIndex: block.styles?.zIndex || 'auto', }; const resizeHandles = ['ne', 'se', 'sw', 'nw', 'n', 'e', 's', 'w']; return ( <div style={blockStyle} className={`relative group transition-shadow duration-200 ${isSelected ? 'shadow-2xl shadow-cyan-500/30' : ''}`} onMouseDown={onMouseDown} > <div className={`absolute inset-0 ring-2 pointer-events-none transition-all duration-200 ${borderRadiusClass} ${isSelected ? 'ring-cyan-500' : 'ring-transparent group-hover:ring-cyan-500/50'}`}></div> <div className={`w-full h-full overflow-hidden ${borderRadiusClass}`}> <BlockRenderer block={block} theme={theme} viewport={viewport} isEditing={true} onInlineUpdate={onInlineUpdate} onInlineSelect={onInlineSelect} /> </div> {isSelected && resizeHandles.map(dir => ( <div key={dir} className={`absolute w-3 h-3 bg-cyan-500 border-2 border-slate-900 rounded-full resize-handle-${dir} cursor-${dir}-resize z-50`} onMouseDown={(e) => { e.stopPropagation(); onResizeStart(e, dir); }} ></div> ))} </div> ); };
 
 // --- COMPONENTE PRINCIPAL: PublicSite COM EDITOR INTEGRADO ---
-const PublicSite: React.FC<{ slug: string; navigate: (path: string) => void; }> = ({ slug, navigate }) => {
+const PublicSite: React.FC<{ slug: string; }> = ({ slug }) => {
     const { isAuthenticated, permissions, token, isLoading } = useAuth();
     const [pageData, setPageData] = useState<Page | null>(null);
     const [savedPageData, setSavedPageData] = useState<Page | null>(null);
@@ -394,7 +393,7 @@ const PublicSite: React.FC<{ slug: string; navigate: (path: string) => void; }> 
             <div className="fixed top-0 left-0 right-0 h-16 bg-slate-900/80 backdrop-blur-sm border-b border-slate-700 z-[1001] flex items-center justify-between px-4"
                  style={{ paddingLeft: isPanelOpen ? '336px' : '16px', transition: 'padding-left 0.3s ease-in-out' }}>
                 <div className="flex items-center gap-4">
-                    <button onClick={() => navigate('/administrator/SITE')} className="flex items-center gap-2 text-slate-300 hover:text-white"><ArrowLeftIcon className="w-5 h-5" /> Sair</button>
+                    <button onClick={() => { window.location.hash = '/administrator/SITE' }} className="flex items-center gap-2 text-slate-300 hover:text-white"><ArrowLeftIcon className="w-5 h-5" /> Sair</button>
                     <span className="text-slate-500">|</span>
                     <h2 className="text-lg font-bold text-white truncate">{pageData.title}</h2>
                     <button onClick={() => setIsSeoModalOpen(true)} className="flex items-center gap-2 text-sm text-slate-300 hover:text-white"><SeoIcon className="w-4 h-4"/> SEO</button>

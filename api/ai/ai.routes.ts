@@ -21,7 +21,7 @@ const getAiClient = () => {
 // Endpoint para geração de texto
 // @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts with global types.
 // FIX: Add explicit types to express route handler to resolve type errors.
-router.post('/generate/text', async (req: express.Request, res: express.Response) => {
+router.post('/generate/text', async (req: Request, res: Response) => {
     const { prompt } = req.body;
 
     if (!prompt) {
@@ -45,7 +45,7 @@ router.post('/generate/text', async (req: express.Request, res: express.Response
 // Endpoint para geração de imagem
 // @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts with global types.
 // FIX: Add explicit types to express route handler to resolve type errors.
-router.post('/generate/image', async (req: express.Request, res: express.Response) => {
+router.post('/generate/image', async (req: Request, res: Response) => {
     const { prompt } = req.body;
 
     if (!prompt) {
