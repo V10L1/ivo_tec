@@ -1,7 +1,7 @@
 // api/ai/ai.routes.ts
+// FIX: Separate express value and type imports to resolve type conflicts.
 import express from 'express';
-// FIX: Changed 'import type' to a direct import to resolve type inconsistencies with Express.
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { GoogleGenAI, Type } from '@google/genai';
 import { verifyToken, checkModulePermission } from '../../core/auth.middleware';
 import { pool } from '../../core/db';
@@ -190,9 +190,10 @@ router.post('/generate/page', async (req: Request, res: Response) => {
         
         const slug = title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 
+        // FIX: Converte explicitamente o conteúdo para uma string JSON antes de inserir.
         const result = await pool.query(
             'INSERT INTO pages (title, slug, content, meta_title, meta_description) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-            [title, slug, finalContent, title, prompt.substring(0, 160)]
+            [title, slug, JSON.stringify(finalContent), title, prompt.substring(0, 160)]
         );
 
         res.status(201).json(result.rows[0]);

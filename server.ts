@@ -1,5 +1,6 @@
 
 
+
 // HACK: Declare Node.js globals to resolve TypeScript errors when @types/node is not available.
 declare const process: {
     env: {
@@ -11,8 +12,9 @@ declare const process: {
 declare const __dirname: string;
 
 // server.ts - O Orquestrador Principal
-// FIX: Changed 'import type' to a direct import to resolve type inconsistencies with Express.
-import express, { Request, Response, NextFunction } from 'express';
+// FIX: Separate express value and type imports to resolve type conflicts.
+import express from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';

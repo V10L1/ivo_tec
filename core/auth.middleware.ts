@@ -7,8 +7,8 @@ declare const process: {
 };
 
 // core/auth.middleware.ts - Middlewares de Autênticação e Autorização
-// FIX: Changed 'import type' to a direct import to resolve type inconsistencies with Express.
-import { Request, Response, NextFunction } from 'express';
+// FIX: Use `import type` to prevent type conflicts with Express Request/Response.
+import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { UserRole, AppKey } from '../types';
 import { pool } from './db';
