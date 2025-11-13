@@ -150,7 +150,8 @@ const AppContent: React.FC = () => {
   } else {
     // Roteamento dinâmico para páginas públicas
     const slug = path === '/' ? 'home' : path.substring(1);
-    content = <PublicSite slug={slug} />;
+    // FIX: Pass navigate prop to PublicSite to break circular dependency
+    content = <PublicSite slug={slug} navigate={navigate} />;
   }
 
   return (

@@ -59,7 +59,9 @@ Conteúdo do `.env`:
 DATABASE_URL="postgresql://ivotec:ivo526526@localhost:5432/ivotec_db"
 PORT=8069
 JWT_SECRET="segredo-de-desenvolvimento-pode-ser-simples"
+API_KEY="SUA_CHAVE_DE_API_DO_GOOGLE_AI_AQUI"
 ```
+**Nota:** Para usar os recursos de IA, uma chave de API válida do Google AI Studio é necessária.
 
 **4. Instale Dependências e Rode a Aplicação:**
 Abra um terminal, instale as dependências e inicie o servidor unificado.
@@ -134,6 +136,7 @@ Conteúdo do `.env`:
 DATABASE_URL="postgresql://ivotec:ivo526526@localhost:5432/ivotec_db"
 PORT=8069
 JWT_SECRET="gere-um-segredo-muito-longo-e-aleatorio-para-producao"
+API_KEY="SUA_CHAVE_DE_API_DO_GOOGLE_AI_AQUI_PARA_PRODUCAO"
 ```
 
 **3. Instale as Dependências:**

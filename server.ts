@@ -12,7 +12,7 @@ declare const __dirname: string;
 
 // FIX: Use `import express from 'express'` to allow using `express.Request` and `express.Response` to resolve type conflicts.
 // @google/genai-fix: Import Request and Response types directly from express to resolve type conflicts.
-import express from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -34,7 +34,7 @@ app.use(express.json());
 // FIX: Use explicit `express.Request` and `express.Response` types for route handlers.
 // @google/genai-fix: Use imported Request and Response types.
 // @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts.
-app.get('/api/health', async (req: express.Request, res: express.Response) => {
+app.get('/api/health', async (req: Request, res: Response) => {
     try {
         const client = await pool.connect();
         await client.query('SELECT 1');
@@ -90,7 +90,7 @@ const serveFrontend = () => {
     // FIX: Use explicit `express.Request` and `express.Response` types for route handlers.
     // @google/genai-fix: Use imported Request and Response types.
     // @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts.
-    app.get('*', (req: express.Request, res: express.Response) => {
+    app.get('*', (req: Request, res: Response) => {
         if (req.path.startsWith('/api/')) {
             return res.status(404).json({ message: 'Endpoint da API não encontrado.' });
         }
