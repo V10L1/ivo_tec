@@ -77,14 +77,21 @@ const AdminPanel = () => {
 const AppContent: React.FC = () => {
   const { isAuthenticated } = useAuth();
   
-  const getPathFromHash = () => window.location.hash.substring(1) || '/';
+  const getPathFromHash = () => {
+    const hash = window.location.hash.substring(1);
+    // Remove query parameters from the hash to get only the path
+    const pathOnly = hash.split('?')[0];
+    return pathOnly || '/';
+  };
+
   const [path, setPath] = useState(getPathFromHash());
   const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
   const [setupError, setSetupError] = useState<string | null>(null);
 
   const navigate = (newPath: string) => {
     window.location.hash = newPath;
-    setPath(newPath);
+    // We only set the path part, without query params, to the state
+    setPath(newPath.split('?')[0] || '/');
   };
 
   useEffect(() => {

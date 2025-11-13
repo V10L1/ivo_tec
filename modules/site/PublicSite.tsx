@@ -1,8 +1,11 @@
+
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Page, SiteData, PageBlock, SiteSettings, HeroBlockContent, TextBlockContent, ImageBlockContent, ButtonBlockContent, MenuBlockContent, VideoBlockContent, MenuItem, GridSettings, BlockLayout, ContainerStyles, TextStyles, StyledText, FixedContainer, FixedContainerPosition, Section } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRouter } from '../../App';
-import { PlusCircleIcon, SettingsIcon, Trash2Icon, MotorcycleIcon, TypeIcon, ImageIcon, CodeIcon, ChevronLeftIcon, SaveIcon, ArrowLeftIcon, LayoutIcon, MenuIcon, PointerIcon, AlignStartVerticalIcon, AlignCenterVerticalIcon, AlignEndVerticalIcon, AlignStartHorizontalIcon, AlignCenterHorizontalIcon, AlignEndHorizontalIcon, GridIcon, VideoIcon, DividerIcon, SparklesIcon, BringToFrontIcon, SendToBackIcon, BoldIcon, ItalicIcon, AlignLeftIcon, AlignCenterIcon, AlignRightIcon, AlignJustifyIcon, SquareIcon, RoundedSquareIcon, CircleIcon, PanelTopIcon, PanelLeftIcon, PanelRightIcon, PanelBottomIcon, EyeIcon, EyeOffIcon, PanelOpenIcon, PanelCloseIcon, AlignHorizontalStartIcon, AlignHorizontalCenterIcon, AlignHorizontalEndIcon, XCircleIcon, ChevronsUpIcon, ChevronsDownIcon, SectionIcon } from '../../components/icons/Icons';
+// FIX: Add ChevronRightIcon to imports
+import { PlusCircleIcon, SettingsIcon, Trash2Icon, MotorcycleIcon, TypeIcon, ImageIcon, CodeIcon, ChevronLeftIcon, ChevronRightIcon, SaveIcon, ArrowLeftIcon, LayoutIcon, MenuIcon, PointerIcon, AlignStartVerticalIcon, AlignCenterVerticalIcon, AlignEndVerticalIcon, AlignStartHorizontalIcon, AlignCenterHorizontalIcon, AlignEndHorizontalIcon, GridIcon, VideoIcon, DividerIcon, SparklesIcon, BringToFrontIcon, SendToBackIcon, BoldIcon, ItalicIcon, AlignLeftIcon, AlignCenterIcon, AlignRightIcon, AlignJustifyIcon, SquareIcon, RoundedSquareIcon, CircleIcon, PanelTopIcon, PanelLeftIcon, PanelRightIcon, PanelBottomIcon, EyeIcon, EyeOffIcon, PanelOpenIcon, PanelCloseIcon, AlignHorizontalStartIcon, AlignHorizontalCenterIcon, AlignHorizontalEndIcon, XCircleIcon, ChevronsUpIcon, ChevronsDownIcon, SectionIcon } from '../../components/icons/Icons';
 
 // --- UTILITIES, HELPERS, AND DEFAULTS ---
 
@@ -23,7 +26,7 @@ const createNewBlock = (type: PageBlock['type']): PageBlock => { const id = gene
 const blockComponentList: { type: PageBlock['type']; label: string; Icon: React.FC<any> }[] = [ { type: 'hero', label: 'Herói', Icon: MotorcycleIcon }, { type: 'text', label: 'Texto', Icon: TypeIcon }, { type: 'image', label: 'Imagem', Icon: ImageIcon }, { type: 'button', label: 'Botão', Icon: CodeIcon }, { type: 'menu', label: 'Menu', Icon: MenuIcon }, { type: 'video', label: 'Vídeo', Icon: VideoIcon }, { type: 'divider', label: 'Divisor', Icon: DividerIcon }, { type: 'spacer', label: 'Espaçador', Icon: SparklesIcon }, ];
 const sectionComponentList = [ { type: 'section', label: 'Seção Vazia', Icon: SectionIcon, data: createNewSection } ];
 type EditorContext = 'main' | 'footer' | FixedContainerPosition;
-type Selection = { type: 'section'; id: string; context: EditorContext } | { type: 'block'; id: string; sectionId: string; context: EditorContext } | null;
+type Selection = { type: 'page' } | { type: 'section'; id: string; context: EditorContext } | { type: 'block'; id: string; sectionId: string; context: EditorContext } | null;
 
 // --- EDITOR SUB-COMPONENTS (INJECTED FOR INLINE EDITING) ---
 const InputField: React.FC<{ label: string; value: string | number; onChange: (value: string) => void; type?: string; placeholder?: string; min?: number; max?: number; step?: number; }> = ({ label, value, onChange, type = "text", placeholder, min, max, step }) => ( <div> <label className="block text-sm font-medium text-slate-400 mb-1">{label}</label> <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} type={type} min={min} max={max} step={step} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-sm" /> </div> );
@@ -35,7 +38,6 @@ const RichTextToolbar: React.FC<{ styles: TextStyles, onStyleChange: (field: key
 const RichTextInputWithToolbar: React.FC<{ label: string; value: StyledText; onChange: (value: StyledText) => void; isTextarea?: boolean; }> = ({ label, value, onChange, isTextarea = false }) => { const handleStyleChange = (field: keyof TextStyles, styleValue: any) => { onChange({ ...value, styles: { ...(value.styles || defaultTextStyles), [field]: styleValue } }); }; const handleTextChange = (text: string) => { onChange({ ...value, text }); }; return ( <div className="space-y-2"> <label className="block text-sm font-medium text-slate-400">{label}</label> <RichTextToolbar styles={value.styles || defaultTextStyles} onStyleChange={handleStyleChange} /> {isTextarea ? ( <textarea value={value.text} onChange={e => handleTextChange(e.target.value)} rows={5} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-sm" /> ) : ( <input value={value.text} onChange={e => handleTextChange(e.target.value)} type="text" className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-sm" /> )} </div> ); };
 
 // --- RENDERIZADORES DE BLOCO E PÁGINA (Público e Editor) ---
-// FIX: Changed `tag` prop type from `keyof JSX.IntrinsicElements` to `React.ElementType` to resolve JSX namespace error.
 const EditableText: React.FC<{tag: React.ElementType, html: string, isEditing: boolean, onChange: (newHtml: string) => void, className?: string, style?: React.CSSProperties}> = ({ tag, html, isEditing, onChange, ...props }) => { const ref = useRef<HTMLElement>(null); const onBlur = () => { if (ref.current) { onChange(ref.current.innerHTML); } }; const Tag = tag; return <Tag ref={ref} onBlur={onBlur} contentEditable={isEditing} suppressContentEditableWarning={true} dangerouslySetInnerHTML={{ __html: html }} {...props} />; };
 const BlockRenderer: React.FC<{ block: PageBlock; isEditing?: boolean; onToggleContainer?: (target: FixedContainerPosition) => void; onInlineUpdate: (field: string, subfield: keyof TextStyles | 'text', value: any) => void; }> = ({ block, isEditing = false, onToggleContainer = () => {}, onInlineUpdate }) => {
     const commonClasses = "w-full h-full flex flex-col p-4";
@@ -80,9 +82,8 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
     // --- Editor State ---
     const [isEditMode, setIsEditMode] = useState(false);
     const [isPanelOpen, setIsPanelOpen] = useState(true);
-    const [isToolbarCollapsed, setIsToolbarCollapsed] = useState(false);
     const [activeTab, setActiveTab] = useState<'components' | 'inspector'>('components');
-    const [selection, setSelection] = useState<Selection>(null);
+    const [selection, setSelection] = useState<Selection>({ type: 'page' });
     const [interactionState, setInteractionState] = useState<{ type: 'move' | 'resize' | 'new_block' | 'new_section'; item: PageBlock | Section; initialMouse: { x: number; y: number }; initialLayout?: BlockLayout; resizeDirection?: string; targetContext: EditorContext; targetSectionId?: string; } | null>(null);
     const canvasRefs = { main: useRef<HTMLDivElement>(null), footer: useRef<HTMLDivElement>(null), };
 
@@ -94,7 +95,11 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
         const fetchContent = async () => {
             setStatus('loading');
             try {
-                const endpoint = canEdit ? (slug === 'home' ? '/api/site/pages/admin/home' : `/api/site/pages/admin/slug/${slug}`) : (slug === 'home' ? '/api/site/pages/public/home' : `/api/site/pages/public/slug/${slug}`);
+                // Ensure slug is not carrying query params
+                const cleanSlug = slug.split('?')[0];
+                const finalSlug = cleanSlug === '/' ? 'home' : cleanSlug;
+
+                const endpoint = canEdit ? (finalSlug === 'home' ? '/api/site/pages/admin/home' : `/api/site/pages/admin/slug/${finalSlug}`) : (finalSlug === 'home' ? '/api/site/pages/public/home' : `/api/site/pages/public/slug/${finalSlug}`);
                 const fetchOptions: RequestInit = canEdit ? { headers: { 'Authorization': `Bearer ${token}` } } : {};
                 
                 const response = await fetch(endpoint, fetchOptions);
@@ -137,11 +142,11 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
     
     // Ativa o modo de edição se o parâmetro de URL estiver presente
     useEffect(() => {
-        const params = new URLSearchParams(window.location.search);
+        const params = new URLSearchParams(window.location.hash.split('?')[1]);
         if (params.get('edit') === 'true' && canEdit) {
             setIsEditMode(true);
         }
-    }, [canEdit]);
+    }, [canEdit, slug]);
 
 
     // --- Editor Logic Handlers ---
@@ -179,6 +184,13 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
     
     const handleToggleContainer = (target: FixedContainerPosition) => { setCollapsedStates(prev => ({ ...prev, [target]: !prev[target] })); };
 
+    const handleSelect = (newSelection: Selection) => {
+        setSelection(newSelection);
+        if (newSelection) {
+            setActiveTab('inspector');
+        }
+    };
+
     // --- Drag, Drop, and Resize (simplified for sections) ---
     // This logic would need to be significantly expanded for full drag-and-drop between sections, reordering, etc.
     // The current implementation focuses on adding new items.
@@ -189,25 +201,87 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
     if (status === 'error' || !pageData || !pageData.content) return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-red-400"><h1>Erro ao carregar o conteúdo da página.</h1></div>;
 
     const { settings, fixedContainers, sections, footerSections } = pageData.content;
-    const mainPadding = {
+    const finalPadding = {
         paddingTop: fixedContainers.top.enabled && !collapsedStates.top ? `${fixedContainers.top.size}px` : '0px',
         paddingBottom: fixedContainers.bottom.enabled && !collapsedStates.bottom ? `${fixedContainers.bottom.size}px` : '0px',
-        paddingLeft: fixedContainers.left.enabled && !collapsedStates.left ? `${fixedContainers.left.size}px` : '0px',
-        paddingRight: fixedContainers.right.enabled && !collapsedStates.right ? `${fixedContainers.right.size}px` : '0px',
+        // FIX: Operator '+' cannot be applied to types 'string | number' and 'number'. Changed to calculate total padding as a number first.
+        paddingLeft: `${(isEditMode && isPanelOpen ? 320 : 0) + (fixedContainers.left.enabled && !collapsedStates.left ? fixedContainers.left.size : 0)}px`,
+        paddingRight: (fixedContainers.right.enabled && !collapsedStates.right ? `${fixedContainers.right.size}px` : '0px'),
+        transition: 'padding 0.3s ease-in-out',
     };
 
-    return (
-        <div className="min-h-screen transition-colors duration-300" style={{ backgroundColor: settings.backgroundColor, ...mainPadding }}>
-            
-            {canEdit && isEditMode && (
-                <>
-                  {/* Editor UI - To be re-implemented based on section logic */}
-                </>
-            )}
+    const renderEditorUI = () => (
+        <>
+            {/* Top Toolbar */}
+            <div className="fixed top-0 left-0 right-0 h-16 bg-slate-900/80 backdrop-blur-sm border-b border-slate-700 z-[1001] flex items-center justify-between px-4"
+                 style={{ paddingLeft: isPanelOpen ? '336px' : '16px', transition: 'padding-left 0.3s ease-in-out' }}>
+                <div className="flex items-center gap-4">
+                    <button onClick={() => navigate('/administrator/SITE')} className="flex items-center gap-2 text-slate-300 hover:text-white"><ArrowLeftIcon className="w-5 h-5" /> Sair</button>
+                    <span className="text-slate-500">|</span>
+                    <h2 className="text-lg font-bold text-white truncate">{pageData.title}</h2>
+                </div>
+                <div className="flex items-center gap-3">
+                    <span className={`text-sm transition-opacity duration-300 ${hasUnsavedChanges ? 'text-yellow-400 opacity-100' : 'text-slate-500 opacity-0'}`}>Alterações não salvas</span>
+                    <button onClick={() => setIsEditMode(false)} className="bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold py-2 px-4 rounded-lg flex items-center gap-2"><EyeIcon className="w-5 h-5" /> Visualizar</button>
+                    <button onClick={handleSaveChanges} disabled={!hasUnsavedChanges || status === 'saving'} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 disabled:bg-slate-600 disabled:cursor-not-allowed">
+                        <SaveIcon className="w-5 h-5" />
+                        {status === 'saving' ? 'Salvando...' : 'Salvar'}
+                    </button>
+                </div>
+            </div>
 
-            <main ref={canvasRefs.main} className="relative mx-auto max-w-screen-2xl">
+            {/* Side Panel */}
+            <div className={`fixed top-0 left-0 h-full bg-slate-900 border-r border-slate-700 z-[1000] w-80 transition-transform duration-300 ease-in-out ${isPanelOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                <div className="flex flex-col h-full">
+                    <div className="flex-shrink-0 p-4 border-b border-slate-700">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-xl font-bold">Editor</h3>
+                            <button onClick={() => setIsPanelOpen(false)} className="p-1 text-slate-400 hover:text-white"><ChevronLeftIcon className="w-5 h-5"/></button>
+                        </div>
+                         <div className="flex mt-4 bg-slate-800 p-1 rounded-md">
+                            <button onClick={() => setActiveTab('components')} className={`flex-1 py-1 text-sm rounded ${activeTab === 'components' ? 'bg-cyan-600 text-white' : 'text-slate-300'}`}>Componentes</button>
+                            <button onClick={() => setActiveTab('inspector')} className={`flex-1 py-1 text-sm rounded ${activeTab === 'inspector' ? 'bg-cyan-600 text-white' : 'text-slate-300'}`}>Inspector</button>
+                        </div>
+                    </div>
+                    <div className="flex-grow overflow-y-auto p-4">
+                        {activeTab === 'components' && (
+                            <div className="space-y-4">
+                                <div>
+                                    <h4 className="font-bold mb-2">Seções</h4>
+                                    {sectionComponentList.map(comp => <div key={comp.type} className="p-2 bg-slate-800 rounded flex items-center gap-2 cursor-grab"><comp.Icon className="w-5 h-5 text-cyan-400"/><span>{comp.label}</span></div>)}
+                                </div>
+                                <div>
+                                    <h4 className="font-bold mb-2">Blocos</h4>
+                                    <div className="grid grid-cols-2 gap-2">
+                                    {blockComponentList.map(comp => <div key={comp.type} className="p-2 bg-slate-800 rounded flex items-center gap-2 cursor-grab"><comp.Icon className="w-5 h-5 text-cyan-400"/><span>{comp.label}</span></div>)}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        {activeTab === 'inspector' && (
+                           <div className="space-y-4 text-sm">
+                               {selection?.type === 'page' && <p>Configurações da Página</p>}
+                               {selection?.type === 'section' && <p>Configurações da Seção: {selection.id}</p>}
+                               {selection?.type === 'block' && <p>Configurações do Bloco: {selection.id}</p>}
+                               {!selection && <p className="text-slate-500 text-center mt-8">Selecione um elemento na página para editar suas propriedades.</p>}
+                           </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+            {!isPanelOpen && <button onClick={() => setIsPanelOpen(true)} className="fixed top-1/2 left-0 -translate-y-1/2 bg-slate-800/80 p-2 rounded-r-lg z-50 hover:bg-cyan-600"><ChevronRightIcon className="w-5 h-5"/></button>}
+        </>
+    );
+
+    return (
+        <div className="min-h-screen transition-colors duration-300" style={{ backgroundColor: settings.backgroundColor, ...finalPadding }}>
+            
+            {canEdit && isEditMode && renderEditorUI()}
+
+            <main ref={canvasRefs.main} className="relative mx-auto max-w-screen-2xl" onClick={() => handleSelect({ type: 'page' })}>
                 {(sections || []).map(section => (
-                    <div key={section.id} style={{ backgroundColor: hexToRgba(section.styles.backgroundColor || '#000', section.styles.backgroundOpacity) }} className="relative">
+                    <div key={section.id} style={{ backgroundColor: hexToRgba(section.styles.backgroundColor || '#000', section.styles.backgroundOpacity) }} className={`relative group ${isEditMode ? 'p-4 border-2 border-dashed border-transparent hover:border-cyan-500/50' : ''}`}
+                         onClick={(e) => { e.stopPropagation(); if(isEditMode) handleSelect({ type: 'section', id: section.id, context: 'main' }); }}>
                         <div className="relative" style={{ display: 'grid', gridTemplateColumns: `repeat(${section.gridSettings.columns}, 1fr)`, gridAutoRows: `${section.gridSettings.rowHeight}px`, gap: `${section.gridSettings.gap}px` }}>
                            {section.blocks.map(block => {
                                 const isSelected = selection?.type === 'block' && selection.id === block.id;
@@ -219,7 +293,7 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
                                     zIndex: block.styles?.zIndex || 'auto',
                                 };
                                 if (isEditMode) {
-                                    return <div key={block.id} style={blockWrapperStyle}><InteractiveBlock block={block} isSelected={isSelected} onMouseDown={(e) => {}} onResizeStart={(e, dir) => {}} onInlineUpdate={(...args) => handleInlineUpdate(block.id, ...args)} /></div>;
+                                    return <div key={block.id} style={blockWrapperStyle} onClick={(e) => { e.stopPropagation(); handleSelect({ type: 'block', id: block.id, sectionId: section.id, context: 'main' }); }}><InteractiveBlock block={block} isSelected={isSelected} onMouseDown={(e) => {}} onResizeStart={(e, dir) => {}} onInlineUpdate={(...args) => handleInlineUpdate(block.id, ...args)} /></div>;
                                 }
                                 return <div key={block.id} style={blockWrapperStyle}><BlockRenderer block={block} onToggleContainer={handleToggleContainer} onInlineUpdate={() => {}} /></div>;
                             })}
@@ -230,7 +304,8 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
             
             <footer ref={canvasRefs.footer} className="relative mx-auto max-w-screen-2xl mt-8 pt-8 border-t border-slate-800">
                  {(footerSections || []).map(section => (
-                    <div key={section.id} style={{ backgroundColor: hexToRgba(section.styles.backgroundColor || '#000', section.styles.backgroundOpacity) }} className="relative">
+                    <div key={section.id} style={{ backgroundColor: hexToRgba(section.styles.backgroundColor || '#000', section.styles.backgroundOpacity) }} className={`relative group ${isEditMode ? 'p-4 border-2 border-dashed border-transparent hover:border-cyan-500/50' : ''}`}
+                         onClick={(e) => { e.stopPropagation(); if(isEditMode) handleSelect({ type: 'section', id: section.id, context: 'footer' }); }}>
                         <div className="relative" style={{ display: 'grid', gridTemplateColumns: `repeat(${section.gridSettings.columns}, 1fr)`, gridAutoRows: `${section.gridSettings.rowHeight}px`, gap: `${section.gridSettings.gap}px` }}>
                            {section.blocks.map(block => {
                                 const isSelected = selection?.type === 'block' && selection.id === block.id;
@@ -242,7 +317,7 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
                                     zIndex: block.styles?.zIndex || 'auto',
                                 };
                                 if (isEditMode) {
-                                    return <div key={block.id} style={blockWrapperStyle}><InteractiveBlock block={block} isSelected={isSelected} onMouseDown={(e) => {}} onResizeStart={(e, dir) => {}} onInlineUpdate={(...args) => handleInlineUpdate(block.id, ...args)} /></div>;
+                                    return <div key={block.id} style={blockWrapperStyle} onClick={(e) => { e.stopPropagation(); handleSelect({ type: 'block', id: block.id, sectionId: section.id, context: 'footer' }); }}><InteractiveBlock block={block} isSelected={isSelected} onMouseDown={(e) => {}} onResizeStart={(e, dir) => {}} onInlineUpdate={(...args) => handleInlineUpdate(block.id, ...args)} /></div>;
                                 }
                                 return <div key={block.id} style={blockWrapperStyle}><BlockRenderer block={block} onToggleContainer={handleToggleContainer} onInlineUpdate={() => {}} /></div>;
                             })}
