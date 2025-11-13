@@ -1,7 +1,8 @@
 // api/ai/ai.routes.ts
 // FIX: Use explicit `Request` and `Response` types from `express` to resolve type conflicts with global DOM types.
 // Use 'express.Request' and 'express.Response' to prevent conflicts.
-import express, { Request, Response } from 'express';
+// FIX: Changed import to use default express and qualified types to avoid conflict with global DOM types.
+import express from 'express';
 import { GoogleGenAI } from '@google/genai';
 import { verifyToken, checkModulePermission } from '../../core/auth.middleware';
 
@@ -20,7 +21,8 @@ const getAiClient = () => {
 };
 
 // Endpoint para geração de texto
-router.post('/generate/text', async (req: Request, res: Response) => {
+// FIX: Used express.Request and express.Response to specify Express types and resolve property access errors.
+router.post('/generate/text', async (req: express.Request, res: express.Response) => {
     const { prompt } = req.body;
 
     if (!prompt) {
@@ -42,7 +44,8 @@ router.post('/generate/text', async (req: Request, res: Response) => {
 });
 
 // Endpoint para geração de imagem
-router.post('/generate/image', async (req: Request, res: Response) => {
+// FIX: Used express.Request and express.Response to specify Express types and resolve property access errors.
+router.post('/generate/image', async (req: express.Request, res: express.Response) => {
     const { prompt } = req.body;
 
     if (!prompt) {
