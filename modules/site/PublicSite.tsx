@@ -84,7 +84,13 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
     const [isPanelOpen, setIsPanelOpen] = useState(true);
     const [activeTab, setActiveTab] = useState<'components' | 'inspector'>('components');
     const [selection, setSelection] = useState<Selection>({ type: 'page' });
-    const [interactionState, setInteractionState] = useState<{ type: 'move' | 'resize' | 'new_block' | 'new_section'; item: PageBlock | Section; initialMouse: { x: number; y: number }; initialLayout?: BlockLayout; resizeDirection?: string; } | null>(null);
+
+    // --- Drag and Drop State ---
+    const [interactionState, setInteractionState] = useState<{ type: 'new_block' | 'new_section'; item: PageBlock | Section; } | null>(null);
+    const [ghostElement, setGhostElement] = useState<React.ReactNode | null>(null);
+    const [ghostPosition, setGhostPosition] = useState({ x: 0, y: 0 });
+    const [dropTarget, setDropTarget] = useState<{ sectionId: string; context: EditorContext; insertIndex?: number } | null>(null);
+
     const canvasRefs = { main: useRef<HTMLDivElement>(null), footer: useRef<HTMLDivElement>(null), };
 
     const canEdit = isAuthenticated && (permissions || []).includes('SITE');
@@ -192,93 +198,106 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
     };
     
     // --- DRAG AND DROP LOGIC ---
-
-    const handleComponentMouseDown = (e: React.MouseEvent, type: 'block' | 'section', itemData: PageBlock['type'] | (() => Section)) => {
+    const handleComponentMouseDown = (e: React.MouseEvent, type: 'block' | 'section', itemData: PageBlock['type'] | (() => Section), label: string, Icon: React.FC<any>) => {
         e.preventDefault();
         e.stopPropagation();
-
-        let item: PageBlock | Section;
-        if (type === 'block') {
-            item = createNewBlock(itemData as PageBlock['type']);
-            setInteractionState({
-                type: 'new_block',
-                item,
-                initialMouse: { x: e.clientX, y: e.clientY },
-            });
-        } else {
-            item = (itemData as () => Section)();
-            setInteractionState({
-                type: 'new_section',
-                item,
-                initialMouse: { x: e.clientX, y: e.clientY },
-            });
-        }
+        const item = type === 'block' ? createNewBlock(itemData as PageBlock['type']) : (itemData as () => Section)();
+        setInteractionState({ type: type === 'block' ? 'new_block' : 'new_section', item });
+        setGhostElement(
+            <div className="p-2 bg-slate-700 rounded flex items-center gap-2 pointer-events-none text-white shadow-lg">
+                <Icon className="w-5 h-5 text-cyan-400" />
+                <span>{label}</span>
+            </div>
+        );
+        setGhostPosition({ x: e.clientX, y: e.clientY });
     };
 
-    const handleMouseUp = useCallback(() => {
-        if (!interactionState || !pageData) {
-            setInteractionState(null);
-            return;
-        }
-
-        const dropX = interactionState.initialMouse.x;
-        const dropY = interactionState.initialMouse.y;
-
-        let targetSectionId: string | null = null;
-        let targetContext: EditorContext | null = null;
-        
-        // Find which section the item was dropped on
-        const checkSectionDrop = (ref: React.RefObject<HTMLDivElement>, context: EditorContext, sections: Section[]) => {
-            const container = ref.current;
-            if (container) {
-                const rect = container.getBoundingClientRect();
-                if (dropY >= rect.top && dropY <= rect.bottom) {
-                    // Find the specific section element
-                    for (const section of sections) {
-                        const sectionEl = document.getElementById(section.id);
-                        if(sectionEl) {
-                           const sectionRect = sectionEl.getBoundingClientRect();
-                           if(dropY >= sectionRect.top && dropY <= sectionRect.bottom) {
-                               targetSectionId = section.id;
-                               targetContext = context;
-                               return;
-                           }
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!interactionState) return;
+            setGhostPosition({ x: e.clientX, y: e.clientY });
+            const allSections = [...(pageData?.content?.sections.map(s => ({ ...s, context: 'main' as EditorContext })) || []), ...(pageData?.content?.footerSections.map(s => ({ ...s, context: 'footer' as EditorContext })) || [])];
+            let currentTarget: { sectionId: string; context: EditorContext; insertIndex?: number } | null = null;
+            if (interactionState.type === 'new_section') {
+                const allSectionElements = Array.from(document.querySelectorAll<HTMLElement>('[data-section-id]'));
+                let insertIndex = -1;
+                let smallestDistance = Infinity;
+                let lastSectionBottom = -Infinity;
+                let closestSectionId: string | null = null;
+                let closestContext: EditorContext | null = null;
+                allSectionElements.forEach((el, index) => {
+                    const rect = el.getBoundingClientRect();
+                    const midY = rect.top + rect.height / 2;
+                    const distance = Math.abs(e.clientY - midY);
+                    if (distance < smallestDistance) {
+                        smallestDistance = distance;
+                        insertIndex = e.clientY < midY ? index : index + 1;
+                        closestSectionId = el.dataset.sectionId || null;
+                        closestContext = el.dataset.context as EditorContext;
+                    }
+                    lastSectionBottom = Math.max(lastSectionBottom, rect.bottom);
+                });
+                if (e.clientY > lastSectionBottom && allSectionElements.length > 0) {
+                     insertIndex = allSectionElements.length;
+                     const lastEl = allSectionElements[allSectionElements.length - 1];
+                     closestSectionId = lastEl.dataset.sectionId || null;
+                     closestContext = lastEl.dataset.context as EditorContext;
+                }
+                if (allSectionElements.length === 0) { // Dropping on an empty canvas
+                    currentTarget = { sectionId: 'main-canvas', context: 'main', insertIndex: 0 };
+                } else if (closestSectionId && closestContext !== null) {
+                    currentTarget = { sectionId: closestSectionId, context: closestContext, insertIndex };
+                }
+            } else if (interactionState.type === 'new_block') {
+                for (const section of allSections) {
+                    const sectionEl = document.getElementById(section.id);
+                    if (sectionEl) {
+                        const rect = sectionEl.getBoundingClientRect();
+                        if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
+                            currentTarget = { sectionId: section.id, context: section.context };
+                            break;
                         }
                     }
                 }
             }
+            setDropTarget(currentTarget);
         };
-
-        if (interactionState.type === 'new_block') {
-             if (pageData.content?.sections) checkSectionDrop(canvasRefs.main, 'main', pageData.content.sections);
-             if (!targetSectionId && pageData.content?.footerSections) checkSectionDrop(canvasRefs.footer, 'footer', pageData.content.footerSections);
-
-            if (targetSectionId && targetContext) {
-                updatePageData(draft => {
-                    const sectionListKey = targetContext === 'footer' ? 'footerSections' : 'sections';
-                    const sections = draft.content?.[sectionListKey] || [];
-                    const section = sections.find(s => s.id === targetSectionId);
-                    if (section) {
-                        section.blocks.push(interactionState.item as PageBlock);
-                        handleSelect({ type: 'block', id: (interactionState.item as PageBlock).id, sectionId: section.id, context: targetContext });
-                    }
-                });
+        const handleMouseUp = () => {
+            if (!interactionState) return;
+            if (dropTarget) {
+                if (interactionState.type === 'new_block') {
+                    updatePageData(draft => {
+                        const sectionListKey = dropTarget.context === 'footer' ? 'footerSections' : 'sections';
+                        const sections = draft.content?.[sectionListKey] || [];
+                        const section = sections.find(s => s.id === dropTarget.sectionId);
+                        if (section) {
+                            section.blocks.push(interactionState.item as PageBlock);
+                            handleSelect({ type: 'block', id: (interactionState.item as PageBlock).id, sectionId: section.id, context: dropTarget.context });
+                        }
+                    });
+                } else if (interactionState.type === 'new_section') {
+                    updatePageData(draft => {
+                        const sectionListKey = dropTarget.context === 'footer' ? 'footerSections' : 'sections';
+                        const sections = draft.content?.[sectionListKey] || [];
+                        const insertIdx = dropTarget.insertIndex ?? sections.length;
+                        sections.splice(insertIdx, 0, interactionState.item as Section);
+                        handleSelect({ type: 'section', id: (interactionState.item as Section).id, context: dropTarget.context });
+                    });
+                }
             }
-        }
-        
-        setInteractionState(null);
-    }, [interactionState, pageData]);
-    
-    useEffect(() => {
+            setInteractionState(null);
+            setGhostElement(null);
+            setDropTarget(null);
+        };
         if (interactionState) {
-            window.addEventListener('mouseup', handleMouseUp);
-        } else {
-            window.removeEventListener('mouseup', handleMouseUp);
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp, { once: true });
         }
         return () => {
-            window.removeEventListener('mouseup', handleMouseUp);
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
         };
-    }, [interactionState, handleMouseUp]);
+    }, [interactionState, pageData]);
 
 
     // --- RENDER LOGIC ---
@@ -333,12 +352,12 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
                             <div className="space-y-4">
                                 <div>
                                     <h4 className="font-bold mb-2">Seções</h4>
-                                    {sectionComponentList.map(comp => <div key={comp.type} onMouseDown={(e) => handleComponentMouseDown(e, 'section', comp.data)} className="p-2 bg-slate-800 rounded flex items-center gap-2 cursor-grab"><comp.Icon className="w-5 h-5 text-cyan-400"/><span>{comp.label}</span></div>)}
+                                    {sectionComponentList.map(comp => <div key={comp.type} onMouseDown={(e) => handleComponentMouseDown(e, 'section', comp.data, comp.label, comp.Icon)} className="p-2 bg-slate-800 rounded flex items-center gap-2 cursor-grab"><comp.Icon className="w-5 h-5 text-cyan-400"/><span>{comp.label}</span></div>)}
                                 </div>
                                 <div>
                                     <h4 className="font-bold mb-2">Blocos</h4>
                                     <div className="grid grid-cols-2 gap-2">
-                                    {blockComponentList.map(comp => <div key={comp.type} onMouseDown={(e) => handleComponentMouseDown(e, 'block', comp.type)} className="p-2 bg-slate-800 rounded flex items-center gap-2 cursor-grab"><comp.Icon className="w-5 h-5 text-cyan-400"/><span>{comp.label}</span></div>)}
+                                    {blockComponentList.map(comp => <div key={comp.type} onMouseDown={(e) => handleComponentMouseDown(e, 'block', comp.type, comp.label, comp.Icon)} className="p-2 bg-slate-800 rounded flex items-center gap-2 cursor-grab"><comp.Icon className="w-5 h-5 text-cyan-400"/><span>{comp.label}</span></div>)}
                                     </div>
                                 </div>
                             </div>
@@ -360,12 +379,13 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
 
     return (
         <div className="min-h-screen transition-colors duration-300" style={{ backgroundColor: settings.backgroundColor, ...finalPadding }}>
+            {ghostElement && <div className="fixed z-[10001] pointer-events-none opacity-80" style={{ left: ghostPosition.x, top: ghostPosition.y, transform: 'translate(10px, 10px)' }}>{ghostElement}</div>}
             
             {canEdit && isEditMode && renderEditorUI()}
 
-            <main ref={canvasRefs.main} className="relative mx-auto max-w-screen-2xl" onClick={() => isEditMode && handleSelect({ type: 'page' })}>
+            <main ref={canvasRefs.main} id="main-canvas" className="relative mx-auto max-w-screen-2xl" onClick={() => isEditMode && handleSelect({ type: 'page' })}>
                 {(sections || []).map(section => (
-                    <div key={section.id} id={section.id} style={{ backgroundColor: hexToRgba(section.styles.backgroundColor || '#000', section.styles.backgroundOpacity) }} className={`relative group ${isEditMode ? 'p-4 border-2 border-dashed border-transparent hover:border-cyan-500/50 min-h-[100px]' : ''}`}
+                    <div key={section.id} id={section.id} data-section-id={section.id} data-context="main" style={{ backgroundColor: hexToRgba(section.styles.backgroundColor || '#000', section.styles.backgroundOpacity) }} className={`relative group transition-all duration-200 ${isEditMode ? `p-4 border-2 border-dashed min-h-[100px] ${dropTarget?.sectionId === section.id && dropTarget?.context === 'main' ? 'border-cyan-500 bg-cyan-900/20' : 'border-transparent hover:border-cyan-500/50'}` : ''}`}
                          onClick={(e) => { e.stopPropagation(); if(isEditMode) handleSelect({ type: 'section', id: section.id, context: 'main' }); }}>
                         <div className="relative" style={{ display: 'grid', gridTemplateColumns: `repeat(${section.gridSettings.columns}, 1fr)`, gridAutoRows: `${section.gridSettings.rowHeight}px`, gap: `${section.gridSettings.gap}px` }}>
                            {section.blocks.map(block => {
@@ -389,7 +409,7 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
             
             <footer ref={canvasRefs.footer} className="relative mx-auto max-w-screen-2xl mt-8 pt-8 border-t border-slate-800">
                  {(footerSections || []).map(section => (
-                    <div key={section.id} id={section.id} style={{ backgroundColor: hexToRgba(section.styles.backgroundColor || '#000', section.styles.backgroundOpacity) }} className={`relative group ${isEditMode ? 'p-4 border-2 border-dashed border-transparent hover:border-cyan-500/50 min-h-[100px]' : ''}`}
+                    <div key={section.id} id={section.id} data-section-id={section.id} data-context="footer" style={{ backgroundColor: hexToRgba(section.styles.backgroundColor || '#000', section.styles.backgroundOpacity) }} className={`relative group transition-all duration-200 ${isEditMode ? `p-4 border-2 border-dashed min-h-[100px] ${dropTarget?.sectionId === section.id && dropTarget?.context === 'footer' ? 'border-cyan-500 bg-cyan-900/20' : 'border-transparent hover:border-cyan-500/50'}` : ''}`}
                          onClick={(e) => { e.stopPropagation(); if(isEditMode) handleSelect({ type: 'section', id: section.id, context: 'footer' }); }}>
                         <div className="relative" style={{ display: 'grid', gridTemplateColumns: `repeat(${section.gridSettings.columns}, 1fr)`, gridAutoRows: `${section.gridSettings.rowHeight}px`, gap: `${section.gridSettings.gap}px` }}>
                            {section.blocks.map(block => {
