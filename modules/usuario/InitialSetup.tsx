@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CodeIcon } from '../../components/icons/Icons';
-import { useRouter } from '../../App';
+// FIX: Correct the import path for useRouter.
+import { useRouter } from '../../contexts/RouterContext';
 
 const InitialSetup: React.FC = () => {
   const { navigate } = useRouter();

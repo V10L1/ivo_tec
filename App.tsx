@@ -1,5 +1,6 @@
 
-import React, { useState, useEffect, createContext, useContext, Suspense } from 'react';
+
+import React, { useState, useEffect, Suspense } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Dashboard } from './components/Dashboard';
 import { Header } from './components/Header';
@@ -18,23 +19,13 @@ import InitialSetup from './modules/usuario/InitialSetup';
 import ForgotPassword from './modules/usuario/ForgotPassword';
 import Register from './modules/usuario/Register';
 import AppsManager from './modules/apps/AppsManager';
+import { RouterProvider } from './contexts/RouterContext';
 
 // FIX: Lazily import PublicSite to resolve circular dependency related module loading issue.
-const PublicSite = React.lazy(() => import('./modules/site/PublicSite'));
-
-// --- Router Context ---
-interface RouterContextType {
-  navigate: (path: string) => void;
-}
-const RouterContext = createContext<RouterContextType | undefined>(undefined);
-
-export const useRouter = () => {
-  const context = useContext(RouterContext);
-  if (!context) {
-    throw new Error('useRouter must be used within the main App component');
-  }
-  return context;
-};
+// FIX: Resolve React.lazy type error by explicitly returning the default export.
+const PublicSite = React.lazy(() =>
+  import('./modules/site/PublicSite').then(module => ({ default: module.default }))
+);
 
 // --- Module Views ---
 const ModuleViews: Record<AppKey, React.ComponentType> = {
@@ -162,9 +153,9 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <RouterContext.Provider value={{ navigate }}>
+    <RouterProvider value={{ navigate }}>
       {content}
-    </RouterContext.Provider>
+    </RouterProvider>
   );
 };
 

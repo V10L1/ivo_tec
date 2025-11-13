@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { CodeIcon } from '../../components/icons/Icons';
-import { useRouter } from '../../App';
+import { useRouter } from '../../contexts/RouterContext';
 
 const Login: React.FC = () => {
   const { login } = useAuth();

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CodeIcon } from '../../components/icons/Icons';
-import { useRouter } from '../../App';
+import { useRouter } from '../../contexts/RouterContext';
 
 const ForgotPassword = () => {
   const { navigate } = useRouter();

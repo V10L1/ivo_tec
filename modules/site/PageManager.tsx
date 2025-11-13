@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Page } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
-import { useRouter } from '../../App';
+import { useRouter } from '../../contexts/RouterContext';
 import { PlusCircleIcon, EditIcon, Trash2Icon, CopyIcon, StarIcon } from '../../components/icons/Icons';
 
 type PageSummary = Pick<Page, 'id' | 'title' | 'slug' | 'is_homepage' | 'is_published' | 'updated_at'>;
