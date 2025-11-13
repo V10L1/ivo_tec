@@ -1,7 +1,7 @@
 // api/site/site.routes.ts
-// FIX: Separated express value and type imports to resolve type conflicts.
 import express from 'express';
-import type { Request, Response } from 'express';
+// FIX: Changed 'import type' to a direct import to resolve type inconsistencies with Express.
+import { Request, Response } from 'express';
 import { pool } from '../../core/db';
 import { verifyToken, checkModulePermission } from '../../core/auth.middleware';
 import { SiteData, FixedContainer, ThemeSettings } from '../../types';
@@ -118,9 +118,10 @@ router.post('/pages', verifyToken, checkModulePermission('SITE'), async (req: Re
         return res.status(400).json({ message: 'Título e slug são obrigatórios.' });
     }
     try {
+        // A biblioteca pg lida com a serialização de objetos JS para JSONB
         const result = await pool.query(
             'INSERT INTO pages (title, slug, content, meta_title, meta_description) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-            [title, slug, JSON.stringify(defaultNewPageContent), title, `Esta é a descrição para a página ${title}`]
+            [title, slug, defaultNewPageContent, title, `Esta é a descrição para a página ${title}`]
         );
         res.status(201).json(result.rows[0]);
     } catch (error: any) {
@@ -156,9 +157,10 @@ router.post('/pages/duplicate/:id', verifyToken, checkModulePermission('SITE'), 
         
         const newTitle = `Cópia de ${originalPage.title}`;
         
+        // A biblioteca pg lida com a serialização
         const result = await pool.query(
             'INSERT INTO pages (title, slug, is_homepage, is_published, content, meta_title, meta_description, social_image_url) VALUES ($1, $2, FALSE, FALSE, $3, $4, $5, $6) RETURNING *',
-            [newTitle, newSlug, JSON.stringify(originalPage.content), `Cópia de ${originalPage.meta_title}`, originalPage.meta_description, originalPage.social_image_url]
+            [newTitle, newSlug, originalPage.content, `Cópia de ${originalPage.meta_title}`, originalPage.meta_description, originalPage.social_image_url]
         );
 
         res.status(201).json(result.rows[0]);
@@ -194,6 +196,7 @@ router.put('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req:
     }
 
     try {
+        // A biblioteca pg lida com a serialização
         const result = await pool.query(
             `UPDATE pages SET 
                 title = $1, 
@@ -204,7 +207,7 @@ router.put('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req:
                 meta_description = $6,
                 social_image_url = $7
              WHERE id = $8 RETURNING *`,
-            [title, slug, is_published, JSON.stringify(content), metaTitle, metaDescription, socialImageUrl, id]
+            [title, slug, is_published, content, metaTitle, metaDescription, socialImageUrl, id]
         );
         if (result.rowCount === 0) {
             return res.status(404).json({ message: 'Página não encontrada.' });

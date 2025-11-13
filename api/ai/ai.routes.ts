@@ -1,7 +1,7 @@
 // api/ai/ai.routes.ts
-// FIX: Separated express value and type imports to resolve type conflicts.
 import express from 'express';
-import type { Request, Response } from 'express';
+// FIX: Changed 'import type' to a direct import to resolve type inconsistencies with Express.
+import { Request, Response } from 'express';
 import { GoogleGenAI, Type } from '@google/genai';
 import { verifyToken, checkModulePermission } from '../../core/auth.middleware';
 import { pool } from '../../core/db';

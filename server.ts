@@ -11,9 +11,8 @@ declare const process: {
 declare const __dirname: string;
 
 // server.ts - O Orquestrador Principal
-// FIX: Separated express value and type imports to resolve type conflicts.
-import express from 'express';
-import type { Request, Response, NextFunction } from 'express';
+// FIX: Changed 'import type' to a direct import to resolve type inconsistencies with Express.
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -47,6 +46,7 @@ app.get('/api/health', async (req: Request, res: Response) => {
 // --- Carregador de Módulos Dinâmico (Refatorado para Robustez) ---
 const loadApiModules = async () => {
     const sourceApiDir = path.join(process.cwd(), 'api');
+    const compiledBaseDir = __dirname; // O diretório base dos arquivos compilados (ex: dist/server)
 
     try {
         const moduleFolders = await fs.readdir(sourceApiDir, { withFileTypes: true });
@@ -60,16 +60,16 @@ const loadApiModules = async () => {
                     const manifestContent = await fs.readFile(manifestPath, 'utf-8');
                     const manifest = JSON.parse(manifestContent);
                     
-                    // Constrói o caminho relativo para a importação, a partir do diretório atual (__dirname)
-                    const relativePathForImport = path.join(__dirname, 'api', moduleName, manifest.routesFile);
+                    // Constrói o caminho absoluto para o arquivo de rotas compilado, garantindo a resolução correta.
+                    const absoluteRoutesPath = path.resolve(compiledBaseDir, 'api', moduleName, manifest.routesFile);
 
-                    const { default: router } = await import(relativePathForImport);
+                    const { default: router } = await import(absoluteRoutesPath);
                     
                     if (router) {
                         app.use(manifest.prefix, router);
                         console.log(`[Module Loader] Módulo '${moduleName}' carregado com sucesso no prefixo '${manifest.prefix}'.`);
                     } else {
-                         console.warn(`[Module Loader] Módulo '${moduleName}' em '${relativePathForImport}' não possui uma exportação padrão.`);
+                         console.warn(`[Module Loader] Módulo '${moduleName}' em '${absoluteRoutesPath}' não possui uma exportação padrão.`);
                     }
                 } catch (e: any) {
                     console.error(`[Module Loader] Falha ao carregar o módulo '${moduleName}'. Verifique o manifest.json e o arquivo de rotas.`, e);
