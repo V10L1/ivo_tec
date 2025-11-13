@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect, Suspense } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Dashboard } from './components/Dashboard';
@@ -21,11 +22,10 @@ import Register from './modules/usuario/Register';
 import AppsManager from './modules/apps/AppsManager';
 import { RouterProvider } from './contexts/RouterContext';
 
-// FIX: Lazily import PublicSite to resolve circular dependency related module loading issue.
-// FIX: Resolve React.lazy type error by explicitly returning the default export.
-const PublicSite = React.lazy(() =>
-  import('./modules/site/PublicSite').then(module => ({ default: module.default }))
-);
+// FIX: Simplify lazy import. The complex `.then()` is no longer needed after fixing circular dependencies
+// and may be the cause of the bundler error.
+// @google/genai-fix: Correctly wrap the dynamic import for React.lazy to ensure the 'default' export is resolved.
+const PublicSite = React.lazy(() => import('./modules/site/PublicSite').then(module => ({ default: module.default })));
 
 // --- Module Views ---
 const ModuleViews: Record<AppKey, React.ComponentType> = {

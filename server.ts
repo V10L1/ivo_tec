@@ -37,7 +37,7 @@ app.use(express.json());
 // @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts.
 // @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts with global types.
 // FIX: Add explicit types to express route handler to resolve type errors.
-app.get('/api/health', async (req: Request, res: Response) => {
+app.get('/api/health', async (req: express.Request, res: express.Response) => {
     try {
         const client = await pool.connect();
         await client.query('SELECT 1');
@@ -95,7 +95,7 @@ const serveFrontend = () => {
     // @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts.
     // @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts with global types.
     // FIX: Add explicit types to express route handler to resolve type errors.
-    app.get('*', (req: Request, res: Response) => {
+    app.get('*', (req: express.Request, res: express.Response) => {
         if (req.path.startsWith('/api/')) {
             return res.status(404).json({ message: 'Endpoint da API não encontrado.' });
         }
