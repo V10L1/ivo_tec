@@ -84,7 +84,7 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
     const [isPanelOpen, setIsPanelOpen] = useState(true);
     const [activeTab, setActiveTab] = useState<'components' | 'inspector'>('components');
     const [selection, setSelection] = useState<Selection>({ type: 'page' });
-    const [interactionState, setInteractionState] = useState<{ type: 'move' | 'resize' | 'new_block' | 'new_section'; item: PageBlock | Section; initialMouse: { x: number; y: number }; initialLayout?: BlockLayout; resizeDirection?: string; targetContext: EditorContext; targetSectionId?: string; } | null>(null);
+    const [interactionState, setInteractionState] = useState<{ type: 'move' | 'resize' | 'new_block' | 'new_section'; item: PageBlock | Section; initialMouse: { x: number; y: number }; initialLayout?: BlockLayout; resizeDirection?: string; } | null>(null);
     const canvasRefs = { main: useRef<HTMLDivElement>(null), footer: useRef<HTMLDivElement>(null), };
 
     const canEdit = isAuthenticated && (permissions || []).includes('SITE');
@@ -190,11 +190,97 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
             setActiveTab('inspector');
         }
     };
-
-    // --- Drag, Drop, and Resize (simplified for sections) ---
-    // This logic would need to be significantly expanded for full drag-and-drop between sections, reordering, etc.
-    // The current implementation focuses on adding new items.
     
+    // --- DRAG AND DROP LOGIC ---
+
+    const handleComponentMouseDown = (e: React.MouseEvent, type: 'block' | 'section', itemData: PageBlock['type'] | (() => Section)) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        let item: PageBlock | Section;
+        if (type === 'block') {
+            item = createNewBlock(itemData as PageBlock['type']);
+            setInteractionState({
+                type: 'new_block',
+                item,
+                initialMouse: { x: e.clientX, y: e.clientY },
+            });
+        } else {
+            item = (itemData as () => Section)();
+            setInteractionState({
+                type: 'new_section',
+                item,
+                initialMouse: { x: e.clientX, y: e.clientY },
+            });
+        }
+    };
+
+    const handleMouseUp = useCallback(() => {
+        if (!interactionState || !pageData) {
+            setInteractionState(null);
+            return;
+        }
+
+        const dropX = interactionState.initialMouse.x;
+        const dropY = interactionState.initialMouse.y;
+
+        let targetSectionId: string | null = null;
+        let targetContext: EditorContext | null = null;
+        
+        // Find which section the item was dropped on
+        const checkSectionDrop = (ref: React.RefObject<HTMLDivElement>, context: EditorContext, sections: Section[]) => {
+            const container = ref.current;
+            if (container) {
+                const rect = container.getBoundingClientRect();
+                if (dropY >= rect.top && dropY <= rect.bottom) {
+                    // Find the specific section element
+                    for (const section of sections) {
+                        const sectionEl = document.getElementById(section.id);
+                        if(sectionEl) {
+                           const sectionRect = sectionEl.getBoundingClientRect();
+                           if(dropY >= sectionRect.top && dropY <= sectionRect.bottom) {
+                               targetSectionId = section.id;
+                               targetContext = context;
+                               return;
+                           }
+                        }
+                    }
+                }
+            }
+        };
+
+        if (interactionState.type === 'new_block') {
+             if (pageData.content?.sections) checkSectionDrop(canvasRefs.main, 'main', pageData.content.sections);
+             if (!targetSectionId && pageData.content?.footerSections) checkSectionDrop(canvasRefs.footer, 'footer', pageData.content.footerSections);
+
+            if (targetSectionId && targetContext) {
+                updatePageData(draft => {
+                    const sectionListKey = targetContext === 'footer' ? 'footerSections' : 'sections';
+                    const sections = draft.content?.[sectionListKey] || [];
+                    const section = sections.find(s => s.id === targetSectionId);
+                    if (section) {
+                        section.blocks.push(interactionState.item as PageBlock);
+                        handleSelect({ type: 'block', id: (interactionState.item as PageBlock).id, sectionId: section.id, context: targetContext });
+                    }
+                });
+            }
+        }
+        
+        setInteractionState(null);
+    }, [interactionState, pageData]);
+    
+    useEffect(() => {
+        if (interactionState) {
+            window.addEventListener('mouseup', handleMouseUp);
+        } else {
+            window.removeEventListener('mouseup', handleMouseUp);
+        }
+        return () => {
+            window.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [interactionState, handleMouseUp]);
+
+
     // --- RENDER LOGIC ---
     if (status === 'loading' || isLoading) return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Carregando conteúdo...</div>;
     if (status === 'not_found') return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white"><h1>404 - Página Não Encontrada</h1></div>;
@@ -204,7 +290,6 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
     const finalPadding = {
         paddingTop: fixedContainers.top.enabled && !collapsedStates.top ? `${fixedContainers.top.size}px` : '0px',
         paddingBottom: fixedContainers.bottom.enabled && !collapsedStates.bottom ? `${fixedContainers.bottom.size}px` : '0px',
-        // FIX: Operator '+' cannot be applied to types 'string | number' and 'number'. Changed to calculate total padding as a number first.
         paddingLeft: `${(isEditMode && isPanelOpen ? 320 : 0) + (fixedContainers.left.enabled && !collapsedStates.left ? fixedContainers.left.size : 0)}px`,
         paddingRight: (fixedContainers.right.enabled && !collapsedStates.right ? `${fixedContainers.right.size}px` : '0px'),
         transition: 'padding 0.3s ease-in-out',
@@ -248,12 +333,12 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
                             <div className="space-y-4">
                                 <div>
                                     <h4 className="font-bold mb-2">Seções</h4>
-                                    {sectionComponentList.map(comp => <div key={comp.type} className="p-2 bg-slate-800 rounded flex items-center gap-2 cursor-grab"><comp.Icon className="w-5 h-5 text-cyan-400"/><span>{comp.label}</span></div>)}
+                                    {sectionComponentList.map(comp => <div key={comp.type} onMouseDown={(e) => handleComponentMouseDown(e, 'section', comp.data)} className="p-2 bg-slate-800 rounded flex items-center gap-2 cursor-grab"><comp.Icon className="w-5 h-5 text-cyan-400"/><span>{comp.label}</span></div>)}
                                 </div>
                                 <div>
                                     <h4 className="font-bold mb-2">Blocos</h4>
                                     <div className="grid grid-cols-2 gap-2">
-                                    {blockComponentList.map(comp => <div key={comp.type} className="p-2 bg-slate-800 rounded flex items-center gap-2 cursor-grab"><comp.Icon className="w-5 h-5 text-cyan-400"/><span>{comp.label}</span></div>)}
+                                    {blockComponentList.map(comp => <div key={comp.type} onMouseDown={(e) => handleComponentMouseDown(e, 'block', comp.type)} className="p-2 bg-slate-800 rounded flex items-center gap-2 cursor-grab"><comp.Icon className="w-5 h-5 text-cyan-400"/><span>{comp.label}</span></div>)}
                                     </div>
                                 </div>
                             </div>
@@ -278,9 +363,9 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
             
             {canEdit && isEditMode && renderEditorUI()}
 
-            <main ref={canvasRefs.main} className="relative mx-auto max-w-screen-2xl" onClick={() => handleSelect({ type: 'page' })}>
+            <main ref={canvasRefs.main} className="relative mx-auto max-w-screen-2xl" onClick={() => isEditMode && handleSelect({ type: 'page' })}>
                 {(sections || []).map(section => (
-                    <div key={section.id} style={{ backgroundColor: hexToRgba(section.styles.backgroundColor || '#000', section.styles.backgroundOpacity) }} className={`relative group ${isEditMode ? 'p-4 border-2 border-dashed border-transparent hover:border-cyan-500/50' : ''}`}
+                    <div key={section.id} id={section.id} style={{ backgroundColor: hexToRgba(section.styles.backgroundColor || '#000', section.styles.backgroundOpacity) }} className={`relative group ${isEditMode ? 'p-4 border-2 border-dashed border-transparent hover:border-cyan-500/50 min-h-[100px]' : ''}`}
                          onClick={(e) => { e.stopPropagation(); if(isEditMode) handleSelect({ type: 'section', id: section.id, context: 'main' }); }}>
                         <div className="relative" style={{ display: 'grid', gridTemplateColumns: `repeat(${section.gridSettings.columns}, 1fr)`, gridAutoRows: `${section.gridSettings.rowHeight}px`, gap: `${section.gridSettings.gap}px` }}>
                            {section.blocks.map(block => {
@@ -304,7 +389,7 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
             
             <footer ref={canvasRefs.footer} className="relative mx-auto max-w-screen-2xl mt-8 pt-8 border-t border-slate-800">
                  {(footerSections || []).map(section => (
-                    <div key={section.id} style={{ backgroundColor: hexToRgba(section.styles.backgroundColor || '#000', section.styles.backgroundOpacity) }} className={`relative group ${isEditMode ? 'p-4 border-2 border-dashed border-transparent hover:border-cyan-500/50' : ''}`}
+                    <div key={section.id} id={section.id} style={{ backgroundColor: hexToRgba(section.styles.backgroundColor || '#000', section.styles.backgroundOpacity) }} className={`relative group ${isEditMode ? 'p-4 border-2 border-dashed border-transparent hover:border-cyan-500/50 min-h-[100px]' : ''}`}
                          onClick={(e) => { e.stopPropagation(); if(isEditMode) handleSelect({ type: 'section', id: section.id, context: 'footer' }); }}>
                         <div className="relative" style={{ display: 'grid', gridTemplateColumns: `repeat(${section.gridSettings.columns}, 1fr)`, gridAutoRows: `${section.gridSettings.rowHeight}px`, gap: `${section.gridSettings.gap}px` }}>
                            {section.blocks.map(block => {
