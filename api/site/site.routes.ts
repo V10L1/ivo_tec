@@ -1,7 +1,7 @@
 // api/site/site.routes.ts
 // FIX: Use explicit `Request` and `Response` types from `express` to resolve type conflicts with global DOM types.
-// Use aliases to prevent conflicts with global DOM types for Request and Response.
-import express, { Request as ExpressRequest, Response as ExpressResponse } from 'express';
+// Use 'express.Request' and 'express.Response' to prevent conflicts.
+import express from 'express';
 import { pool } from '../../core/db';
 import { verifyToken, checkModulePermission } from '../../core/auth.middleware';
 import { SiteData, FixedContainer, ThemeSettings } from '../../types';
@@ -34,7 +34,7 @@ const defaultNewPageContent: SiteData = {
 // --- Rotas Públicas (sem autenticação) ---
 
 // Obter página pela Home
-router.get('/pages/public/home', async (req: ExpressRequest, res: ExpressResponse) => {
+router.get('/pages/public/home', async (req: express.Request, res: express.Response) => {
     try {
         res.setHeader('Cache-Control', 'no-store');
         const result = await pool.query('SELECT * FROM pages WHERE is_homepage = TRUE AND is_published = TRUE LIMIT 1');
@@ -49,7 +49,7 @@ router.get('/pages/public/home', async (req: ExpressRequest, res: ExpressRespons
 });
 
 // Obter página pelo slug
-router.get('/pages/public/slug/:slug', async (req: ExpressRequest, res: ExpressResponse) => {
+router.get('/pages/public/slug/:slug', async (req: express.Request, res: express.Response) => {
     try {
         res.setHeader('Cache-Control', 'no-store');
         const { slug } = req.params;
@@ -69,7 +69,7 @@ router.get('/pages/public/slug/:slug', async (req: ExpressRequest, res: ExpressR
 
 // --- Rotas para Admin visualizar QUALQUER página (publicada ou não) ---
 // Obter página HOME para admin
-router.get('/pages/admin/home', verifyToken, checkModulePermission('SITE'), async (req: ExpressRequest, res: ExpressResponse) => {
+router.get('/pages/admin/home', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     try {
         res.setHeader('Cache-Control', 'no-store');
         const result = await pool.query('SELECT * FROM pages WHERE is_homepage = TRUE LIMIT 1');
@@ -84,7 +84,7 @@ router.get('/pages/admin/home', verifyToken, checkModulePermission('SITE'), asyn
 });
 
 // Obter página por slug para admin
-router.get('/pages/admin/slug/:slug', verifyToken, checkModulePermission('SITE'), async (req: ExpressRequest, res: ExpressResponse) => {
+router.get('/pages/admin/slug/:slug', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     try {
         res.setHeader('Cache-Control', 'no-store');
         const { slug } = req.params;
@@ -101,7 +101,7 @@ router.get('/pages/admin/slug/:slug', verifyToken, checkModulePermission('SITE')
 
 
 // Listar todas as páginas
-router.get('/pages', verifyToken, checkModulePermission('SITE'), async (req: ExpressRequest, res: ExpressResponse) => {
+router.get('/pages', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     try {
         const result = await pool.query('SELECT id, title, slug, is_homepage, is_published, updated_at FROM pages ORDER BY title');
         res.json(result.rows);
@@ -112,7 +112,7 @@ router.get('/pages', verifyToken, checkModulePermission('SITE'), async (req: Exp
 });
 
 // Criar uma nova página
-router.post('/pages', verifyToken, checkModulePermission('SITE'), async (req: ExpressRequest, res: ExpressResponse) => {
+router.post('/pages', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     const { title, slug } = req.body;
     if (!title || !slug) {
         return res.status(400).json({ message: 'Título e slug são obrigatórios.' });
@@ -135,7 +135,7 @@ router.post('/pages', verifyToken, checkModulePermission('SITE'), async (req: Ex
 });
 
 // Duplicar uma página
-router.post('/pages/duplicate/:id', verifyToken, checkModulePermission('SITE'), async (req: ExpressRequest, res: ExpressResponse) => {
+router.post('/pages/duplicate/:id', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     const { id } = req.params;
     try {
         const originalPageResult = await pool.query('SELECT * FROM pages WHERE id = $1', [id]);
@@ -157,10 +157,13 @@ router.post('/pages/duplicate/:id', verifyToken, checkModulePermission('SITE'), 
         }
         
         const newTitle = `Cópia de ${originalPage.title}`;
+        
+        // FIX: Converte o objeto de conteúdo da página original para uma string JSON antes de inserir.
+        const contentJson = JSON.stringify(originalPage.content);
 
         const result = await pool.query(
             'INSERT INTO pages (title, slug, is_homepage, is_published, content, meta_title, meta_description, social_image_url) VALUES ($1, $2, FALSE, FALSE, $3, $4, $5, $6) RETURNING *',
-            [newTitle, newSlug, originalPage.content, `Cópia de ${originalPage.meta_title}`, originalPage.meta_description, originalPage.social_image_url]
+            [newTitle, newSlug, contentJson, `Cópia de ${originalPage.meta_title}`, originalPage.meta_description, originalPage.social_image_url]
         );
 
         res.status(201).json(result.rows[0]);
@@ -172,7 +175,7 @@ router.post('/pages/duplicate/:id', verifyToken, checkModulePermission('SITE'), 
 
 
 // Obter dados de uma página específica para edição
-router.get('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: ExpressRequest, res: ExpressResponse) => {
+router.get('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     try {
         const { id } = req.params;
         const result = await pool.query('SELECT * FROM pages WHERE id = $1', [id]);
@@ -187,7 +190,7 @@ router.get('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req:
 });
 
 // Atualizar uma página
-router.put('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: ExpressRequest, res: ExpressResponse) => {
+router.put('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     const { id } = req.params;
     const { title, slug, is_published, content, metaTitle, metaDescription, socialImageUrl } = req.body;
 
@@ -196,6 +199,8 @@ router.put('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req:
     }
 
     try {
+        // FIX: Converte o objeto de conteúdo para uma string JSON antes de atualizar.
+        const contentJson = JSON.stringify(content);
         const result = await pool.query(
             `UPDATE pages SET 
                 title = $1, 
@@ -206,7 +211,7 @@ router.put('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req:
                 meta_description = $6,
                 social_image_url = $7
              WHERE id = $8 RETURNING *`,
-            [title, slug, is_published, JSON.stringify(content), metaTitle, metaDescription, socialImageUrl, id]
+            [title, slug, is_published, contentJson, metaTitle, metaDescription, socialImageUrl, id]
         );
         if (result.rowCount === 0) {
             return res.status(404).json({ message: 'Página não encontrada.' });
@@ -222,7 +227,7 @@ router.put('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req:
 });
 
 // Excluir uma página
-router.delete('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: ExpressRequest, res: ExpressResponse) => {
+router.delete('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     const { id } = req.params;
     try {
         const pageCheck = await pool.query('SELECT is_homepage FROM pages WHERE id = $1', [id]);
@@ -242,7 +247,7 @@ router.delete('/pages/:id', verifyToken, checkModulePermission('SITE'), async (r
 });
 
 // Alternar status de publicação da página
-router.patch('/pages/:id/status', verifyToken, checkModulePermission('SITE'), async (req: ExpressRequest, res: ExpressResponse) => {
+router.patch('/pages/:id/status', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     const { id } = req.params;
     const { is_published } = req.body;
 
@@ -275,7 +280,7 @@ router.patch('/pages/:id/status', verifyToken, checkModulePermission('SITE'), as
 });
 
 // Definir uma página como a página inicial
-router.patch('/pages/:id/set-homepage', verifyToken, checkModulePermission('SITE'), async (req: ExpressRequest, res: ExpressResponse) => {
+router.patch('/pages/:id/set-homepage', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     const { id } = req.params;
     const client = await pool.connect();
     try {

@@ -11,8 +11,8 @@ declare const __dirname: string;
 // server.ts - O Orquestrador Principal
 
 // FIX: Use explicit `Request` and `Response` types from `express` to resolve type conflicts with global DOM types.
-// Use aliases to prevent conflicts with global DOM types for Request and Response.
-import express, { Request as ExpressRequest, Response as ExpressResponse } from 'express';
+// Use 'express.Request' and 'express.Response' to prevent conflicts.
+import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -31,7 +31,7 @@ app.use(cors());
 app.use(express.json());
 
 // --- Rota de Verificação de Saúde ---
-app.get('/api/health', async (req: ExpressRequest, res: ExpressResponse) => {
+app.get('/api/health', async (req: express.Request, res: express.Response) => {
     try {
         const client = await pool.connect();
         await client.query('SELECT 1');
@@ -84,7 +84,7 @@ const serveFrontend = () => {
     app.use('/dist/client', express.static(clientDistPath));
     app.use(express.static(staticRootPath));
 
-    app.get('*', (req: ExpressRequest, res: ExpressResponse) => {
+    app.get('*', (req: express.Request, res: express.Response) => {
         if (req.path.startsWith('/api/')) {
             return res.status(404).json({ message: 'Endpoint da API não encontrado.' });
         }
