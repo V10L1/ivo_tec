@@ -1,6 +1,7 @@
 
 
 
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Page, SiteData, PageBlock, SiteSettings, HeroBlockContent, TextBlockContent, ImageBlockContent, ButtonBlockContent, MenuBlockContent, VideoBlockContent, MenuItem, GridSettings, BlockLayout, ContainerStyles, TextStyles, StyledText, FixedContainer, FixedContainerPosition, Section, AnimationSettings, AnimationType, ThemeSettings } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
@@ -41,7 +42,8 @@ const ButtonGroupField: React.FC<{ label?: string; value: any; options: { value:
 const SelectField: React.FC<{ label: string; value: string | null; options: { value: string; label: string }[]; onChange: (value: string) => void; }> = ({ label, value, options, onChange }) => ( <div> <label className="block text-xs font-medium text-slate-400 mb-1">{label}</label> <select value={value || ''} onChange={e => onChange(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm"> {options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)} </select> </div> );
 const CollapsibleSection: React.FC<{ title: string; icon: React.FC<{className?: string}>; children: React.ReactNode; isOpen?: boolean }> = ({ title, icon: Icon, children, isOpen: defaultOpen = true }) => { const [isOpen, setIsOpen] = useState(defaultOpen); return ( <div className="border-b border-slate-700 last:border-b-0"> <button onClick={() => setIsOpen(!isOpen)} className="w-full flex justify-between items-center p-2 text-slate-300 hover:bg-slate-800"> <div className="flex items-center gap-2"> <Icon className="w-4 h-4" /> <span className="font-semibold text-sm">{title}</span> </div> <ChevronRightIcon className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-90' : ''}`} /> </button> {isOpen && <div className="p-3 space-y-3 bg-slate-800/50">{children}</div>} </div> ); };
 // @google/genai-fix: Update EditableText to accept a 'tag' prop to render different HTML elements.
-const EditableText: React.FC<{html: string, isEditing: boolean, onChange: (newHtml: string) => void, onSelect: () => void, className?: string, style?: React.CSSProperties, placeholder?: string, tag?: keyof JSX.IntrinsicElements }> = ({ html, isEditing, onChange, onSelect, placeholder, tag: Tag = 'div', ...props }) => { const ref = useRef<HTMLElement>(null); useEffect(() => { if (ref.current && ref.current.innerHTML !== html) { ref.current.innerHTML = html; } }, [html]); const onBlur = () => { if (ref.current) { onChange(ref.current.innerHTML); } }; return <Tag ref={ref as any} onBlur={onBlur} onSelect={isEditing ? onSelect : undefined} contentEditable={isEditing} suppressContentEditableWarning={true} dangerouslySetInnerHTML={{ __html: html }} data-placeholder={placeholder} {...props} />; };
+// @google/genai-fix: Changed `keyof JSX.IntrinsicElements` to `React.ElementType` to fix JSX namespace errors.
+const EditableText: React.FC<{html: string, isEditing: boolean, onChange: (newHtml: string) => void, onSelect: () => void, className?: string, style?: React.CSSProperties, placeholder?: string, tag?: React.ElementType }> = ({ html, isEditing, onChange, onSelect, placeholder, tag: Tag = 'div', ...props }) => { const ref = useRef<HTMLElement>(null); useEffect(() => { if (ref.current && ref.current.innerHTML !== html) { ref.current.innerHTML = html; } }, [html]); const onBlur = () => { if (ref.current) { onChange(ref.current.innerHTML); } }; return <Tag ref={ref as any} onBlur={onBlur} onSelect={isEditing ? onSelect : undefined} contentEditable={isEditing} suppressContentEditableWarning={true} dangerouslySetInnerHTML={{ __html: html }} data-placeholder={placeholder} {...props} />; };
 
 // --- RENDERIZADORES DE BLOCO E PÁGINA ---
 const BlockRenderer: React.FC<{ block: PageBlock; theme: ThemeSettings; viewport: Viewport; isEditing?: boolean; onToggleContainer?: (target: FixedContainerPosition) => void; onInlineUpdate: (field: string, subfield: 'text' | keyof TextStyles, value: any) => void; onInlineSelect: () => void; }> = ({ block, theme, viewport, isEditing = false, onToggleContainer = () => {}, onInlineUpdate, onInlineSelect }) => {
@@ -106,10 +108,12 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
 
 
     // --- Drag and Drop State ---
-    const [interactionState, setInteractionState] = useState<{ type: 'new_block' | 'new_section'; item: PageBlock | Section; } | null>(null);
+    const [interactionState, setInteractionState] = useState<{ type: 'new_block' | 'new_section' | 'moving_block' | 'resizing_block'; item?: PageBlock | Section; blockId?: string; sectionId?: string; context?: EditorContext; startPos: { x: number; y: number }; startLayout?: BlockLayout; resizeDirection?: string; } | null>(null);
     const [ghostElement, setGhostElement] = useState<React.ReactNode | null>(null);
     const [ghostPosition, setGhostPosition] = useState({ x: 0, y: 0 });
     const [dropTarget, setDropTarget] = useState<{ sectionId: string; context: EditorContext; insertIndex?: number } | null>(null);
+    const [dragPreview, setDragPreview] = useState<{ layout: BlockLayout; sectionId: string; context: EditorContext } | null>(null);
+
 
     const canEdit = isAuthenticated && (permissions || []).includes('SITE');
     const hasUnsavedChanges = useMemo(() => JSON.stringify(pageData) !== JSON.stringify(savedPageData), [pageData, savedPageData]);
@@ -119,8 +123,9 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
     const interactionStateRef = useRef(interactionState);
     const dropTargetRef = useRef(dropTarget);
     const selectionRef = useRef(selection);
+    const viewportRef = useRef(viewport);
 
-    useEffect(() => { pageDataRef.current = pageData; interactionStateRef.current = interactionState; dropTargetRef.current = dropTarget; selectionRef.current = selection });
+    useEffect(() => { pageDataRef.current = pageData; interactionStateRef.current = interactionState; dropTargetRef.current = dropTarget; selectionRef.current = selection; viewportRef.current = viewport; });
 
 
     // --- Data Fetching and Management ---
@@ -236,11 +241,140 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
         }
     }, []);
 
-    // --- DRAG AND DROP LOGIC (ROBUST VERSION) ---
-    const handleComponentMouseDown = (e: React.MouseEvent, type: 'block' | 'section', itemData: PageBlock['type'] | (() => Section), label: string, Icon: React.FC<any>) => { e.preventDefault(); e.stopPropagation(); const item = type === 'block' ? createNewBlock(itemData as PageBlock['type']) : (itemData as () => Section)(); setInteractionState({ type: type === 'block' ? 'new_block' : 'new_section', item }); setGhostElement( <div className="p-2 bg-slate-700 rounded flex items-center gap-2 pointer-events-none text-white shadow-lg"> <Icon className="w-5 h-5 text-cyan-400" /> <span>{label}</span> </div> ); setGhostPosition({ x: e.clientX, y: e.clientY }); };
-    const handleMouseMove = useCallback((e: MouseEvent) => { const currentInteraction = interactionStateRef.current; if (!currentInteraction) return; setGhostPosition({ x: e.clientX, y: e.clientY }); let currentTarget: { sectionId: string; context: EditorContext; insertIndex?: number } | null = null; if (currentInteraction.type === 'new_section') { const allSectionElements = Array.from(document.querySelectorAll<HTMLElement>('[data-section-id]')); let insertIndex = allSectionElements.length; let closestEl = null; if (allSectionElements.length === 0) { currentTarget = { sectionId: 'main-canvas', context: 'main', insertIndex: 0 }; } else { for(const el of allSectionElements) { const rect = el.getBoundingClientRect(); const midY = rect.top + rect.height / 2; if (e.clientY < midY) { insertIndex = parseInt(el.dataset.index || '0'); closestEl = el; break; } else { insertIndex = parseInt(el.dataset.index || '0') + 1; closestEl = el; } } if (closestEl) { currentTarget = { sectionId: closestEl.dataset.sectionId!, context: closestEl.dataset.context as EditorContext, insertIndex: insertIndex, }; } } } else if (currentInteraction.type === 'new_block') { const allSectionElements = Array.from(document.querySelectorAll<HTMLElement>('[data-section-id]')); for (const el of allSectionElements) { const rect = el.getBoundingClientRect(); if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) { currentTarget = { sectionId: el.dataset.sectionId!, context: el.dataset.context as EditorContext, }; break; } } } setDropTarget(currentTarget); }, []);
-    const handleMouseUp = useCallback(() => { const currentInteraction = interactionStateRef.current; const currentDropTarget = dropTargetRef.current; if (currentInteraction && currentDropTarget) { updatePageData(draft => { const sectionListKey = currentDropTarget.context === 'footer' ? 'footerSections' : 'sections'; const sections = draft.content?.[sectionListKey] || []; if (currentInteraction.type === 'new_block') { const section = sections.find(s => s.id === currentDropTarget.sectionId); if (section) { section.blocks.push(currentInteraction.item as PageBlock); setTimeout(() => handleSelect({ type: 'block', id: (currentInteraction.item as PageBlock).id, sectionId: section.id, context: currentDropTarget.context }), 0); } } else if (currentInteraction.type === 'new_section') { const insertIdx = currentDropTarget.insertIndex ?? sections.length; sections.splice(insertIdx, 0, currentInteraction.item as Section); setTimeout(() => handleSelect({ type: 'section', id: (currentInteraction.item as Section).id, context: currentDropTarget.context }), 0); } }); } setInteractionState(null); setGhostElement(null); setDropTarget(null); }, [updatePageData, handleSelect]);
-    useEffect(() => { if (interactionState) { document.addEventListener('mousemove', handleMouseMove); document.addEventListener('mouseup', handleMouseUp, { once: true }); } return () => { document.removeEventListener('mousemove', handleMouseMove); document.removeEventListener('mouseup', handleMouseUp); }; }, [interactionState, handleMouseMove, handleMouseUp]);
+    // --- DRAG, MOVE, AND RESIZE LOGIC (ROBUST VERSION) ---
+    const handleComponentMouseDown = (e: React.MouseEvent, type: 'block' | 'section', itemData: PageBlock['type'] | (() => Section), label: string, Icon: React.FC<any>) => { e.preventDefault(); e.stopPropagation(); const item = type === 'block' ? createNewBlock(itemData as PageBlock['type']) : (itemData as () => Section)(); setInteractionState({ type: type === 'block' ? 'new_block' : 'new_section', item, startPos: { x: e.clientX, y: e.clientY } }); setGhostElement( <div className="p-2 bg-slate-700 rounded flex items-center gap-2 pointer-events-none text-white shadow-lg"> <Icon className="w-5 h-5 text-cyan-400" /> <span>{label}</span> </div> ); setGhostPosition({ x: e.clientX, y: e.clientY }); };
+    const handleBlockMouseDown = (e: React.MouseEvent, blockId: string, sectionId: string, context: EditorContext) => { e.preventDefault(); e.stopPropagation(); const currentVP = viewportRef.current; const page = pageDataRef.current; if (!page?.content) return; const section = [...page.content.sections, ...page.content.footerSections].find(s => s.id === sectionId); const block = section?.blocks.find(b => b.id === blockId); if (!block) return; handleSelect({ type: 'block', id: blockId, sectionId, context }); setInteractionState({ type: 'moving_block', blockId, sectionId, context, startPos: { x: e.clientX, y: e.clientY }, startLayout: JSON.parse(JSON.stringify(block.layout[currentVP])) }); };
+    const handleResizeStart = (e: React.MouseEvent, blockId: string, sectionId: string, context: EditorContext, direction: string) => { e.preventDefault(); e.stopPropagation(); const currentVP = viewportRef.current; const page = pageDataRef.current; if (!page?.content) return; const section = [...page.content.sections, ...page.content.footerSections].find(s => s.id === sectionId); const block = section?.blocks.find(b => b.id === blockId); if (!block) return; handleSelect({ type: 'block', id: blockId, sectionId, context }); setInteractionState({ type: 'resizing_block', blockId, sectionId, context, startPos: { x: e.clientX, y: e.clientY }, startLayout: JSON.parse(JSON.stringify(block.layout[currentVP])), resizeDirection: direction }); };
+
+    const handleMouseMove = useCallback((e: MouseEvent) => {
+        const currentInteraction = interactionStateRef.current;
+        if (!currentInteraction) return;
+        
+        if (currentInteraction.type === 'new_block' || currentInteraction.type === 'new_section') {
+            setGhostPosition({ x: e.clientX, y: e.clientY });
+            let currentTarget: { sectionId: string; context: EditorContext; insertIndex?: number } | null = null;
+            if (currentInteraction.type === 'new_section') {
+                const allSectionElements = Array.from(document.querySelectorAll<HTMLElement>('[data-section-id]'));
+                let insertIndex = allSectionElements.length;
+                let closestEl = null;
+                if (allSectionElements.length === 0) {
+                    currentTarget = { sectionId: 'main-canvas', context: 'main', insertIndex: 0 };
+                } else {
+                    for (const el of allSectionElements) {
+                        const rect = el.getBoundingClientRect();
+                        const midY = rect.top + rect.height / 2;
+                        if (e.clientY < midY) {
+                            insertIndex = parseInt(el.dataset.index || '0');
+                            closestEl = el;
+                            break;
+                        } else {
+                            insertIndex = parseInt(el.dataset.index || '0') + 1;
+                            closestEl = el;
+                        }
+                    }
+                    if (closestEl) {
+                        currentTarget = { sectionId: closestEl.dataset.sectionId!, context: closestEl.dataset.context as EditorContext, insertIndex: insertIndex, };
+                    }
+                }
+            } else if (currentInteraction.type === 'new_block') {
+                const allSectionElements = Array.from(document.querySelectorAll<HTMLElement>('[data-section-id]'));
+                for (const el of allSectionElements) {
+                    const rect = el.getBoundingClientRect();
+                    if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
+                        currentTarget = { sectionId: el.dataset.sectionId!, context: el.dataset.context as EditorContext, };
+                        break;
+                    }
+                }
+            }
+            setDropTarget(currentTarget);
+        } else if (currentInteraction.type === 'moving_block' || currentInteraction.type === 'resizing_block') {
+            const page = pageDataRef.current;
+            if (!page?.content) return;
+            const section = [...page.content.sections, ...page.content.footerSections].find(s => s.id === currentInteraction.sectionId);
+            if (!section || !currentInteraction.startLayout) return;
+
+            const grid = section.gridSettings;
+            const deltaX = e.clientX - currentInteraction.startPos.x;
+            const deltaY = e.clientY - currentInteraction.startPos.y;
+            const colWidth = (section.gridSettings.gap + (document.getElementById(section.id)?.clientWidth || 0) / section.gridSettings.columns);
+            const rowHeight = grid.rowHeight + grid.gap;
+            
+            const colDelta = Math.round(deltaX / colWidth);
+            const rowDelta = Math.round(deltaY / rowHeight);
+
+            let newLayout = { ...currentInteraction.startLayout };
+
+            if (currentInteraction.type === 'moving_block') {
+                const width = newLayout.colEnd - newLayout.colStart;
+                const height = newLayout.rowEnd - newLayout.rowStart;
+                newLayout.colStart = Math.max(1, currentInteraction.startLayout.colStart + colDelta);
+                newLayout.colEnd = Math.min(grid.columns + 1, newLayout.colStart + width);
+                newLayout.rowStart = Math.max(1, currentInteraction.startLayout.rowStart + rowDelta);
+                newLayout.rowEnd = newLayout.rowStart + height;
+            } else { // Resizing
+                const dir = currentInteraction.resizeDirection;
+                if (dir?.includes('e')) newLayout.colEnd = Math.min(grid.columns + 1, Math.max(newLayout.colStart + 1, currentInteraction.startLayout.colEnd + colDelta));
+                if (dir?.includes('w')) newLayout.colStart = Math.max(1, Math.min(newLayout.colEnd - 1, currentInteraction.startLayout.colStart + colDelta));
+                if (dir?.includes('s')) newLayout.rowEnd = Math.max(newLayout.rowStart + 1, currentInteraction.startLayout.rowEnd + rowDelta);
+                if (dir?.includes('n')) newLayout.rowStart = Math.max(1, Math.min(newLayout.rowEnd - 1, currentInteraction.startLayout.rowStart + rowDelta));
+            }
+
+            setDragPreview({ layout: newLayout, sectionId: section.id, context: currentInteraction.context! });
+        }
+    }, []);
+
+    const handleMouseUp = useCallback(() => {
+        const currentInteraction = interactionStateRef.current;
+        const currentDropTarget = dropTargetRef.current;
+        const currentDragPreview = dragPreview; // Use a local variable to capture state at time of call
+        
+        if (currentInteraction) {
+            if ((currentInteraction.type === 'new_block' || currentInteraction.type === 'new_section') && currentDropTarget) {
+                updatePageData(draft => {
+                    const sectionListKey = currentDropTarget.context === 'footer' ? 'footerSections' : 'sections';
+                    const sections = draft.content?.[sectionListKey] || [];
+                    if (currentInteraction.type === 'new_block') {
+                        const section = sections.find(s => s.id === currentDropTarget.sectionId);
+                        if (section) {
+                            section.blocks.push(currentInteraction.item as PageBlock);
+                            setTimeout(() => handleSelect({ type: 'block', id: (currentInteraction.item as PageBlock).id, sectionId: section.id, context: currentDropTarget.context }), 0);
+                        }
+                    } else if (currentInteraction.type === 'new_section') {
+                        const insertIdx = currentDropTarget.insertIndex ?? sections.length;
+                        sections.splice(insertIdx, 0, currentInteraction.item as Section);
+                        setTimeout(() => handleSelect({ type: 'section', id: (currentInteraction.item as Section).id, context: currentDropTarget.context }), 0);
+                    }
+                });
+            } else if ((currentInteraction.type === 'moving_block' || currentInteraction.type === 'resizing_block') && currentDragPreview) {
+                 updatePageData(draft => {
+                    const sectionListKey = currentDragPreview.context === 'footer' ? 'footerSections' : 'sections';
+                    const section = draft.content?.[sectionListKey]?.find(s => s.id === currentDragPreview.sectionId);
+                    if (section) {
+                        const block = section.blocks.find(b => b.id === currentInteraction.blockId);
+                        if (block) {
+                            block.layout[viewportRef.current] = currentDragPreview.layout;
+                        }
+                    }
+                });
+            }
+        }
+
+        setInteractionState(null);
+        setGhostElement(null);
+        setDropTarget(null);
+        setDragPreview(null);
+    }, [updatePageData, handleSelect, dragPreview]); // Include dragPreview
+
+    useEffect(() => {
+        if (interactionState) {
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp, { once: true });
+        }
+        return () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [interactionState, handleMouseMove, handleMouseUp]);
 
 
     // --- RENDER LOGIC ---
@@ -322,6 +456,41 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
         </>
     );
 
+    const renderSectionContent = (section: Section, context: EditorContext) => (
+        <div key={section.id} id={section.id} data-section-id={section.id} data-context={context} data-index={(pageData.content?.[context === 'footer' ? 'footerSections' : 'sections'] || []).findIndex(s => s.id === section.id)}
+            style={{ backgroundColor: hexToRgba(section.styles.backgroundColor || '#000', section.styles.backgroundOpacity) }}
+            className={`relative group transition-all duration-200 ${isEditMode ? `p-4 border-2 border-dashed min-h-[100px] ${dropTarget?.sectionId === section.id && dropTarget?.context === context ? 'border-cyan-500 bg-cyan-900/20' : 'border-transparent hover:border-cyan-500/50'}` : ''}`}
+            onClick={(e) => { e.stopPropagation(); if (isEditMode) handleSelect({ type: 'section', id: section.id, context }); }}>
+            
+            <div className="relative" style={{ display: 'grid', gridTemplateColumns: `repeat(${section.gridSettings.columns}, 1fr)`, gridAutoRows: `${section.gridSettings.rowHeight}px`, gap: `${section.gridSettings.gap}px`, height: '100%' }}>
+                {section.blocks.map(block => {
+                    const isSelected = selection?.type === 'block' && selection.id === block.id;
+                    return (
+                        <div key={block.id} id={block.id} data-animation={block.animation.type} data-animation-delay={block.animation.delay} data-animation-duration={block.animation.duration}
+                            onClick={(e) => { e.stopPropagation(); if (isEditMode) handleSelect({ type: 'block', id: block.id, sectionId: section.id, context }); }}
+                            style={{ gridColumn: `${block.layout[viewport].colStart} / ${block.layout[viewport].colEnd}`, gridRow: `${block.layout[viewport].rowStart} / ${block.layout[viewport].rowEnd}` }}
+                        >
+                            {isEditMode ?
+                                <InteractiveBlock block={block} theme={theme} viewport={viewport} isSelected={isSelected} onMouseDown={(e) => handleBlockMouseDown(e, block.id, section.id, context)} onResizeStart={(e, dir) => handleResizeStart(e, block.id, section.id, context, dir)} onInlineUpdate={() => { }} onInlineSelect={() => { }} />
+                                :
+                                <BlockRenderer block={block} theme={theme} viewport={viewport} onToggleContainer={handleToggleContainer} onInlineUpdate={() => { }} onInlineSelect={() => { }} />
+                            }
+                        </div>
+                    );
+                })}
+                 {dragPreview && dragPreview.sectionId === section.id && dragPreview.context === context && (
+                    <div className="absolute bg-cyan-500/30 border-2 border-cyan-400 border-dashed rounded-lg pointer-events-none"
+                         style={{
+                             gridColumn: `${dragPreview.layout.colStart} / ${dragPreview.layout.colEnd}`,
+                             gridRow: `${dragPreview.layout.rowStart} / ${dragPreview.layout.rowEnd}`,
+                             zIndex: 1000
+                         }}
+                    ></div>
+                )}
+            </div>
+        </div>
+    );
+
     return (
         <div className="min-h-screen transition-colors duration-300" style={{ backgroundColor: settings.backgroundColor }}>
              <style>
@@ -333,39 +502,11 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
                 {canEdit && isEditMode && renderEditorUI()}
 
                 <main id="main-canvas" className="relative mx-auto" onClick={() => isEditMode && handleSelect({ type: 'page' })}>
-                    {(sections || []).map((section, index) => (
-                        <div key={section.id} id={section.id} data-section-id={section.id} data-context="main" data-index={index} style={{ backgroundColor: hexToRgba(section.styles.backgroundColor || '#000', section.styles.backgroundOpacity) }} className={`relative group transition-all duration-200 ${isEditMode ? `p-4 border-2 border-dashed min-h-[100px] ${dropTarget?.sectionId === section.id && dropTarget?.context === 'main' ? 'border-cyan-500 bg-cyan-900/20' : 'border-transparent hover:border-cyan-500/50'}` : ''}`}
-                            onClick={(e) => { e.stopPropagation(); if(isEditMode) handleSelect({ type: 'section', id: section.id, context: 'main' }); }}>
-                            <div className="relative" style={{ display: 'grid', gridTemplateColumns: `repeat(${section.gridSettings.columns}, 1fr)`, gridAutoRows: `${section.gridSettings.rowHeight}px`, gap: `${section.gridSettings.gap}px` }}>
-                            {section.blocks.map(block => {
-                                    const isSelected = selection?.type === 'block' && selection.id === block.id;
-                                    const blockWrapperStyle: React.CSSProperties = { ...block.layout[viewport], zIndex: block.styles?.zIndex || 'auto', };
-                                    return <div key={block.id} id={block.id} style={blockWrapperStyle} data-animation={block.animation.type} data-animation-delay={block.animation.delay} data-animation-duration={block.animation.duration} onClick={(e) => { e.stopPropagation(); if (isEditMode) handleSelect({ type: 'block', id: block.id, sectionId: section.id, context: 'main' }); }}>
-                                        {isEditMode ? <InteractiveBlock block={block} theme={theme} viewport={viewport} isSelected={isSelected} onMouseDown={(e) => {}} onResizeStart={(e, dir) => {}} onInlineUpdate={() => {}} onInlineSelect={()=>{}} />
-                                                   : <BlockRenderer block={block} theme={theme} viewport={viewport} onToggleContainer={handleToggleContainer} onInlineUpdate={() => {}} onInlineSelect={()=>{}} />}
-                                    </div>;
-                                })}
-                            </div>
-                        </div>
-                    ))}
+                    {(sections || []).map(section => renderSectionContent(section, 'main'))}
                 </main>
                 
                 <footer className="relative mx-auto max-w-screen-2xl mt-8 pt-8 border-t border-slate-800">
-                    {(footerSections || []).map((section, index) => (
-                        <div key={section.id} id={section.id} data-section-id={section.id} data-context="footer" data-index={index} style={{ backgroundColor: hexToRgba(section.styles.backgroundColor || '#000', section.styles.backgroundOpacity) }} className={`relative group transition-all duration-200 ${isEditMode ? `p-4 border-2 border-dashed min-h-[100px] ${dropTarget?.sectionId === section.id && dropTarget?.context === 'footer' ? 'border-cyan-500 bg-cyan-900/20' : 'border-transparent hover:border-cyan-500/50'}` : ''}`}
-                            onClick={(e) => { e.stopPropagation(); if(isEditMode) handleSelect({ type: 'section', id: section.id, context: 'footer' }); }}>
-                            <div className="relative" style={{ display: 'grid', gridTemplateColumns: `repeat(${section.gridSettings.columns}, 1fr)`, gridAutoRows: `${section.gridSettings.rowHeight}px`, gap: `${section.gridSettings.gap}px` }}>
-                            {section.blocks.map(block => {
-                                    const isSelected = selection?.type === 'block' && selection.id === block.id;
-                                    const blockWrapperStyle: React.CSSProperties = { ...block.layout[viewport], zIndex: block.styles?.zIndex || 'auto' };
-                                    return <div key={block.id} id={block.id} style={blockWrapperStyle} data-animation={block.animation.type} data-animation-delay={block.animation.delay} data-animation-duration={block.animation.duration} onClick={(e) => { e.stopPropagation(); if (isEditMode) handleSelect({ type: 'block', id: block.id, sectionId: section.id, context: 'footer' }); }}>
-                                        {isEditMode ? <InteractiveBlock block={block} theme={theme} viewport={viewport} isSelected={isSelected} onMouseDown={(e) => {}} onResizeStart={(e, dir) => {}} onInlineUpdate={() => {}} onInlineSelect={()=>{}} />
-                                                   : <BlockRenderer block={block} theme={theme} viewport={viewport} onToggleContainer={handleToggleContainer} onInlineUpdate={() => {}} onInlineSelect={()=>{}} />}
-                                    </div>;
-                                })}
-                            </div>
-                        </div>
-                    ))}
+                     {(footerSections || []).map(section => renderSectionContent(section, 'footer'))}
                 </footer>
             </div>
             {feedback && <div className={`fixed bottom-4 right-4 p-4 rounded-lg shadow-lg text-white z-[10000] ${feedback.type === 'error' ? 'bg-red-600' : 'bg-green-600'}`}>{feedback.message}</div>}
