@@ -1,10 +1,5 @@
-
 // api/site/site.routes.ts
-// FIX: Use explicit `Request` and `Response` types from `express` to resolve type conflicts with global DOM types.
-// Use 'express.Request' and 'express.Response' to prevent conflicts.
-// FIX: Changed import to use default express and qualified types to avoid conflict with global DOM types.
-// FIX: Resolve TypeScript type conflicts between Express and global DOM types by explicitly importing `Request` and `Response` from `express`.
-// @google/genai-fix: Changed import to use explicit Request and Response types from express.
+// @google/genai-fix: Use explicit `Request` and `Response` types from `express` to resolve type conflicts with global DOM types.
 import express, { Request, Response } from 'express';
 import { pool } from '../../core/db';
 import { verifyToken, checkModulePermission } from '../../core/auth.middleware';
@@ -38,10 +33,6 @@ const defaultNewPageContent: SiteData = {
 // --- Rotas Públicas (sem autenticação) ---
 
 // Obter página pela Home
-// FIX: Used express.Request and express.Response to specify Express types and resolve property access errors.
-// FIX: Use explicit Request and Response types from express to resolve property access errors.
-// FIX: Use qualified express types to avoid conflict with global DOM types.
-// @google/genai-fix: Use explicit Request and Response types from express.
 router.get('/pages/public/home', async (req: Request, res: Response) => {
     try {
         res.setHeader('Cache-Control', 'no-store');
@@ -57,10 +48,6 @@ router.get('/pages/public/home', async (req: Request, res: Response) => {
 });
 
 // Obter página pelo slug
-// FIX: Used express.Request and express.Response to specify Express types and resolve property access errors.
-// FIX: Use explicit Request and Response types from express to resolve property access errors.
-// FIX: Use qualified express types to avoid conflict with global DOM types.
-// @google/genai-fix: Use explicit Request and Response types from express.
 router.get('/pages/public/slug/:slug', async (req: Request, res: Response) => {
     try {
         res.setHeader('Cache-Control', 'no-store');
@@ -81,10 +68,6 @@ router.get('/pages/public/slug/:slug', async (req: Request, res: Response) => {
 
 // --- Rotas para Admin visualizar QUALQUER página (publicada ou não) ---
 // Obter página HOME para admin
-// FIX: Used express.Request and express.Response to specify Express types and resolve property access errors.
-// FIX: Use explicit Request and Response types from express to resolve property access errors.
-// FIX: Use qualified express types to avoid conflict with global DOM types.
-// @google/genai-fix: Use explicit Request and Response types from express.
 router.get('/pages/admin/home', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
     try {
         res.setHeader('Cache-Control', 'no-store');
@@ -100,10 +83,6 @@ router.get('/pages/admin/home', verifyToken, checkModulePermission('SITE'), asyn
 });
 
 // Obter página por slug para admin
-// FIX: Used express.Request and express.Response to specify Express types and resolve property access errors.
-// FIX: Use explicit Request and Response types from express to resolve property access errors.
-// FIX: Use qualified express types to avoid conflict with global DOM types.
-// @google/genai-fix: Use explicit Request and Response types from express.
 router.get('/pages/admin/slug/:slug', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
     try {
         res.setHeader('Cache-Control', 'no-store');
@@ -121,10 +100,6 @@ router.get('/pages/admin/slug/:slug', verifyToken, checkModulePermission('SITE')
 
 
 // Listar todas as páginas
-// FIX: Used express.Request and express.Response to specify Express types and resolve property access errors.
-// FIX: Use explicit Request and Response types from express to resolve property access errors.
-// FIX: Use qualified express types to avoid conflict with global DOM types.
-// @google/genai-fix: Use explicit Request and Response types from express.
 router.get('/pages', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
     try {
         const result = await pool.query('SELECT id, title, slug, is_homepage, is_published, updated_at FROM pages ORDER BY title');
@@ -136,10 +111,6 @@ router.get('/pages', verifyToken, checkModulePermission('SITE'), async (req: Req
 });
 
 // Criar uma nova página
-// FIX: Used express.Request and express.Response to specify Express types and resolve property access errors.
-// FIX: Use explicit Request and Response types from express to resolve property access errors.
-// FIX: Use qualified express types to avoid conflict with global DOM types.
-// @google/genai-fix: Use explicit Request and Response types from express.
 router.post('/pages', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
     const { title, slug } = req.body;
     if (!title || !slug) {
@@ -162,10 +133,6 @@ router.post('/pages', verifyToken, checkModulePermission('SITE'), async (req: Re
 });
 
 // Duplicar uma página
-// FIX: Used express.Request and express.Response to specify Express types and resolve property access errors.
-// FIX: Use explicit Request and Response types from express to resolve property access errors.
-// FIX: Use qualified express types to avoid conflict with global DOM types.
-// @google/genai-fix: Use explicit Request and Response types from express.
 router.post('/pages/duplicate/:id', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
     const { id } = req.params;
     try {
@@ -204,10 +171,6 @@ router.post('/pages/duplicate/:id', verifyToken, checkModulePermission('SITE'), 
 
 
 // Obter dados de uma página específica para edição
-// FIX: Used express.Request and express.Response to specify Express types and resolve property access errors.
-// FIX: Use explicit Request and Response types from express to resolve property access errors.
-// FIX: Use qualified express types to avoid conflict with global DOM types.
-// @google/genai-fix: Use explicit Request and Response types from express.
 router.get('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
@@ -223,10 +186,6 @@ router.get('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req:
 });
 
 // Atualizar uma página
-// FIX: Used express.Request and express.Response to specify Express types and resolve property access errors.
-// FIX: Use explicit Request and Response types from express to resolve property access errors.
-// FIX: Use qualified express types to avoid conflict with global DOM types.
-// @google/genai-fix: Use explicit Request and Response types from express.
 router.put('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
     const { id } = req.params;
     const { title, slug, is_published, content, metaTitle, metaDescription, socialImageUrl } = req.body;
@@ -263,10 +222,6 @@ router.put('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req:
 });
 
 // Excluir uma página
-// FIX: Used express.Request and express.Response to specify Express types and resolve property access errors.
-// FIX: Use explicit Request and Response types from express to resolve property access errors.
-// FIX: Use qualified express types to avoid conflict with global DOM types.
-// @google/genai-fix: Use explicit Request and Response types from express.
 router.delete('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
     const { id } = req.params;
     try {
@@ -287,10 +242,6 @@ router.delete('/pages/:id', verifyToken, checkModulePermission('SITE'), async (r
 });
 
 // Alternar status de publicação da página
-// FIX: Used express.Request and express.Response to specify Express types and resolve property access errors.
-// FIX: Use explicit Request and Response types from express to resolve property access errors.
-// FIX: Use qualified express types to avoid conflict with global DOM types.
-// @google/genai-fix: Use explicit Request and Response types from express.
 router.patch('/pages/:id/status', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
     const { id } = req.params;
     const { is_published } = req.body;
@@ -324,10 +275,6 @@ router.patch('/pages/:id/status', verifyToken, checkModulePermission('SITE'), as
 });
 
 // Definir uma página como a página inicial
-// FIX: Used express.Request and express.Response to specify Express types and resolve property access errors.
-// FIX: Use explicit Request and Response types from express to resolve property access errors.
-// FIX: Use qualified express types to avoid conflict with global DOM types.
-// @google/genai-fix: Use explicit Request and Response types from express.
 router.patch('/pages/:id/set-homepage', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
     const { id } = req.params;
     const client = await pool.connect();

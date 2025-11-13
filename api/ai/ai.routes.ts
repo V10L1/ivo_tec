@@ -1,8 +1,5 @@
-
-
 // api/ai/ai.routes.ts
-// FIX: Resolve TypeScript type conflicts between Express and global DOM types by explicitly importing `Request` and `Response` from `express`.
-// @google/genai-fix: Changed import to use explicit Request and Response types from express.
+// @google/genai-fix: Use explicit `Request` and `Response` types from `express` to resolve type conflicts with global DOM types.
 import express, { Request, Response } from 'express';
 import { GoogleGenAI, Type } from '@google/genai';
 import { verifyToken, checkModulePermission } from '../../core/auth.middleware';
@@ -142,9 +139,6 @@ const siteDataSchema = {
     required: ['settings', 'theme', 'sections']
 };
 
-// FIX: Use explicit Request and Response types from express to resolve property access errors.
-// FIX: Use qualified express types to avoid conflict with global DOM types.
-// @google/genai-fix: Use explicit Request and Response types from express.
 router.post('/generate/page', async (req: Request, res: Response) => {
     const { title, prompt } = req.body;
     if (!title || !prompt) {
@@ -211,9 +205,6 @@ router.post('/generate/page', async (req: Request, res: Response) => {
 
 
 // Endpoint para geração de texto
-// FIX: Use explicit Request and Response types from express to resolve property access errors.
-// FIX: Use qualified express types to avoid conflict with global DOM types.
-// @google/genai-fix: Use explicit Request and Response types from express.
 router.post('/generate/text', async (req: Request, res: Response) => {
     const { prompt } = req.body;
     if (!prompt) return res.status(400).json({ message: 'O prompt é obrigatório.' });
@@ -228,9 +219,6 @@ router.post('/generate/text', async (req: Request, res: Response) => {
 });
 
 // Endpoint para geração de imagem
-// FIX: Use explicit Request and Response types from express to resolve property access errors.
-// FIX: Use qualified express types to avoid conflict with global DOM types.
-// @google/genai-fix: Use explicit Request and Response types from express.
 router.post('/generate/image', async (req: Request, res: Response) => {
     const { prompt } = req.body;
     if (!prompt) return res.status(400).json({ message: 'O prompt é obrigatório.' });

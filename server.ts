@@ -1,5 +1,3 @@
-
-
 // HACK: Declare Node.js globals to resolve TypeScript errors when @types/node is not available.
 declare const process: {
     env: {
@@ -11,14 +9,7 @@ declare const process: {
 declare const __dirname: string;
 
 // server.ts - O Orquestrador Principal
-
-// FIX: Use explicit `Request` and `Response` types from `express` to resolve type conflicts with global DOM types.
-// Use 'express.Request' and 'express.Response' to prevent conflicts.
-// Correcting import to explicitly use Request and Response from express
-// FIX: Changed import to use default express and qualified types to avoid conflict with global DOM types.
-// FIX: Resolve TypeScript type conflicts between Express and global DOM types by explicitly importing `Request` and `Response` from `express`.
-// @google/genai-fix: Changed import to use explicit Request and Response types from express.
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -37,11 +28,6 @@ app.use(cors());
 app.use(express.json());
 
 // --- Rota de Verificação de Saúde ---
-// Correcting types for req and res
-// FIX: Used express.Request and express.Response to specify Express types and resolve property access errors.
-// FIX: Use explicit Request and Response types from express to resolve property access errors.
-// FIX: Use qualified express types to avoid conflict with global DOM types.
-// @google/genai-fix: Use explicit Request and Response types from express.
 app.get('/api/health', async (req: Request, res: Response) => {
     try {
         const client = await pool.connect();
@@ -54,29 +40,38 @@ app.get('/api/health', async (req: Request, res: Response) => {
 });
 
 
-// --- Carregador de Módulos Dinâmico ---
+// --- Carregador de Módulos Dinâmico (Refatorado para Robustez) ---
 const loadApiModules = async () => {
     const sourceApiDir = path.join(process.cwd(), 'api');
-    const compiledApiDir = path.join(__dirname, 'api');
+    const compiledBaseDir = path.join(__dirname); // O diretório base dos arquivos compilados (ex: dist/server)
+
     try {
         const moduleFolders = await fs.readdir(sourceApiDir, { withFileTypes: true });
 
         for (const folder of moduleFolders) {
             if (folder.isDirectory()) {
-                const manifestPath = path.join(sourceApiDir, folder.name, 'manifest.json');
+                const moduleName = folder.name;
+                const manifestPath = path.join(sourceApiDir, moduleName, 'manifest.json');
+                
                 try {
                     const manifestContent = await fs.readFile(manifestPath, 'utf-8');
                     const manifest = JSON.parse(manifestContent);
                     
-                    const routesPath = path.join(compiledApiDir, folder.name, manifest.routesFile);
-                    const { default: router } = await import(routesPath);
+                    // Constrói o caminho absoluto para o arquivo de rotas compilado
+                    // manifest.routesFile é algo como './usuario.routes.js'
+                    const relativeRoutesPath = path.join('api', moduleName, manifest.routesFile);
+                    const absoluteRoutesPath = path.resolve(compiledBaseDir, relativeRoutesPath);
+
+                    const { default: router } = await import(absoluteRoutesPath);
                     
                     if (router) {
                         app.use(manifest.prefix, router);
-                        console.log(`[Module Loader] Módulo '${folder.name}' carregado com sucesso no prefixo '${manifest.prefix}'.`);
+                        console.log(`[Module Loader] Módulo '${moduleName}' carregado com sucesso no prefixo '${manifest.prefix}'.`);
+                    } else {
+                         console.warn(`[Module Loader] Módulo '${moduleName}' em '${absoluteRoutesPath}' não possui uma exportação padrão.`);
                     }
-                } catch (e) {
-                    console.error(`[Module Loader] Falha ao carregar o módulo '${folder.name}'. Verifique o manifest.json e o arquivo de rotas.`, e);
+                } catch (e: any) {
+                    console.error(`[Module Loader] Falha ao carregar o módulo '${moduleName}'. Verifique o manifest.json e o arquivo de rotas.`, e.message);
                 }
             }
         }
@@ -95,15 +90,14 @@ const serveFrontend = () => {
     app.use('/dist/client', express.static(clientDistPath));
     app.use(express.static(staticRootPath));
 
-    // Correcting types for req and res
-    // FIX: Used express.Request and express.Response to specify Express types and resolve property access errors.
-    // FIX: Use explicit Request and Response types from express to resolve property access errors.
-    // FIX: Use qualified express types to avoid conflict with global DOM types.
-    // @google/genai-fix: Use explicit Request and Response types from express.
-    app.get('*', (req: Request, res: Response) => {
+    // Rota "catch-all" melhorada para lidar com APIs não encontradas
+    // @google/genai-fix: Add explicit Request, Response, and NextFunction types to the middleware to resolve type conflicts.
+    app.use((req: Request, res: Response, next: NextFunction) => {
         if (req.path.startsWith('/api/')) {
-            return res.status(404).json({ message: 'Endpoint da API não encontrado.' });
+            // Se chegou até aqui, é uma rota de API que não foi encontrada.
+            return res.status(404).json({ message: `Endpoint da API não encontrado: ${req.method} ${req.path}` });
         }
+        // Se não for uma rota de API, serve o frontend.
         res.sendFile(path.join(staticRootPath, 'index.html'));
     });
 };

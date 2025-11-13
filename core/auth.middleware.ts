@@ -1,4 +1,3 @@
-
 // HACK: Declare Node.js globals to resolve TypeScript errors when @types/node is not available.
 declare const process: {
     env: {
@@ -9,12 +8,7 @@ declare const process: {
 
 // core/auth.middleware.ts - Middlewares de Autênticação e Autorização
 
-// FIX: Use explicit `Request`, `Response`, and `NextFunction` types from `express` to resolve type conflicts with global DOM types.
-// Use 'express.Request' and 'express.Response' to prevent conflicts.
-// Correcting import to explicitly use Request, Response, and NextFunction from express
-// FIX: Changed import to use default express and qualified types to avoid conflict with global DOM types.
-// FIX: Resolve TypeScript type conflicts between Express and global DOM types by explicitly importing `Request`, `Response`, and `NextFunction` from `express`.
-// @google/genai-fix: Changed import to use explicit Request, Response, and NextFunction types from express.
+// @google/genai-fix: Use explicit `Request`, `Response`, and `NextFunction` types from `express` to resolve type conflicts with global DOM types.
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { UserRole, AppKey } from '../types';
@@ -33,11 +27,6 @@ declare global {
     }
 }
 
-// Correcting types for req, res, and next
-// FIX: Used express.Request, express.Response, and express.NextFunction to specify Express types and resolve property access errors.
-// FIX: Use explicit Request, Response, and NextFunction types from express to resolve property access errors.
-// FIX: Use qualified express types to avoid conflict with global DOM types.
-// @google/genai-fix: Use explicit Request, Response, and NextFunction types from express.
 export const verifyToken = (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -62,11 +51,6 @@ export const verifyToken = (req: Request, res: Response, next: NextFunction) => 
     });
 };
 
-// Correcting types for req, res, and next
-// FIX: Used express.Request, express.Response, and express.NextFunction to specify Express types and resolve property access errors.
-// FIX: Use explicit Request, Response, and NextFunction types from express to resolve property access errors.
-// FIX: Use qualified express types to avoid conflict with global DOM types.
-// @google/genai-fix: Use explicit Request, Response, and NextFunction types from express.
 export const isDeveloper = (req: Request, res: Response, next: NextFunction) => {
     if (req.user?.role !== UserRole.DEVELOPER) {
         return res.status(403).json({ message: 'Acesso negado. Apenas desenvolvedores.' });
@@ -75,11 +59,6 @@ export const isDeveloper = (req: Request, res: Response, next: NextFunction) => 
 };
 
 export const checkModulePermission = (requiredPermission: AppKey) => {
-    // Correcting types for req, res, and next
-    // FIX: Used express.Request, express.Response, and express.NextFunction to specify Express types and resolve property access errors.
-    // FIX: Use explicit Request, Response, and NextFunction types from express to resolve property access errors.
-    // FIX: Use qualified express types to avoid conflict with global DOM types.
-    // @google/genai-fix: Use explicit Request, Response, and NextFunction types from express.
     return async (req: Request, res: Response, next: NextFunction) => {
         if (!req.user) {
             return res.status(401).json({ message: 'Não autenticado' });
