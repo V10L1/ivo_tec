@@ -113,6 +113,20 @@ export interface AnimationSettings {
     duration: number; // in ms
 }
 
+// FIX: Export Viewport and Selection types for use in site editor components.
+export type Viewport = 'desktop' | 'tablet' | 'mobile';
+
+export type Selection =
+  | { type: 'page' }
+  | { type: 'section'; id: string; context: 'main' | 'footer' }
+  | {
+      type: 'block';
+      id: string;
+      sectionId: string;
+      blockType: PageBlock['type'];
+      context: 'main' | 'footer' | FixedContainerPosition;
+    };
+
 export type PageBlock = {
   id: string;
   layout: {

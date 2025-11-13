@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Page } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
@@ -58,7 +57,7 @@ const PageManager: React.FC = () => {
             setIsCreateModalOpen(false);
             setNewPage({ title: '', slug: '' });
             // Redireciona para a página recém-criada em modo de edição
-            navigate(`/${data.slug}?edit=true`);
+            window.location.hash = `/${data.slug}?edit=true`;
 
         } catch (error: any) {
             handleFeedback('error', error.message);
@@ -113,7 +112,7 @@ const PageManager: React.FC = () => {
 
     const handleEditPage = (page: PageSummary) => {
         const path = page.is_homepage ? '/' : `/${page.slug}`;
-        navigate(`${path}?edit=true`);
+        window.location.hash = `${path}?edit=true`;
     };
 
     const handleToggleStatus = async (page: PageSummary) => {

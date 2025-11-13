@@ -11,7 +11,7 @@ declare const process: {
 // FIX: Use `import express from 'express'` to allow using `express.Request` and `express.Response` to resolve type conflicts.
 // @google/genai-fix: Import Request, Response, and NextFunction types directly from express to resolve type conflicts.
 // @google/genai-fix: Use fully qualified express types to avoid conflicts with global DOM types.
-import { Request, Response, NextFunction } from 'express';
+import express from 'express';
 import jwt from 'jsonwebtoken';
 import { UserRole, AppKey } from '../types';
 import { pool } from './db';
@@ -34,7 +34,7 @@ declare global {
 // @google/genai-fix: Use explicit express types to resolve conflicts.
 // @google/genai-fix: Use explicit express types to resolve conflicts with global types.
 // FIX: Add explicit types to express middleware to resolve type errors.
-export const verifyToken = (req: Request, res: Response, next: NextFunction) => {
+export const verifyToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
@@ -63,7 +63,7 @@ export const verifyToken = (req: Request, res: Response, next: NextFunction) => 
 // @google/genai-fix: Use explicit express types to resolve conflicts.
 // @google/genai-fix: Use explicit express types to resolve conflicts with global types.
 // FIX: Add explicit types to express middleware to resolve type errors.
-export const isDeveloper = (req: Request, res: Response, next: NextFunction) => {
+export const isDeveloper = (req: express.Request, res: express.Response, next: express.NextFunction) => {
     if (req.user?.role !== UserRole.DEVELOPER) {
         return res.status(403).json({ message: 'Acesso negado. Apenas desenvolvedores.' });
     }
@@ -76,7 +76,7 @@ export const checkModulePermission = (requiredPermission: AppKey) => {
     // @google/genai-fix: Use explicit express types to resolve conflicts.
     // @google/genai-fix: Use explicit express types to resolve conflicts with global types.
     // FIX: Add explicit types to express middleware to resolve type errors.
-    return async (req: Request, res: Response, next: NextFunction) => {
+    return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
         if (!req.user) {
             return res.status(401).json({ message: 'Não autenticado' });
         }
