@@ -91,10 +91,20 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
     const [ghostPosition, setGhostPosition] = useState({ x: 0, y: 0 });
     const [dropTarget, setDropTarget] = useState<{ sectionId: string; context: EditorContext; insertIndex?: number } | null>(null);
 
-    const canvasRefs = { main: useRef<HTMLDivElement>(null), footer: useRef<HTMLDivElement>(null), };
-
     const canEdit = isAuthenticated && (permissions || []).includes('SITE');
     const hasUnsavedChanges = useMemo(() => JSON.stringify(pageData) !== JSON.stringify(savedPageData), [pageData, savedPageData]);
+
+    // Refs for stable event handlers to avoid stale closures
+    const pageDataRef = useRef(pageData);
+    const interactionStateRef = useRef(interactionState);
+    const dropTargetRef = useRef(dropTarget);
+
+    useEffect(() => {
+        pageDataRef.current = pageData;
+        interactionStateRef.current = interactionState;
+        dropTargetRef.current = dropTarget;
+    });
+
 
     // --- Data Fetching and Management ---
     useEffect(() => {
@@ -197,7 +207,7 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
         }
     };
     
-    // --- DRAG AND DROP LOGIC ---
+    // --- DRAG AND DROP LOGIC (ROBUST VERSION) ---
     const handleComponentMouseDown = (e: React.MouseEvent, type: 'block' | 'section', itemData: PageBlock['type'] | (() => Section), label: string, Icon: React.FC<any>) => {
         e.preventDefault();
         e.stopPropagation();
@@ -212,83 +222,84 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
         setGhostPosition({ x: e.clientX, y: e.clientY });
     };
 
-    useEffect(() => {
-        const handleMouseMove = (e: MouseEvent) => {
-            if (!interactionState) return;
-            setGhostPosition({ x: e.clientX, y: e.clientY });
-            const allSections = [...(pageData?.content?.sections.map(s => ({ ...s, context: 'main' as EditorContext })) || []), ...(pageData?.content?.footerSections.map(s => ({ ...s, context: 'footer' as EditorContext })) || [])];
-            let currentTarget: { sectionId: string; context: EditorContext; insertIndex?: number } | null = null;
-            if (interactionState.type === 'new_section') {
-                const allSectionElements = Array.from(document.querySelectorAll<HTMLElement>('[data-section-id]'));
-                let insertIndex = -1;
-                let smallestDistance = Infinity;
-                let lastSectionBottom = -Infinity;
-                let closestSectionId: string | null = null;
-                let closestContext: EditorContext | null = null;
+    const handleMouseMove = useCallback((e: MouseEvent) => {
+        const currentInteraction = interactionStateRef.current;
+        if (!currentInteraction) return;
+
+        setGhostPosition({ x: e.clientX, y: e.clientY });
+        
+        let currentTarget: { sectionId: string; context: EditorContext; insertIndex?: number } | null = null;
+        
+        if (currentInteraction.type === 'new_section') {
+            const allSectionElements = Array.from(document.querySelectorAll<HTMLElement>('[data-section-id]'));
+            let insertIndex = -1;
+            let smallestDistance = Infinity;
+
+            if (allSectionElements.length === 0) {
+                 currentTarget = { sectionId: 'main-canvas', context: 'main', insertIndex: 0 };
+            } else {
                 allSectionElements.forEach((el, index) => {
                     const rect = el.getBoundingClientRect();
                     const midY = rect.top + rect.height / 2;
                     const distance = Math.abs(e.clientY - midY);
+
                     if (distance < smallestDistance) {
                         smallestDistance = distance;
                         insertIndex = e.clientY < midY ? index : index + 1;
-                        closestSectionId = el.dataset.sectionId || null;
-                        closestContext = el.dataset.context as EditorContext;
+                        currentTarget = {
+                            sectionId: el.dataset.sectionId!,
+                            context: el.dataset.context as EditorContext,
+                            insertIndex: insertIndex,
+                        };
                     }
-                    lastSectionBottom = Math.max(lastSectionBottom, rect.bottom);
                 });
-                if (e.clientY > lastSectionBottom && allSectionElements.length > 0) {
-                     insertIndex = allSectionElements.length;
-                     const lastEl = allSectionElements[allSectionElements.length - 1];
-                     closestSectionId = lastEl.dataset.sectionId || null;
-                     closestContext = lastEl.dataset.context as EditorContext;
+            }
+        } else if (currentInteraction.type === 'new_block') {
+            const allSectionElements = Array.from(document.querySelectorAll<HTMLElement>('[data-section-id]'));
+            for (const el of allSectionElements) {
+                const rect = el.getBoundingClientRect();
+                if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
+                    currentTarget = {
+                        sectionId: el.dataset.sectionId!,
+                        context: el.dataset.context as EditorContext,
+                    };
+                    break;
                 }
-                if (allSectionElements.length === 0) { // Dropping on an empty canvas
-                    currentTarget = { sectionId: 'main-canvas', context: 'main', insertIndex: 0 };
-                } else if (closestSectionId && closestContext !== null) {
-                    currentTarget = { sectionId: closestSectionId, context: closestContext, insertIndex };
-                }
-            } else if (interactionState.type === 'new_block') {
-                for (const section of allSections) {
-                    const sectionEl = document.getElementById(section.id);
-                    if (sectionEl) {
-                        const rect = sectionEl.getBoundingClientRect();
-                        if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
-                            currentTarget = { sectionId: section.id, context: section.context };
-                            break;
-                        }
+            }
+        }
+        setDropTarget(currentTarget);
+    }, []);
+
+    const handleMouseUp = useCallback(() => {
+        const currentInteraction = interactionStateRef.current;
+        const currentDropTarget = dropTargetRef.current;
+
+        if (currentInteraction && currentDropTarget) {
+            updatePageData(draft => {
+                const sectionListKey = currentDropTarget.context === 'footer' ? 'footerSections' : 'sections';
+                const sections = draft.content?.[sectionListKey] || [];
+                
+                if (currentInteraction.type === 'new_block') {
+                    const section = sections.find(s => s.id === currentDropTarget.sectionId);
+                    if (section) {
+                        section.blocks.push(currentInteraction.item as PageBlock);
+                        // Using a timeout to ensure the state update has propagated before selecting
+                        setTimeout(() => handleSelect({ type: 'block', id: (currentInteraction.item as PageBlock).id, sectionId: section.id, context: currentDropTarget.context }), 0);
                     }
+                } else if (currentInteraction.type === 'new_section') {
+                    const insertIdx = currentDropTarget.insertIndex ?? sections.length;
+                    sections.splice(insertIdx, 0, currentInteraction.item as Section);
+                    setTimeout(() => handleSelect({ type: 'section', id: (currentInteraction.item as Section).id, context: currentDropTarget.context }), 0);
                 }
-            }
-            setDropTarget(currentTarget);
-        };
-        const handleMouseUp = () => {
-            if (!interactionState) return;
-            if (dropTarget) {
-                if (interactionState.type === 'new_block') {
-                    updatePageData(draft => {
-                        const sectionListKey = dropTarget.context === 'footer' ? 'footerSections' : 'sections';
-                        const sections = draft.content?.[sectionListKey] || [];
-                        const section = sections.find(s => s.id === dropTarget.sectionId);
-                        if (section) {
-                            section.blocks.push(interactionState.item as PageBlock);
-                            handleSelect({ type: 'block', id: (interactionState.item as PageBlock).id, sectionId: section.id, context: dropTarget.context });
-                        }
-                    });
-                } else if (interactionState.type === 'new_section') {
-                    updatePageData(draft => {
-                        const sectionListKey = dropTarget.context === 'footer' ? 'footerSections' : 'sections';
-                        const sections = draft.content?.[sectionListKey] || [];
-                        const insertIdx = dropTarget.insertIndex ?? sections.length;
-                        sections.splice(insertIdx, 0, interactionState.item as Section);
-                        handleSelect({ type: 'section', id: (interactionState.item as Section).id, context: dropTarget.context });
-                    });
-                }
-            }
-            setInteractionState(null);
-            setGhostElement(null);
-            setDropTarget(null);
-        };
+            });
+        }
+
+        setInteractionState(null);
+        setGhostElement(null);
+        setDropTarget(null);
+    }, [updatePageData]);
+
+    useEffect(() => {
         if (interactionState) {
             document.addEventListener('mousemove', handleMouseMove);
             document.addEventListener('mouseup', handleMouseUp, { once: true });
@@ -297,7 +308,7 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
         };
-    }, [interactionState, pageData]);
+    }, [interactionState, handleMouseMove, handleMouseUp]);
 
 
     // --- RENDER LOGIC ---
@@ -383,7 +394,7 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
             
             {canEdit && isEditMode && renderEditorUI()}
 
-            <main ref={canvasRefs.main} id="main-canvas" className="relative mx-auto max-w-screen-2xl" onClick={() => isEditMode && handleSelect({ type: 'page' })}>
+            <main id="main-canvas" className="relative mx-auto max-w-screen-2xl" onClick={() => isEditMode && handleSelect({ type: 'page' })}>
                 {(sections || []).map(section => (
                     <div key={section.id} id={section.id} data-section-id={section.id} data-context="main" style={{ backgroundColor: hexToRgba(section.styles.backgroundColor || '#000', section.styles.backgroundOpacity) }} className={`relative group transition-all duration-200 ${isEditMode ? `p-4 border-2 border-dashed min-h-[100px] ${dropTarget?.sectionId === section.id && dropTarget?.context === 'main' ? 'border-cyan-500 bg-cyan-900/20' : 'border-transparent hover:border-cyan-500/50'}` : ''}`}
                          onClick={(e) => { e.stopPropagation(); if(isEditMode) handleSelect({ type: 'section', id: section.id, context: 'main' }); }}>
@@ -407,7 +418,7 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
                 ))}
             </main>
             
-            <footer ref={canvasRefs.footer} className="relative mx-auto max-w-screen-2xl mt-8 pt-8 border-t border-slate-800">
+            <footer className="relative mx-auto max-w-screen-2xl mt-8 pt-8 border-t border-slate-800">
                  {(footerSections || []).map(section => (
                     <div key={section.id} id={section.id} data-section-id={section.id} data-context="footer" style={{ backgroundColor: hexToRgba(section.styles.backgroundColor || '#000', section.styles.backgroundOpacity) }} className={`relative group transition-all duration-200 ${isEditMode ? `p-4 border-2 border-dashed min-h-[100px] ${dropTarget?.sectionId === section.id && dropTarget?.context === 'footer' ? 'border-cyan-500 bg-cyan-900/20' : 'border-transparent hover:border-cyan-500/50'}` : ''}`}
                          onClick={(e) => { e.stopPropagation(); if(isEditMode) handleSelect({ type: 'section', id: section.id, context: 'footer' }); }}>
