@@ -10,10 +10,8 @@ declare const __dirname: string;
 
 // server.ts - O Orquestrador Principal
 
-// FIX: Use `import express from 'express'` to allow using `express.Request` and `express.Response` to resolve type conflicts.
-// @google/genai-fix: Import Request and Response types directly from express to resolve type conflicts.
-// @google/genai-fix: Use fully qualified express types to avoid conflicts with global DOM types.
-import express from 'express';
+// FIX: Use explicit `Request` and `Response` types from `express` to resolve type conflicts with global DOM types.
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -32,13 +30,7 @@ app.use(cors());
 app.use(express.json());
 
 // --- Rota de Verificação de Saúde ---
-// FIX: Use explicit `express.Request` and `express.Response` types for route handlers.
-// @google/genai-fix: Use imported Request and Response types.
-// @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts.
-// @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts with global types.
-// FIX: Add explicit types to express route handler to resolve type errors.
-// @google/genai-fix: Using imported Request and Response types from express.
-app.get('/api/health', async (req: express.Request, res: express.Response) => {
+app.get('/api/health', async (req: Request, res: Response) => {
     try {
         const client = await pool.connect();
         await client.query('SELECT 1');
@@ -91,13 +83,7 @@ const serveFrontend = () => {
     app.use('/dist/client', express.static(clientDistPath));
     app.use(express.static(staticRootPath));
 
-    // FIX: Use explicit `express.Request` and `express.Response` types for route handlers.
-    // @google/genai-fix: Use imported Request and Response types.
-    // @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts.
-    // @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts with global types.
-    // FIX: Add explicit types to express route handler to resolve type errors.
-    // @google/genai-fix: Using imported Request and Response types from express.
-    app.get('*', (req: express.Request, res: express.Response) => {
+    app.get('*', (req: Request, res: Response) => {
         if (req.path.startsWith('/api/')) {
             return res.status(404).json({ message: 'Endpoint da API não encontrado.' });
         }
