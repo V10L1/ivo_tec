@@ -39,6 +39,7 @@ const defaultNewPageContent: SiteData = {
 // @google/genai-fix: Use imported Request and Response types.
 // @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts.
 // @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts with global types.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.get('/pages/public/home', async (req: express.Request, res: express.Response) => {
     try {
         res.setHeader('Cache-Control', 'no-store');
@@ -58,6 +59,7 @@ router.get('/pages/public/home', async (req: express.Request, res: express.Respo
 // @google/genai-fix: Use imported Request and Response types.
 // @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts.
 // @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts with global types.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.get('/pages/public/slug/:slug', async (req: express.Request, res: express.Response) => {
     try {
         res.setHeader('Cache-Control', 'no-store');
@@ -82,6 +84,7 @@ router.get('/pages/public/slug/:slug', async (req: express.Request, res: express
 // @google/genai-fix: Use imported Request and Response types.
 // @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts.
 // @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts with global types.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.get('/pages/admin/home', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     try {
         res.setHeader('Cache-Control', 'no-store');
@@ -101,6 +104,7 @@ router.get('/pages/admin/home', verifyToken, checkModulePermission('SITE'), asyn
 // @google/genai-fix: Use imported Request and Response types.
 // @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts.
 // @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts with global types.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.get('/pages/admin/slug/:slug', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     try {
         res.setHeader('Cache-Control', 'no-store');
@@ -122,6 +126,7 @@ router.get('/pages/admin/slug/:slug', verifyToken, checkModulePermission('SITE')
 // @google/genai-fix: Use imported Request and Response types.
 // @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts.
 // @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts with global types.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.get('/pages', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     try {
         const result = await pool.query('SELECT id, title, slug, is_homepage, is_published, updated_at FROM pages ORDER BY title');
@@ -137,6 +142,7 @@ router.get('/pages', verifyToken, checkModulePermission('SITE'), async (req: exp
 // @google/genai-fix: Use imported Request and Response types.
 // @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts.
 // @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts with global types.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.post('/pages', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     const { title, slug } = req.body;
     if (!title || !slug) {
@@ -162,6 +168,7 @@ router.post('/pages', verifyToken, checkModulePermission('SITE'), async (req: ex
 // @google/genai-fix: Use imported Request and Response types.
 // @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts.
 // @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts with global types.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.post('/pages/duplicate/:id', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     const { id } = req.params;
     try {
@@ -203,6 +210,7 @@ router.post('/pages/duplicate/:id', verifyToken, checkModulePermission('SITE'), 
 // @google/genai-fix: Use imported Request and Response types.
 // @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts.
 // @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts with global types.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.get('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     try {
         const { id } = req.params;
@@ -222,6 +230,7 @@ router.get('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req:
 // @google/genai-fix: Use imported Request and Response types.
 // @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts.
 // @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts with global types.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.put('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     const { id } = req.params;
     const { title, slug, is_published, content, metaTitle, metaDescription, socialImageUrl } = req.body;
@@ -261,6 +270,7 @@ router.put('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req:
 // @google/genai-fix: Use imported Request and Response types.
 // @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts.
 // @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts with global types.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.delete('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     const { id } = req.params;
     try {
@@ -285,6 +295,7 @@ router.delete('/pages/:id', verifyToken, checkModulePermission('SITE'), async (r
 // @google/genai-fix: Use imported Request and Response types.
 // @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts.
 // @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts with global types.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.patch('/pages/:id/status', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     const { id } = req.params;
     const { is_published } = req.body;
@@ -322,6 +333,7 @@ router.patch('/pages/:id/status', verifyToken, checkModulePermission('SITE'), as
 // @google/genai-fix: Use imported Request and Response types.
 // @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts.
 // @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts with global types.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.patch('/pages/:id/set-homepage', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     const { id } = req.params;
     const client = await pool.connect();

@@ -82,8 +82,7 @@ const BlockRenderer: React.FC<{ block: PageBlock; theme: ThemeSettings; viewport
 const InteractiveBlock: React.FC<{ block: PageBlock; theme: ThemeSettings; viewport: Viewport; isSelected: boolean; onMouseDown: (e: React.MouseEvent) => void; onResizeStart: (e: React.MouseEvent, direction: string) => void; onInlineUpdate: (field: string, subfield: 'text' | keyof TextStyles, value: any) => void; onInlineSelect: () => void; }> = ({ block, theme, viewport, isSelected, onMouseDown, onResizeStart, onInlineUpdate, onInlineSelect }) => { const layout = block.layout[viewport]; const borderRadiusClass = getBorderRadiusClass(block.styles?.borderRadius); const blockStyle = { gridColumn: `${layout.colStart} / ${layout.colEnd}`, gridRow: `${layout.rowStart} / ${layout.rowEnd}`, alignSelf: layout.alignSelf, justifySelf: layout.justifySelf, zIndex: block.styles?.zIndex || 'auto', }; const resizeHandles = ['ne', 'se', 'sw', 'nw', 'n', 'e', 's', 'w']; return ( <div style={blockStyle} className={`relative group transition-shadow duration-200 ${isSelected ? 'shadow-2xl shadow-cyan-500/30' : ''}`} onMouseDown={onMouseDown} > <div className={`absolute inset-0 ring-2 pointer-events-none transition-all duration-200 ${borderRadiusClass} ${isSelected ? 'ring-cyan-500' : 'ring-transparent group-hover:ring-cyan-500/50'}`}></div> <div className={`w-full h-full overflow-hidden ${borderRadiusClass}`}> <BlockRenderer block={block} theme={theme} viewport={viewport} isEditing={true} onInlineUpdate={onInlineUpdate} onInlineSelect={onInlineSelect} /> </div> {isSelected && resizeHandles.map(dir => ( <div key={dir} className={`absolute w-3 h-3 bg-cyan-500 border-2 border-slate-900 rounded-full resize-handle-${dir} cursor-${dir}-resize z-50`} onMouseDown={(e) => { e.stopPropagation(); onResizeStart(e, dir); }} ></div> ))} </div> ); };
 
 // --- COMPONENTE PRINCIPAL: PublicSite COM EDITOR INTEGRADO ---
-// @google/genai-fix: Changed to a named export to fix module resolution issue.
-export const PublicSite: React.FC<{ slug: string; navigate: (path: string) => void; }> = ({ slug, navigate }) => {
+const PublicSite: React.FC<{ slug: string; navigate: (path: string) => void; }> = ({ slug, navigate }) => {
     const { isAuthenticated, permissions, token, isLoading } = useAuth();
     const [pageData, setPageData] = useState<Page | null>(null);
     const [savedPageData, setSavedPageData] = useState<Page | null>(null);
@@ -514,3 +513,5 @@ export const PublicSite: React.FC<{ slug: string; navigate: (path: string) => vo
         </div>
     );
 };
+
+export default PublicSite;

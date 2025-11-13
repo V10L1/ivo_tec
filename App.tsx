@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, createContext, useContext } from 'react';
+import React, { useState, useEffect, createContext, useContext, Suspense } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Dashboard } from './components/Dashboard';
 import { Header } from './components/Header';
@@ -12,13 +12,15 @@ import StockControl from './modules/estoque/StockControl';
 import MessagesChat from './modules/mensagens/MessagesChat';
 import SupportTickets from './modules/suporte/SupportTickets';
 import UserManagement from './modules/usuario/UserManagement';
-// @google/genai-fix: Changed import to be a named import to fix module resolution issue.
-import { PublicSite } from './modules/site/PublicSite';
+// import PublicSite from './modules/site/PublicSite';
 import Login from './modules/usuario/Login';
 import InitialSetup from './modules/usuario/InitialSetup';
 import ForgotPassword from './modules/usuario/ForgotPassword';
 import Register from './modules/usuario/Register';
 import AppsManager from './modules/apps/AppsManager';
+
+// FIX: Lazily import PublicSite to resolve circular dependency related module loading issue.
+const PublicSite = React.lazy(() => import('./modules/site/PublicSite'));
 
 // --- Router Context ---
 interface RouterContextType {
@@ -152,7 +154,11 @@ const AppContent: React.FC = () => {
     // Roteamento dinâmico para páginas públicas
     const slug = path === '/' ? 'home' : path.substring(1);
     // FIX: Pass navigate prop to PublicSite to break circular dependency
-    content = <PublicSite slug={slug} navigate={navigate} />;
+    content = (
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Carregando conteúdo...</div>}>
+        <PublicSite slug={slug} navigate={navigate} />
+      </Suspense>
+    );
   }
 
   return (

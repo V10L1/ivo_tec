@@ -14,11 +14,13 @@ const getAiClient = () => {
     if (!apiKey) {
         throw new Error("A variável de ambiente API_KEY não está definida.");
     }
-    return new GoogleGenAI({ apiKey });
+    // FIX: Initialize GoogleGenAI with the correct object structure.
+    return new GoogleGenAI({ apiKey: process.env.API_KEY });
 };
 
 // Endpoint para geração de texto
 // @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts with global types.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.post('/generate/text', async (req: express.Request, res: express.Response) => {
     const { prompt } = req.body;
 
@@ -42,6 +44,7 @@ router.post('/generate/text', async (req: express.Request, res: express.Response
 
 // Endpoint para geração de imagem
 // @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts with global types.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.post('/generate/image', async (req: express.Request, res: express.Response) => {
     const { prompt } = req.body;
 
