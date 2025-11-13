@@ -1,6 +1,7 @@
 // api/usuario/usuario.routes.ts
-// FIX: Import Request and Response types directly from express.
-import express, { Request, Response } from 'express';
+// FIX: Separated express value and type imports to resolve type conflicts.
+import express from 'express';
+import type { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { pool } from '../../core/db';
@@ -11,7 +12,6 @@ const router = express.Router();
 
 // --- Rotas de Setup e Saúde (parte do núcleo de usuário) ---
 
-// FIX: Use the imported Request and Response types.
 router.get('/setup/status', async (req: Request, res: Response) => {
     try {
         const result = await pool.query('SELECT COUNT(*) FROM users');
@@ -23,7 +23,6 @@ router.get('/setup/status', async (req: Request, res: Response) => {
     }
 });
 
-// FIX: Use the imported Request and Response types.
 router.post('/setup/initialize', async (req: Request, res: Response) => {
     try {
         const userCheck = await pool.query('SELECT COUNT(*) FROM users');
@@ -53,7 +52,6 @@ router.post('/setup/initialize', async (req: Request, res: Response) => {
 });
 
 // --- Rotas de Autenticação ---
-// FIX: Use the imported Request and Response types.
 router.post('/auth/login', async (req: Request, res: Response) => {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -94,7 +92,6 @@ router.post('/auth/login', async (req: Request, res: Response) => {
             role: user.role,
         };
 
-        // FIX: Read JWT_SECRET inside the function to avoid undefined on startup race condition.
         const JWT_SECRET = process.env.JWT_SECRET;
         if (!JWT_SECRET) {
             console.error("ERRO FATAL: JWT_SECRET não está definido no momento do login.");
@@ -112,7 +109,6 @@ router.post('/auth/login', async (req: Request, res: Response) => {
 });
 
 // Rota para verificar um token e obter dados do usuário atual
-// FIX: Use the imported Request and Response types.
 router.get('/auth/me', verifyToken, async (req: Request, res: Response) => {
     if (!req.user) {
         return res.status(401).json({ message: 'Não autenticado' });
@@ -139,7 +135,6 @@ router.get('/auth/me', verifyToken, async (req: Request, res: Response) => {
 });
 
 
-// FIX: Use the imported Request and Response types.
 router.post('/auth/register', async (req: Request, res: Response) => {
     const { name, email, password } = req.body;
     if (!name || !email || !password) {
@@ -166,7 +161,6 @@ router.post('/auth/register', async (req: Request, res: Response) => {
     }
 });
 
-// FIX: Use the imported Request and Response types.
 router.post('/auth/reset-password', async (req: Request, res: Response) => {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -196,7 +190,6 @@ router.post('/auth/reset-password', async (req: Request, res: Response) => {
 
 // --- Rotas de Gerenciamento de Usuários (Protegidas) ---
 
-// FIX: Use the imported Request and Response types.
 router.get('/users', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
     try {
         const result = await pool.query('SELECT id, name, email, role FROM users ORDER BY name');
@@ -207,7 +200,6 @@ router.get('/users', verifyToken, checkModulePermission('USERS'), async (req: Re
     }
 });
 
-// FIX: Use the imported Request and Response types.
 router.post('/users', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
     const { name, email, password, role } = req.body;
     if (!name || !email || !password || !role) {
@@ -233,7 +225,6 @@ router.post('/users', verifyToken, checkModulePermission('USERS'), async (req: R
     }
 });
 
-// FIX: Use the imported Request and Response types.
 router.put('/users/:id', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
     const { id } = req.params;
     const { role } = req.body;
@@ -261,7 +252,6 @@ router.put('/users/:id', verifyToken, checkModulePermission('USERS'), async (req
     }
 });
 
-// FIX: Use the imported Request and Response types.
 router.delete('/users/:id', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
     const { id } = req.params;
 
@@ -283,7 +273,6 @@ router.delete('/users/:id', verifyToken, checkModulePermission('USERS'), async (
 
 // --- Rotas de Gerenciamento de Permissões (Protegidas) ---
 
-// FIX: Use the imported Request and Response types.
 router.get('/permissions', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
     try {
         const result = await pool.query('SELECT role, permissions FROM role_permissions');
@@ -298,7 +287,6 @@ router.get('/permissions', verifyToken, checkModulePermission('USERS'), async (r
     }
 });
 
-// FIX: Use the imported Request and Response types.
 router.post('/permissions', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
     const { role, permissions = [] } = req.body;
 
@@ -325,7 +313,6 @@ router.post('/permissions', verifyToken, checkModulePermission('USERS'), async (
 });
 
 
-// FIX: Use the imported Request and Response types.
 router.put('/permissions/:role', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
     const { role } = req.params;
     const { permissions } = req.body;
@@ -346,7 +333,6 @@ router.put('/permissions/:role', verifyToken, checkModulePermission('USERS'), as
     }
 });
 
-// FIX: Use the imported Request and Response types.
 router.delete('/permissions/:role', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
     const { role } = req.params;
 

@@ -1,6 +1,7 @@
 // api/ai/ai.routes.ts
-// FIX: Import Request and Response types directly from express.
-import express, { Request, Response } from 'express';
+// FIX: Separated express value and type imports to resolve type conflicts.
+import express from 'express';
+import type { Request, Response } from 'express';
 import { GoogleGenAI, Type } from '@google/genai';
 import { verifyToken, checkModulePermission } from '../../core/auth.middleware';
 import { pool } from '../../core/db';
@@ -139,7 +140,6 @@ const siteDataSchema = {
     required: ['settings', 'theme', 'sections']
 };
 
-// FIX: Use the imported Request and Response types.
 router.post('/generate/page', async (req: Request, res: Response) => {
     const { title, prompt } = req.body;
     if (!title || !prompt) {
@@ -170,7 +170,6 @@ router.post('/generate/page', async (req: Request, res: Response) => {
         
         const generatedContentText = response.text;
         
-        // FIX: Adiciona uma verificação para garantir que o texto da IA não seja indefinido antes de fazer o parse.
         if (!generatedContentText) {
             throw new Error('A IA não retornou um conteúdo JSON válido.');
         }
@@ -206,7 +205,6 @@ router.post('/generate/page', async (req: Request, res: Response) => {
 
 
 // Endpoint para geração de texto
-// FIX: Use the imported Request and Response types.
 router.post('/generate/text', async (req: Request, res: Response) => {
     const { prompt } = req.body;
     if (!prompt) return res.status(400).json({ message: 'O prompt é obrigatório.' });
@@ -221,7 +219,6 @@ router.post('/generate/text', async (req: Request, res: Response) => {
 });
 
 // Endpoint para geração de imagem
-// FIX: Use the imported Request and Response types.
 router.post('/generate/image', async (req: Request, res: Response) => {
     const { prompt } = req.body;
     if (!prompt) return res.status(400).json({ message: 'O prompt é obrigatório.' });

@@ -11,8 +11,9 @@ declare const process: {
 declare const __dirname: string;
 
 // server.ts - O Orquestrador Principal
-// FIX: Import Request, Response, and NextFunction types directly from express.
-import express, { Request, Response, NextFunction } from 'express';
+// FIX: Separated express value and type imports to resolve type conflicts.
+import express from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -31,7 +32,6 @@ app.use(cors());
 app.use(express.json());
 
 // --- Rota de Verificação de Saúde ---
-// FIX: Use the imported Request and Response types.
 app.get('/api/health', async (req: Request, res: Response) => {
     try {
         const client = await pool.connect();
@@ -47,7 +47,6 @@ app.get('/api/health', async (req: Request, res: Response) => {
 // --- Carregador de Módulos Dinâmico (Refatorado para Robustez) ---
 const loadApiModules = async () => {
     const sourceApiDir = path.join(process.cwd(), 'api');
-    const compiledBaseDir = path.join(__dirname); // O diretório base dos arquivos compilados (ex: dist/server)
 
     try {
         const moduleFolders = await fs.readdir(sourceApiDir, { withFileTypes: true });
@@ -61,17 +60,16 @@ const loadApiModules = async () => {
                     const manifestContent = await fs.readFile(manifestPath, 'utf-8');
                     const manifest = JSON.parse(manifestContent);
                     
-                    // Constrói o caminho absoluto para o arquivo de rotas compilado
-                    // manifest.routesFile é algo como './usuario.routes.js'
-                    const absoluteRoutesPath = path.resolve(compiledBaseDir, 'api', moduleName, manifest.routesFile);
+                    // Constrói o caminho relativo para a importação, a partir do diretório atual (__dirname)
+                    const relativePathForImport = path.join(__dirname, 'api', moduleName, manifest.routesFile);
 
-                    const { default: router } = await import(absoluteRoutesPath);
+                    const { default: router } = await import(relativePathForImport);
                     
                     if (router) {
                         app.use(manifest.prefix, router);
                         console.log(`[Module Loader] Módulo '${moduleName}' carregado com sucesso no prefixo '${manifest.prefix}'.`);
                     } else {
-                         console.warn(`[Module Loader] Módulo '${moduleName}' em '${absoluteRoutesPath}' não possui uma exportação padrão.`);
+                         console.warn(`[Module Loader] Módulo '${moduleName}' em '${relativePathForImport}' não possui uma exportação padrão.`);
                     }
                 } catch (e: any) {
                     console.error(`[Module Loader] Falha ao carregar o módulo '${moduleName}'. Verifique o manifest.json e o arquivo de rotas.`, e);
@@ -94,7 +92,6 @@ const serveFrontend = () => {
     app.use(express.static(staticRootPath));
 
     // Rota "catch-all" melhorada para lidar com APIs não encontradas
-    // FIX: Use the imported Request, Response, and NextFunction types.
     app.use((req: Request, res: Response, next: NextFunction) => {
         if (req.path.startsWith('/api/')) {
             // Se chegou até aqui, é uma rota de API que não foi encontrada.

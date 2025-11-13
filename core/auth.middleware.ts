@@ -7,8 +7,8 @@ declare const process: {
 };
 
 // core/auth.middleware.ts - Middlewares de Autênticação e Autorização
-// FIX: Import Request, Response, and NextFunction types directly from express.
-import { Request, Response, NextFunction } from 'express';
+// FIX: Use `import type` to prevent module resolution conflicts with Express types.
+import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { UserRole, AppKey } from '../types';
 import { pool } from './db';
@@ -26,7 +26,6 @@ declare global {
     }
 }
 
-// FIX: Use the imported Request, Response, and NextFunction types.
 export const verifyToken = (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -35,7 +34,6 @@ export const verifyToken = (req: Request, res: Response, next: NextFunction) => 
         return res.status(401).json({ message: 'Nenhum token fornecido' });
     }
     
-    // FIX: Read JWT_SECRET inside the function to avoid undefined on startup race condition.
     const JWT_SECRET = process.env.JWT_SECRET;
     if (!JWT_SECRET) {
         console.error("ERRO FATAL: JWT_SECRET não está definido no momento da verificação.");
@@ -51,7 +49,6 @@ export const verifyToken = (req: Request, res: Response, next: NextFunction) => 
     });
 };
 
-// FIX: Use the imported Request, Response, and NextFunction types.
 export const isDeveloper = (req: Request, res: Response, next: NextFunction) => {
     if (req.user?.role !== UserRole.DEVELOPER) {
         return res.status(403).json({ message: 'Acesso negado. Apenas desenvolvedores.' });
@@ -60,7 +57,6 @@ export const isDeveloper = (req: Request, res: Response, next: NextFunction) => 
 };
 
 export const checkModulePermission = (requiredPermission: AppKey) => {
-    // FIX: Use the imported Request, Response, and NextFunction types.
     return async (req: Request, res: Response, next: NextFunction) => {
         if (!req.user) {
             return res.status(401).json({ message: 'Não autenticado' });

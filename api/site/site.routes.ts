@@ -1,6 +1,7 @@
 // api/site/site.routes.ts
-// FIX: Import Request and Response types directly from express.
-import express, { Request, Response } from 'express';
+// FIX: Separated express value and type imports to resolve type conflicts.
+import express from 'express';
+import type { Request, Response } from 'express';
 import { pool } from '../../core/db';
 import { verifyToken, checkModulePermission } from '../../core/auth.middleware';
 import { SiteData, FixedContainer, ThemeSettings } from '../../types';
@@ -33,7 +34,6 @@ const defaultNewPageContent: SiteData = {
 // --- Rotas Públicas (sem autenticação) ---
 
 // Obter página pela Home
-// FIX: Use the imported Request and Response types.
 router.get('/pages/public/home', async (req: Request, res: Response) => {
     try {
         res.setHeader('Cache-Control', 'no-store');
@@ -49,7 +49,6 @@ router.get('/pages/public/home', async (req: Request, res: Response) => {
 });
 
 // Obter página pelo slug
-// FIX: Use the imported Request and Response types.
 router.get('/pages/public/slug/:slug', async (req: Request, res: Response) => {
     try {
         res.setHeader('Cache-Control', 'no-store');
@@ -70,7 +69,6 @@ router.get('/pages/public/slug/:slug', async (req: Request, res: Response) => {
 
 // --- Rotas para Admin visualizar QUALQUER página (publicada ou não) ---
 // Obter página HOME para admin
-// FIX: Use the imported Request and Response types.
 router.get('/pages/admin/home', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
     try {
         res.setHeader('Cache-Control', 'no-store');
@@ -86,7 +84,6 @@ router.get('/pages/admin/home', verifyToken, checkModulePermission('SITE'), asyn
 });
 
 // Obter página por slug para admin
-// FIX: Use the imported Request and Response types.
 router.get('/pages/admin/slug/:slug', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
     try {
         res.setHeader('Cache-Control', 'no-store');
@@ -104,7 +101,6 @@ router.get('/pages/admin/slug/:slug', verifyToken, checkModulePermission('SITE')
 
 
 // Listar todas as páginas
-// FIX: Use the imported Request and Response types.
 router.get('/pages', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
     try {
         const result = await pool.query('SELECT id, title, slug, is_homepage, is_published, updated_at FROM pages ORDER BY title');
@@ -116,14 +112,12 @@ router.get('/pages', verifyToken, checkModulePermission('SITE'), async (req: Req
 });
 
 // Criar uma nova página
-// FIX: Use the imported Request and Response types.
 router.post('/pages', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
     const { title, slug } = req.body;
     if (!title || !slug) {
         return res.status(400).json({ message: 'Título e slug são obrigatórios.' });
     }
     try {
-        // FIX: Converte explicitamente o conteúdo para uma string JSON antes de inserir.
         const result = await pool.query(
             'INSERT INTO pages (title, slug, content, meta_title, meta_description) VALUES ($1, $2, $3, $4, $5) RETURNING *',
             [title, slug, JSON.stringify(defaultNewPageContent), title, `Esta é a descrição para a página ${title}`]
@@ -139,7 +133,6 @@ router.post('/pages', verifyToken, checkModulePermission('SITE'), async (req: Re
 });
 
 // Duplicar uma página
-// FIX: Use the imported Request and Response types.
 router.post('/pages/duplicate/:id', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
     const { id } = req.params;
     try {
@@ -163,7 +156,6 @@ router.post('/pages/duplicate/:id', verifyToken, checkModulePermission('SITE'), 
         
         const newTitle = `Cópia de ${originalPage.title}`;
         
-        // FIX: Converte explicitamente o conteúdo para uma string JSON antes de inserir.
         const result = await pool.query(
             'INSERT INTO pages (title, slug, is_homepage, is_published, content, meta_title, meta_description, social_image_url) VALUES ($1, $2, FALSE, FALSE, $3, $4, $5, $6) RETURNING *',
             [newTitle, newSlug, JSON.stringify(originalPage.content), `Cópia de ${originalPage.meta_title}`, originalPage.meta_description, originalPage.social_image_url]
@@ -178,7 +170,6 @@ router.post('/pages/duplicate/:id', verifyToken, checkModulePermission('SITE'), 
 
 
 // Obter dados de uma página específica para edição
-// FIX: Use the imported Request and Response types.
 router.get('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
@@ -194,7 +185,6 @@ router.get('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req:
 });
 
 // Atualizar uma página
-// FIX: Use the imported Request and Response types.
 router.put('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
     const { id } = req.params;
     const { title, slug, is_published, content, metaTitle, metaDescription, socialImageUrl } = req.body;
@@ -204,7 +194,6 @@ router.put('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req:
     }
 
     try {
-        // FIX: Converte explicitamente o conteúdo para uma string JSON antes de atualizar.
         const result = await pool.query(
             `UPDATE pages SET 
                 title = $1, 
@@ -231,7 +220,6 @@ router.put('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req:
 });
 
 // Excluir uma página
-// FIX: Use the imported Request and Response types.
 router.delete('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
     const { id } = req.params;
     try {
@@ -252,7 +240,6 @@ router.delete('/pages/:id', verifyToken, checkModulePermission('SITE'), async (r
 });
 
 // Alternar status de publicação da página
-// FIX: Use the imported Request and Response types.
 router.patch('/pages/:id/status', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
     const { id } = req.params;
     const { is_published } = req.body;
@@ -286,7 +273,6 @@ router.patch('/pages/:id/status', verifyToken, checkModulePermission('SITE'), as
 });
 
 // Definir uma página como a página inicial
-// FIX: Use the imported Request and Response types.
 router.patch('/pages/:id/set-homepage', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
     const { id } = req.params;
     const client = await pool.connect();
