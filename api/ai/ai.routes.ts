@@ -2,7 +2,8 @@
 
 // api/ai/ai.routes.ts
 // FIX: Resolve TypeScript type conflicts between Express and global DOM types by explicitly importing `Request` and `Response` from `express`.
-import express from 'express';
+// @google/genai-fix: Changed import to use explicit Request and Response types from express.
+import express, { Request, Response } from 'express';
 import { GoogleGenAI, Type } from '@google/genai';
 import { verifyToken, checkModulePermission } from '../../core/auth.middleware';
 import { pool } from '../../core/db';
@@ -143,7 +144,8 @@ const siteDataSchema = {
 
 // FIX: Use explicit Request and Response types from express to resolve property access errors.
 // FIX: Use qualified express types to avoid conflict with global DOM types.
-router.post('/generate/page', async (req: express.Request, res: express.Response) => {
+// @google/genai-fix: Use explicit Request and Response types from express.
+router.post('/generate/page', async (req: Request, res: Response) => {
     const { title, prompt } = req.body;
     if (!title || !prompt) {
         return res.status(400).json({ message: 'Título e prompt são obrigatórios.' });
@@ -211,7 +213,8 @@ router.post('/generate/page', async (req: express.Request, res: express.Response
 // Endpoint para geração de texto
 // FIX: Use explicit Request and Response types from express to resolve property access errors.
 // FIX: Use qualified express types to avoid conflict with global DOM types.
-router.post('/generate/text', async (req: express.Request, res: express.Response) => {
+// @google/genai-fix: Use explicit Request and Response types from express.
+router.post('/generate/text', async (req: Request, res: Response) => {
     const { prompt } = req.body;
     if (!prompt) return res.status(400).json({ message: 'O prompt é obrigatório.' });
     try {
@@ -227,7 +230,8 @@ router.post('/generate/text', async (req: express.Request, res: express.Response
 // Endpoint para geração de imagem
 // FIX: Use explicit Request and Response types from express to resolve property access errors.
 // FIX: Use qualified express types to avoid conflict with global DOM types.
-router.post('/generate/image', async (req: express.Request, res: express.Response) => {
+// @google/genai-fix: Use explicit Request and Response types from express.
+router.post('/generate/image', async (req: Request, res: Response) => {
     const { prompt } = req.body;
     if (!prompt) return res.status(400).json({ message: 'O prompt é obrigatório.' });
     try {

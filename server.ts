@@ -1,4 +1,5 @@
 
+
 // HACK: Declare Node.js globals to resolve TypeScript errors when @types/node is not available.
 declare const process: {
     env: {
@@ -16,7 +17,8 @@ declare const __dirname: string;
 // Correcting import to explicitly use Request and Response from express
 // FIX: Changed import to use default express and qualified types to avoid conflict with global DOM types.
 // FIX: Resolve TypeScript type conflicts between Express and global DOM types by explicitly importing `Request` and `Response` from `express`.
-import express from 'express';
+// @google/genai-fix: Changed import to use explicit Request and Response types from express.
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -39,7 +41,8 @@ app.use(express.json());
 // FIX: Used express.Request and express.Response to specify Express types and resolve property access errors.
 // FIX: Use explicit Request and Response types from express to resolve property access errors.
 // FIX: Use qualified express types to avoid conflict with global DOM types.
-app.get('/api/health', async (req: express.Request, res: express.Response) => {
+// @google/genai-fix: Use explicit Request and Response types from express.
+app.get('/api/health', async (req: Request, res: Response) => {
     try {
         const client = await pool.connect();
         await client.query('SELECT 1');
@@ -96,7 +99,8 @@ const serveFrontend = () => {
     // FIX: Used express.Request and express.Response to specify Express types and resolve property access errors.
     // FIX: Use explicit Request and Response types from express to resolve property access errors.
     // FIX: Use qualified express types to avoid conflict with global DOM types.
-    app.get('*', (req: express.Request, res: express.Response) => {
+    // @google/genai-fix: Use explicit Request and Response types from express.
+    app.get('*', (req: Request, res: Response) => {
         if (req.path.startsWith('/api/')) {
             return res.status(404).json({ message: 'Endpoint da API não encontrado.' });
         }
