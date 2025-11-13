@@ -1,5 +1,3 @@
-
-
 // api/site/site.routes.ts
 // FIX: Use `import express from 'express'` to allow using `express.Request` and `express.Response` to resolve type conflicts.
 import express from 'express';
@@ -33,7 +31,7 @@ const defaultNewPageContent: SiteData = {
 // --- Rotas Públicas (sem autenticação) ---
 
 // Obter página pela Home
-// FIX: Use explicit `express.Request` and `express.Response` types for route handlers.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.get('/pages/public/home', async (req: express.Request, res: express.Response) => {
     try {
         res.setHeader('Cache-Control', 'no-store');
@@ -49,7 +47,7 @@ router.get('/pages/public/home', async (req: express.Request, res: express.Respo
 });
 
 // Obter página pelo slug
-// FIX: Use explicit `express.Request` and `express.Response` types for route handlers.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.get('/pages/public/slug/:slug', async (req: express.Request, res: express.Response) => {
     try {
         res.setHeader('Cache-Control', 'no-store');
@@ -70,7 +68,7 @@ router.get('/pages/public/slug/:slug', async (req: express.Request, res: express
 
 // --- Rotas para Admin visualizar QUALQUER página (publicada ou não) ---
 // Obter página HOME para admin
-// FIX: Use explicit `express.Request` and `express.Response` types for route handlers.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.get('/pages/admin/home', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     try {
         res.setHeader('Cache-Control', 'no-store');
@@ -86,7 +84,7 @@ router.get('/pages/admin/home', verifyToken, checkModulePermission('SITE'), asyn
 });
 
 // Obter página por slug para admin
-// FIX: Use explicit `express.Request` and `express.Response` types for route handlers.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.get('/pages/admin/slug/:slug', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     try {
         res.setHeader('Cache-Control', 'no-store');
@@ -104,7 +102,7 @@ router.get('/pages/admin/slug/:slug', verifyToken, checkModulePermission('SITE')
 
 
 // Listar todas as páginas
-// FIX: Use explicit `express.Request` and `express.Response` types for route handlers.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.get('/pages', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     try {
         const result = await pool.query('SELECT id, title, slug, is_homepage, is_published, updated_at FROM pages ORDER BY title');
@@ -116,7 +114,7 @@ router.get('/pages', verifyToken, checkModulePermission('SITE'), async (req: exp
 });
 
 // Criar uma nova página
-// FIX: Use explicit `express.Request` and `express.Response` types for route handlers.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.post('/pages', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     const { title, slug } = req.body;
     if (!title || !slug) {
@@ -138,7 +136,7 @@ router.post('/pages', verifyToken, checkModulePermission('SITE'), async (req: ex
 });
 
 // Duplicar uma página
-// FIX: Use explicit `express.Request` and `express.Response` types for route handlers.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.post('/pages/duplicate/:id', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     const { id } = req.params;
     try {
@@ -176,7 +174,7 @@ router.post('/pages/duplicate/:id', verifyToken, checkModulePermission('SITE'), 
 
 
 // Obter dados de uma página específica para edição
-// FIX: Use explicit `express.Request` and `express.Response` types for route handlers.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.get('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     try {
         const { id } = req.params;
@@ -192,7 +190,7 @@ router.get('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req:
 });
 
 // Atualizar uma página
-// FIX: Use explicit `express.Request` and `express.Response` types for route handlers.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.put('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     const { id } = req.params;
     const { title, slug, is_published, content } = req.body;
@@ -220,7 +218,7 @@ router.put('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req:
 });
 
 // Excluir uma página
-// FIX: Use explicit `express.Request` and `express.Response` types for route handlers.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.delete('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     const { id } = req.params;
     try {
@@ -241,7 +239,7 @@ router.delete('/pages/:id', verifyToken, checkModulePermission('SITE'), async (r
 });
 
 // Alternar status de publicação da página
-// FIX: Use explicit `express.Request` and `express.Response` types for route handlers.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.patch('/pages/:id/status', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     const { id } = req.params;
     const { is_published } = req.body;
@@ -275,7 +273,7 @@ router.patch('/pages/:id/status', verifyToken, checkModulePermission('SITE'), as
 });
 
 // Definir uma página como a página inicial
-// FIX: Use explicit `express.Request` and `express.Response` types for route handlers.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.patch('/pages/:id/set-homepage', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     const { id } = req.params;
     const client = await pool.connect();

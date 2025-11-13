@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Page } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
@@ -53,13 +54,14 @@ const PageManager: React.FC = () => {
             if (!response.ok) {
                 throw new Error(data.message || 'Falha ao criar a página.');
             }
-            handleFeedback('success', 'Página criada com sucesso!');
-            await fetchPages();
+            handleFeedback('success', 'Página criada! Redirecionando para o editor...');
             setIsCreateModalOpen(false);
             setNewPage({ title: '', slug: '' });
+            // Redireciona para a página recém-criada em modo de edição
+            navigate(`/${data.slug}?edit=true`);
+
         } catch (error: any) {
             handleFeedback('error', error.message);
-        } finally {
             setStatus('idle');
         }
     };
@@ -111,7 +113,7 @@ const PageManager: React.FC = () => {
 
     const handleEditPage = (page: PageSummary) => {
         const path = page.is_homepage ? '/' : `/${page.slug}`;
-        navigate(path);
+        navigate(`${path}?edit=true`);
     };
 
     const handleToggleStatus = async (page: PageSummary) => {

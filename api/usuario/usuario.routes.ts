@@ -12,7 +12,7 @@ const JWT_SECRET = process.env.JWT_SECRET!;
 
 // --- Rotas de Setup e Saúde (parte do núcleo de usuário) ---
 
-// FIX: Use explicit `express.Request` and `express.Response` types for route handlers.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.get('/setup/status', async (req: express.Request, res: express.Response) => {
     try {
         const result = await pool.query('SELECT COUNT(*) FROM users');
@@ -24,7 +24,7 @@ router.get('/setup/status', async (req: express.Request, res: express.Response) 
     }
 });
 
-// FIX: Use explicit `express.Request` and `express.Response` types for route handlers.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.post('/setup/initialize', async (req: express.Request, res: express.Response) => {
     try {
         const userCheck = await pool.query('SELECT COUNT(*) FROM users');
@@ -54,7 +54,7 @@ router.post('/setup/initialize', async (req: express.Request, res: express.Respo
 });
 
 // --- Rotas de Autenticação ---
-// FIX: Use explicit `express.Request` and `express.Response` types for route handlers.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.post('/auth/login', async (req: express.Request, res: express.Response) => {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -106,7 +106,7 @@ router.post('/auth/login', async (req: express.Request, res: express.Response) =
 });
 
 // Rota para verificar um token e obter dados do usuário atual
-// FIX: Use explicit `express.Request` and `express.Response` types for route handlers.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.get('/auth/me', verifyToken, async (req: express.Request, res: express.Response) => {
     if (!req.user) {
         return res.status(401).json({ message: 'Não autenticado' });
@@ -133,7 +133,7 @@ router.get('/auth/me', verifyToken, async (req: express.Request, res: express.Re
 });
 
 
-// FIX: Use explicit `express.Request` and `express.Response` types for route handlers.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.post('/auth/register', async (req: express.Request, res: express.Response) => {
     const { name, email, password } = req.body;
     if (!name || !email || !password) {
@@ -160,7 +160,7 @@ router.post('/auth/register', async (req: express.Request, res: express.Response
     }
 });
 
-// FIX: Use explicit `express.Request` and `express.Response` types for route handlers.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.post('/auth/reset-password', async (req: express.Request, res: express.Response) => {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -190,7 +190,7 @@ router.post('/auth/reset-password', async (req: express.Request, res: express.Re
 
 // --- Rotas de Gerenciamento de Usuários (Protegidas) ---
 
-// FIX: Use explicit `express.Request` and `express.Response` types for route handlers.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.get('/users', verifyToken, checkModulePermission('USERS'), async (req: express.Request, res: express.Response) => {
     try {
         const result = await pool.query('SELECT id, name, email, role FROM users ORDER BY name');
@@ -201,7 +201,7 @@ router.get('/users', verifyToken, checkModulePermission('USERS'), async (req: ex
     }
 });
 
-// FIX: Use explicit `express.Request` and `express.Response` types for route handlers.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.post('/users', verifyToken, checkModulePermission('USERS'), async (req: express.Request, res: express.Response) => {
     const { name, email, password, role } = req.body;
     if (!name || !email || !password || !role) {
@@ -227,7 +227,7 @@ router.post('/users', verifyToken, checkModulePermission('USERS'), async (req: e
     }
 });
 
-// FIX: Use explicit `express.Request` and `express.Response` types for route handlers.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.put('/users/:id', verifyToken, checkModulePermission('USERS'), async (req: express.Request, res: express.Response) => {
     const { id } = req.params;
     const { role } = req.body;
@@ -255,7 +255,7 @@ router.put('/users/:id', verifyToken, checkModulePermission('USERS'), async (req
     }
 });
 
-// FIX: Use explicit `express.Request` and `express.Response` types for route handlers.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.delete('/users/:id', verifyToken, checkModulePermission('USERS'), async (req: express.Request, res: express.Response) => {
     const { id } = req.params;
 
@@ -277,7 +277,7 @@ router.delete('/users/:id', verifyToken, checkModulePermission('USERS'), async (
 
 // --- Rotas de Gerenciamento de Permissões (Protegidas) ---
 
-// FIX: Use explicit `express.Request` and `express.Response` types for route handlers.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.get('/permissions', verifyToken, checkModulePermission('USERS'), async (req: express.Request, res: express.Response) => {
     try {
         const result = await pool.query('SELECT role, permissions FROM role_permissions');
@@ -292,7 +292,7 @@ router.get('/permissions', verifyToken, checkModulePermission('USERS'), async (r
     }
 });
 
-// FIX: Use explicit `express.Request` and `express.Response` types for route handlers.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.post('/permissions', verifyToken, checkModulePermission('USERS'), async (req: express.Request, res: express.Response) => {
     const { role, permissions = [] } = req.body;
 
@@ -319,7 +319,7 @@ router.post('/permissions', verifyToken, checkModulePermission('USERS'), async (
 });
 
 
-// FIX: Use explicit `express.Request` and `express.Response` types for route handlers.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.put('/permissions/:role', verifyToken, checkModulePermission('USERS'), async (req: express.Request, res: express.Response) => {
     const { role } = req.params;
     const { permissions } = req.body;
@@ -340,7 +340,7 @@ router.put('/permissions/:role', verifyToken, checkModulePermission('USERS'), as
     }
 });
 
-// FIX: Use explicit `express.Request` and `express.Response` types for route handlers.
+// FIX: Add explicit types to express route handler to resolve type errors.
 router.delete('/permissions/:role', verifyToken, checkModulePermission('USERS'), async (req: express.Request, res: express.Response) => {
     const { role } = req.params;
 

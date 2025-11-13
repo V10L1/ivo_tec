@@ -135,6 +135,15 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
     
     useEffect(() => { if (pageData?.content?.settings.brandName) { document.title = pageData.content.settings.brandName; } return () => { document.title = 'Painel de Administração Modular'; }; }, [pageData]);
     
+    // Ativa o modo de edição se o parâmetro de URL estiver presente
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('edit') === 'true' && canEdit) {
+            setIsEditMode(true);
+        }
+    }, [canEdit]);
+
+
     // --- Editor Logic Handlers ---
     const handleFeedback = (type: 'error' | 'success', message: string) => { setFeedback({ type, message }); setTimeout(() => setFeedback(null), 4000); };
     const updatePageData = (updater: (draft: Page) => void) => { setPageData(prev => { if (!prev) return null; const draft = JSON.parse(JSON.stringify(prev)); updater(draft); return draft; }); };
