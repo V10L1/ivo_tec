@@ -155,17 +155,19 @@ export interface FixedContainers {
   bottom: FixedContainer;
 }
 
+export interface Section {
+  id: string;
+  styles: ContainerStyles; // For background, padding, etc.
+  gridSettings: GridSettings; // Each section has its own grid
+  blocks: PageBlock[];
+}
 
 // Representa o objeto de conteúdo JSONB dentro de cada página
 export interface SiteData {
   settings: SiteSettings;
-  gridSettings: {
-    desktop: GridSettings;
-    // Futuramente: tablet: GridSettings; mobile: GridSettings;
-  };
   fixedContainers: FixedContainers;
-  mainBlocks: PageBlock[];
-  footerBlocks: PageBlock[];
+  sections: Section[];
+  footerSections: Section[];
 }
 
 // Representa uma página individual no banco de dados

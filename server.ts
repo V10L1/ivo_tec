@@ -10,7 +10,8 @@ declare const __dirname: string;
 
 // server.ts - O Orquestrador Principal
 
-import express, { Request, Response } from 'express';
+// FIX: Use `import express from 'express'` to allow using `express.Request` and `express.Response` to resolve type conflicts.
+import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -29,7 +30,8 @@ app.use(cors());
 app.use(express.json());
 
 // --- Rota de Verificação de Saúde ---
-app.get('/api/health', async (req: Request, res: Response) => {
+// FIX: Use explicit `express.Request` and `express.Response` types for route handlers.
+app.get('/api/health', async (req: express.Request, res: express.Response) => {
     try {
         const client = await pool.connect();
         await client.query('SELECT 1');
@@ -82,7 +84,8 @@ const serveFrontend = () => {
     app.use('/dist/client', express.static(clientDistPath));
     app.use(express.static(staticRootPath));
 
-    app.get('*', (req: Request, res: Response) => {
+    // FIX: Use explicit `express.Request` and `express.Response` types for route handlers.
+    app.get('*', (req: express.Request, res: express.Response) => {
         if (req.path.startsWith('/api/')) {
             return res.status(404).json({ message: 'Endpoint da API não encontrado.' });
         }
