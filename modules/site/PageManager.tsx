@@ -3,17 +3,96 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Page } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRouter } from '../../contexts/RouterContext';
-import { PlusCircleIcon, EditIcon, Trash2Icon, CopyIcon, StarIcon } from '../../components/icons/Icons';
+import { Wand2Icon, EditIcon, Trash2Icon, CopyIcon, StarIcon } from '../../components/icons/Icons';
 
 type PageSummary = Pick<Page, 'id' | 'title' | 'slug' | 'is_homepage' | 'is_published' | 'updated_at'>;
+
+const AiGenerationModal: React.FC<{
+    onClose: () => void;
+    onPageCreated: (page: Page) => void;
+}> = ({ onClose, onPageCreated }) => {
+    const [title, setTitle] = useState('');
+    const [prompt, setPrompt] = useState('');
+    const [status, setStatus] = useState<'idle' | 'submitting'>('idle');
+    const [error, setError] = useState<string | null>(null);
+    const { token } = useAuth();
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setStatus('submitting');
+        setError(null);
+        try {
+            const response = await fetch('/api/ai/generate/page', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ title, prompt })
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.message || 'Falha ao gerar a página com IA.');
+            }
+            onPageCreated(data);
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setStatus('idle');
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+            <div className="bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl border border-slate-700">
+                <form onSubmit={handleSubmit}>
+                    <div className="p-6">
+                        <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                            <Wand2Icon className="w-5 h-5 text-cyan-400" />
+                            Criar Página com Assistente de IA
+                        </h3>
+                        <p className="text-sm text-slate-400 mb-4">Descreva o site que você quer criar. A IA irá gerar uma estrutura completa para você refinar.</p>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-400 mb-1">Título da Página</label>
+                                <input
+                                    type="text"
+                                    value={title}
+                                    onChange={e => setTitle(e.target.value)}
+                                    required
+                                    className="w-full bg-slate-900 border border-slate-700 rounded-md p-2"
+                                    placeholder="Ex: Oficina de Motos Garagem 55"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-400 mb-1">Descrição para a IA</label>
+                                <textarea
+                                    value={prompt}
+                                    onChange={e => setPrompt(e.target.value)}
+                                    required
+                                    rows={5}
+                                    className="w-full bg-slate-900 border border-slate-700 rounded-md p-2"
+                                    placeholder="Ex: Crie um site para minha oficina de motos customizadas. O estilo deve ser rústico e moderno. Inclua uma seção de 'Sobre', nossos 'Serviços' (pintura, motor, escapamento) e uma 'Galeria' de fotos."
+                                />
+                            </div>
+                            {error && <p className="text-sm text-red-400">{error}</p>}
+                        </div>
+                    </div>
+                    <div className="px-6 py-4 bg-slate-800/50 border-t border-slate-700 flex justify-end gap-3">
+                        <button type="button" onClick={onClose} className="bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold py-2 px-4 rounded-lg">Cancelar</button>
+                        <button type="submit" className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg" disabled={status === 'submitting'}>
+                            {status === 'submitting' ? 'Gerando...' : 'Gerar Página'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+};
 
 const PageManager: React.FC = () => {
     const [pages, setPages] = useState<PageSummary[]>([]);
     const [status, setStatus] = useState<'loading' | 'idle' | 'error' | 'submitting'>('loading');
     const [feedback, setFeedback] = useState<{ type: 'error' | 'success', message: string } | null>(null);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const [newPage, setNewPage] = useState({ title: '', slug: '' });
-
+    
     const { token } = useAuth();
     const { navigate } = useRouter();
 
@@ -34,37 +113,18 @@ const PageManager: React.FC = () => {
     useEffect(() => {
         fetchPages();
     }, [fetchPages]);
-
+    
     const handleFeedback = (type: 'error' | 'success', message: string) => {
         setFeedback({ type, message });
         setTimeout(() => setFeedback(null), 4000);
     };
-    
-    const handleCreatePage = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setStatus('submitting');
-        try {
-            const response = await fetch('/api/site/pages', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify(newPage)
-            });
-             const data = await response.json();
-            if (!response.ok) {
-                throw new Error(data.message || 'Falha ao criar a página.');
-            }
-            handleFeedback('success', 'Página criada! Redirecionando para o editor...');
-            setIsCreateModalOpen(false);
-            setNewPage({ title: '', slug: '' });
-            // Redireciona para a página recém-criada em modo de edição
-            window.location.hash = `/${data.slug}?edit=true`;
 
-        } catch (error: any) {
-            handleFeedback('error', error.message);
-            setStatus('idle');
-        }
+    const handlePageCreatedByAI = (page: Page) => {
+        handleFeedback('success', 'Página gerada! Redirecionando para o editor...');
+        setIsCreateModalOpen(false);
+        window.location.hash = `/${page.slug}?edit=true`;
     };
-
+    
     const handleDeletePage = async (pageId: string, isHomepage: boolean) => {
         if (isHomepage) {
             handleFeedback('error', 'Não é possível excluir a página inicial.');
@@ -159,16 +219,6 @@ const PageManager: React.FC = () => {
             setStatus('idle');
         }
     };
-    
-    const generateSlug = (title: string) => {
-        return title
-            .toLowerCase()
-            .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // Remove accents
-            .replace(/[^a-z0-9\s-]/g, '') // Remove non-alphanumeric characters except spaces and hyphens
-            .trim()
-            .replace(/\s+/g, '-') // Replace spaces with hyphens
-            .replace(/-+/g, '-'); // Replace multiple hyphens with a single one
-    };
 
     return (
         <div>
@@ -187,8 +237,8 @@ const PageManager: React.FC = () => {
                     className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 transition-colors disabled:bg-slate-600"
                     disabled={status === 'submitting'}
                 >
-                    <PlusCircleIcon className="w-5 h-5" />
-                    Criar Nova Página
+                    <Wand2Icon className="w-5 h-5" />
+                    Criar Página com IA
                 </button>
             </div>
 
@@ -227,52 +277,17 @@ const PageManager: React.FC = () => {
                         <div className="p-2 bg-slate-800/50 border-t border-slate-700 flex justify-end gap-2">
                              <button onClick={() => handleDuplicatePage(page.id)} title="Duplicar" className="p-2 text-slate-400 hover:text-cyan-400 hover:bg-slate-700 rounded-md disabled:opacity-50" disabled={status === 'submitting'}><CopyIcon className="w-4 h-4" /></button>
                              <button onClick={() => handleDeletePage(page.id, page.is_homepage)} title={page.is_homepage ? "Não é possível excluir a página inicial" : "Excluir"} className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed" disabled={status === 'submitting' || page.is_homepage}><Trash2Icon className="w-4 h-4" /></button>
-                             <button onClick={() => handleEditPage(page)} className="bg-slate-700 hover:bg-cyan-600 text-slate-200 hover:text-white font-semibold py-1 px-3 rounded-md flex items-center gap-2 disabled:opacity-50" disabled={status === 'submitting'}><EditIcon className="w-4 h-4" /> Editar</button>
+                             <button onClick={() => handleEditPage(page)} className="bg-slate-700 hover:bg-cyan-600 text-slate-200 hover:text-white font-semibold py-1 px-3 rounded-md flex items-center gap-2 disabled:opacity-50" disabled={status === 'submitting'}><EditIcon className="w-4 h-4" /> Refinar</button>
                         </div>
                     </div>
                 ))}
             </div>
 
             {isCreateModalOpen && (
-                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-                    <div className="bg-slate-800 rounded-lg shadow-xl w-full max-w-md border border-slate-700">
-                        <form onSubmit={handleCreatePage}>
-                            <div className="p-6">
-                                <h3 className="text-lg font-bold text-white mb-4">Criar Nova Página</h3>
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-400 mb-1">Título da Página</label>
-                                        <input 
-                                            type="text" 
-                                            value={newPage.title} 
-                                            onChange={e => setNewPage({ title: e.target.value, slug: generateSlug(e.target.value) })}
-                                            required 
-                                            className="w-full bg-slate-900 border border-slate-700 rounded-md p-2"
-                                            placeholder="Ex: Sobre Nós"
-                                        />
-                                    </div>
-                                     <div>
-                                        <label className="block text-sm font-medium text-slate-400 mb-1">Slug da URL</label>
-                                        <input 
-                                            type="text" 
-                                            value={newPage.slug} 
-                                            onChange={e => setNewPage({ ...newPage, slug: e.target.value })}
-                                            required 
-                                            className="w-full bg-slate-900 border border-slate-700 rounded-md p-2"
-                                            placeholder="Ex: sobre-nos"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="px-6 py-4 bg-slate-800/50 border-t border-slate-700 flex justify-end gap-3">
-                                <button type="button" onClick={() => setIsCreateModalOpen(false)} className="bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold py-2 px-4 rounded-lg">Cancelar</button>
-                                <button type="submit" className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg" disabled={status === 'submitting'}>
-                                    {status === 'submitting' ? 'Criando...' : 'Criar Página'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
+                <AiGenerationModal
+                    onClose={() => setIsCreateModalOpen(false)}
+                    onPageCreated={handlePageCreatedByAI}
+                />
             )}
         </div>
     );

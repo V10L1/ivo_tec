@@ -1,9 +1,10 @@
 
+
 import React, { Suspense, lazy } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 const LazyPublicSite = lazy(() => import('./modules/site/PublicSite'));
-const LazySiteEditor = lazy(() => import('./modules/site/SiteEditor'));
+const LazyAiPoweredEditor = lazy(() => import('./modules/site/AiPoweredEditor'));
 
 const SiteComponentSelector: React.FC = () => {
     const { isAuthenticated, permissions, isLoading } = useAuth();
@@ -11,7 +12,8 @@ const SiteComponentSelector: React.FC = () => {
     const getSlugFromHash = () => {
         const hash = window.location.hash.substring(1);
         const slug = hash.split('?')[0];
-        return slug === '/' || slug === '' ? 'home' : slug;
+        // Garante que a raiz do site seja mapeada para "home"
+        return slug === '/' || slug === '' ? 'home' : slug.startsWith('/') ? slug.substring(1) : slug;
     };
 
     const getIsEditMode = () => {
@@ -28,10 +30,10 @@ const SiteComponentSelector: React.FC = () => {
     }
 
     if (isEditRequested && canEdit) {
-        return <LazySiteEditor slug={slug} />;
+        return <LazyAiPoweredEditor slug={slug} />;
     }
     
-    // For all other cases (not requesting edit, or can't edit), show public site.
+    // Para todos os outros casos (não solicitando edição, ou não pode editar), mostra o site público.
     return <LazyPublicSite slug={slug} />;
 };
 

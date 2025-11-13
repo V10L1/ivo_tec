@@ -14,7 +14,8 @@ declare const __dirname: string;
 // Use 'express.Request' and 'express.Response' to prevent conflicts.
 // Correcting import to explicitly use Request and Response from express
 // FIX: Changed import to use default express and qualified types to avoid conflict with global DOM types.
-import express from 'express';
+// FIX: Resolve TypeScript type conflicts between Express and global DOM types by explicitly importing `Request` and `Response` from `express`.
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -35,7 +36,8 @@ app.use(express.json());
 // --- Rota de Verificação de Saúde ---
 // Correcting types for req and res
 // FIX: Used express.Request and express.Response to specify Express types and resolve property access errors.
-app.get('/api/health', async (req: express.Request, res: express.Response) => {
+// FIX: Use explicit Request and Response types from express to resolve property access errors.
+app.get('/api/health', async (req: Request, res: Response) => {
     try {
         const client = await pool.connect();
         await client.query('SELECT 1');
@@ -90,7 +92,8 @@ const serveFrontend = () => {
 
     // Correcting types for req and res
     // FIX: Used express.Request and express.Response to specify Express types and resolve property access errors.
-    app.get('*', (req: express.Request, res: express.Response) => {
+    // FIX: Use explicit Request and Response types from express to resolve property access errors.
+    app.get('*', (req: Request, res: Response) => {
         if (req.path.startsWith('/api/')) {
             return res.status(404).json({ message: 'Endpoint da API não encontrado.' });
         }
