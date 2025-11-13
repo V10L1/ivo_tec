@@ -11,8 +11,8 @@ declare const process: {
 declare const __dirname: string;
 
 // server.ts - O Orquestrador Principal
-// @google/genai-fix: Use fully qualified 'express' types to avoid conflicts with global DOM types.
-import * as express from 'express';
+// FIX: Import Request, Response, and NextFunction types directly from express.
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -31,7 +31,8 @@ app.use(cors());
 app.use(express.json());
 
 // --- Rota de Verificação de Saúde ---
-app.get('/api/health', async (req: express.Request, res: express.Response) => {
+// FIX: Use the imported Request and Response types.
+app.get('/api/health', async (req: Request, res: Response) => {
     try {
         const client = await pool.connect();
         await client.query('SELECT 1');
@@ -93,7 +94,8 @@ const serveFrontend = () => {
     app.use(express.static(staticRootPath));
 
     // Rota "catch-all" melhorada para lidar com APIs não encontradas
-    app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+    // FIX: Use the imported Request, Response, and NextFunction types.
+    app.use((req: Request, res: Response, next: NextFunction) => {
         if (req.path.startsWith('/api/')) {
             // Se chegou até aqui, é uma rota de API que não foi encontrada.
             return res.status(404).json({ message: `Endpoint da API não encontrado: ${req.method} ${req.path}` });
