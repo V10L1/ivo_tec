@@ -12,7 +12,8 @@ import StockControl from './modules/estoque/StockControl';
 import MessagesChat from './modules/mensagens/MessagesChat';
 import SupportTickets from './modules/suporte/SupportTickets';
 import UserManagement from './modules/usuario/UserManagement';
-import PublicSite from './modules/site/PublicSite';
+// @google/genai-fix: Changed import to be a named import to fix module resolution issue.
+import { PublicSite } from './modules/site/PublicSite';
 import Login from './modules/usuario/Login';
 import InitialSetup from './modules/usuario/InitialSetup';
 import ForgotPassword from './modules/usuario/ForgotPassword';

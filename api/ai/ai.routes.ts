@@ -1,5 +1,6 @@
 // api/ai/ai.routes.ts
-import express, { Request, Response } from 'express';
+// @google/genai-fix: Use fully qualified express types to avoid conflicts with global DOM types.
+import express from 'express';
 import { GoogleGenAI } from '@google/genai';
 import { verifyToken, checkModulePermission } from '../../core/auth.middleware';
 
@@ -17,7 +18,8 @@ const getAiClient = () => {
 };
 
 // Endpoint para geração de texto
-router.post('/generate/text', async (req: Request, res: Response) => {
+// @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts with global types.
+router.post('/generate/text', async (req: express.Request, res: express.Response) => {
     const { prompt } = req.body;
 
     if (!prompt) {
@@ -39,7 +41,8 @@ router.post('/generate/text', async (req: Request, res: Response) => {
 });
 
 // Endpoint para geração de imagem
-router.post('/generate/image', async (req: Request, res: Response) => {
+// @google/genai-fix: Use explicit express.Request and express.Response types to resolve conflicts with global types.
+router.post('/generate/image', async (req: express.Request, res: express.Response) => {
     const { prompt } = req.body;
 
     if (!prompt) {
@@ -59,9 +62,15 @@ router.post('/generate/image', async (req: Request, res: Response) => {
         });
 
         if (response.generatedImages && response.generatedImages.length > 0) {
-            const base64ImageBytes: string = response.generatedImages[0].image.imageBytes;
-            const imageUrl = `data:image/jpeg;base64,${base64ImageBytes}`;
-            res.json({ imageUrl });
+            const firstImage = response.generatedImages[0];
+            // FIX: Adiciona verificações de nulidade para evitar erros de tipo em tempo de compilação.
+            if (firstImage && firstImage.image && firstImage.image.imageBytes) {
+                const base64ImageBytes: string = firstImage.image.imageBytes;
+                const imageUrl = `data:image/jpeg;base64,${base64ImageBytes}`;
+                res.json({ imageUrl });
+            } else {
+                 throw new Error('A imagem gerada está vazia ou corrompida.');
+            }
         } else {
             throw new Error('Nenhuma imagem foi gerada.');
         }

@@ -10,7 +10,8 @@ declare const process: {
 
 // FIX: Use `import express from 'express'` to allow using `express.Request` and `express.Response` to resolve type conflicts.
 // @google/genai-fix: Import Request, Response, and NextFunction types directly from express to resolve type conflicts.
-import { Request, Response, NextFunction } from 'express';
+// @google/genai-fix: Use fully qualified express types to avoid conflicts with global DOM types.
+import express from 'express';
 import jwt from 'jsonwebtoken';
 import { UserRole, AppKey } from '../types';
 import { pool } from './db';
@@ -31,7 +32,8 @@ declare global {
 // FIX: Use explicit `express.Request`, `express.Response`, and `express.NextFunction` types for middleware.
 // @google/genai-fix: Use imported Request, Response, and NextFunction types.
 // @google/genai-fix: Use explicit express types to resolve conflicts.
-export const verifyToken = (req: Request, res: Response, next: NextFunction) => {
+// @google/genai-fix: Use explicit express types to resolve conflicts with global types.
+export const verifyToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
@@ -58,7 +60,8 @@ export const verifyToken = (req: Request, res: Response, next: NextFunction) => 
 // FIX: Use explicit `express.Request`, `express.Response`, and `express.NextFunction` types for middleware.
 // @google/genai-fix: Use imported Request, Response, and NextFunction types.
 // @google/genai-fix: Use explicit express types to resolve conflicts.
-export const isDeveloper = (req: Request, res: Response, next: NextFunction) => {
+// @google/genai-fix: Use explicit express types to resolve conflicts with global types.
+export const isDeveloper = (req: express.Request, res: express.Response, next: express.NextFunction) => {
     if (req.user?.role !== UserRole.DEVELOPER) {
         return res.status(403).json({ message: 'Acesso negado. Apenas desenvolvedores.' });
     }
@@ -69,7 +72,8 @@ export const checkModulePermission = (requiredPermission: AppKey) => {
     // FIX: Use explicit `express.Request`, `express.Response`, and `express.NextFunction` types for middleware.
     // @google/genai-fix: Use imported Request, Response, and NextFunction types.
     // @google/genai-fix: Use explicit express types to resolve conflicts.
-    return async (req: Request, res: Response, next: NextFunction) => {
+    // @google/genai-fix: Use explicit express types to resolve conflicts with global types.
+    return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
         if (!req.user) {
             return res.status(401).json({ message: 'Não autenticado' });
         }
