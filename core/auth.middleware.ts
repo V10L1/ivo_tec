@@ -13,7 +13,7 @@ declare const process: {
 // Correcting import to explicitly use Request, Response, and NextFunction from express
 // FIX: Changed import to use default express and qualified types to avoid conflict with global DOM types.
 // FIX: Resolve TypeScript type conflicts between Express and global DOM types by explicitly importing `Request`, `Response`, and `NextFunction` from `express`.
-import express, { Request, Response, NextFunction } from 'express';
+import express from 'express';
 import jwt from 'jsonwebtoken';
 import { UserRole, AppKey } from '../types';
 import { pool } from './db';
@@ -34,7 +34,8 @@ declare global {
 // Correcting types for req, res, and next
 // FIX: Used express.Request, express.Response, and express.NextFunction to specify Express types and resolve property access errors.
 // FIX: Use explicit Request, Response, and NextFunction types from express to resolve property access errors.
-export const verifyToken = (req: Request, res: Response, next: NextFunction) => {
+// FIX: Use qualified express types to avoid conflict with global DOM types.
+export const verifyToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
@@ -61,7 +62,8 @@ export const verifyToken = (req: Request, res: Response, next: NextFunction) => 
 // Correcting types for req, res, and next
 // FIX: Used express.Request, express.Response, and express.NextFunction to specify Express types and resolve property access errors.
 // FIX: Use explicit Request, Response, and NextFunction types from express to resolve property access errors.
-export const isDeveloper = (req: Request, res: Response, next: NextFunction) => {
+// FIX: Use qualified express types to avoid conflict with global DOM types.
+export const isDeveloper = (req: express.Request, res: express.Response, next: express.NextFunction) => {
     if (req.user?.role !== UserRole.DEVELOPER) {
         return res.status(403).json({ message: 'Acesso negado. Apenas desenvolvedores.' });
     }
@@ -72,7 +74,8 @@ export const checkModulePermission = (requiredPermission: AppKey) => {
     // Correcting types for req, res, and next
     // FIX: Used express.Request, express.Response, and express.NextFunction to specify Express types and resolve property access errors.
     // FIX: Use explicit Request, Response, and NextFunction types from express to resolve property access errors.
-    return async (req: Request, res: Response, next: NextFunction) => {
+    // FIX: Use qualified express types to avoid conflict with global DOM types.
+    return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
         if (!req.user) {
             return res.status(401).json({ message: 'Não autenticado' });
         }

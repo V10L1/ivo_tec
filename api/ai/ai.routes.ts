@@ -2,7 +2,7 @@
 
 // api/ai/ai.routes.ts
 // FIX: Resolve TypeScript type conflicts between Express and global DOM types by explicitly importing `Request` and `Response` from `express`.
-import express, { Request, Response } from 'express';
+import express from 'express';
 import { GoogleGenAI, Type } from '@google/genai';
 import { verifyToken, checkModulePermission } from '../../core/auth.middleware';
 import { pool } from '../../core/db';
@@ -142,7 +142,8 @@ const siteDataSchema = {
 };
 
 // FIX: Use explicit Request and Response types from express to resolve property access errors.
-router.post('/generate/page', async (req: Request, res: Response) => {
+// FIX: Use qualified express types to avoid conflict with global DOM types.
+router.post('/generate/page', async (req: express.Request, res: express.Response) => {
     const { title, prompt } = req.body;
     if (!title || !prompt) {
         return res.status(400).json({ message: 'Título e prompt são obrigatórios.' });
@@ -171,6 +172,12 @@ router.post('/generate/page', async (req: Request, res: Response) => {
         });
         
         const generatedContentText = response.text;
+        
+        // FIX: Adiciona uma verificação para garantir que o texto da IA não seja indefinido antes de fazer o parse.
+        if (!generatedContentText) {
+            throw new Error('A IA não retornou um conteúdo JSON válido.');
+        }
+
         const generatedContent: Omit<SiteData, 'fixedContainers' | 'footerSections'> = JSON.parse(generatedContentText);
         
         // Adicionar partes que a IA não gera
@@ -203,7 +210,8 @@ router.post('/generate/page', async (req: Request, res: Response) => {
 
 // Endpoint para geração de texto
 // FIX: Use explicit Request and Response types from express to resolve property access errors.
-router.post('/generate/text', async (req: Request, res: Response) => {
+// FIX: Use qualified express types to avoid conflict with global DOM types.
+router.post('/generate/text', async (req: express.Request, res: express.Response) => {
     const { prompt } = req.body;
     if (!prompt) return res.status(400).json({ message: 'O prompt é obrigatório.' });
     try {
@@ -218,7 +226,8 @@ router.post('/generate/text', async (req: Request, res: Response) => {
 
 // Endpoint para geração de imagem
 // FIX: Use explicit Request and Response types from express to resolve property access errors.
-router.post('/generate/image', async (req: Request, res: Response) => {
+// FIX: Use qualified express types to avoid conflict with global DOM types.
+router.post('/generate/image', async (req: express.Request, res: express.Response) => {
     const { prompt } = req.body;
     if (!prompt) return res.status(400).json({ message: 'O prompt é obrigatório.' });
     try {
