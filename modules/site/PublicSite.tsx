@@ -1,8 +1,15 @@
-
-
 import React, { useState, useEffect } from 'react';
-import { Page, PageBlock, Section, Viewport, FixedContainerPosition, SiteData } from '../../types';
+import { Page, PageBlock, Section, Viewport, FixedContainerPosition, SiteData, ThemeSettings, ColorStyleValue, ThemeColorKey } from '../../types';
 import BlockRenderer from './components/BlockRenderer';
+
+// Função utilitária para resolver a cor com base no tema
+export const resolveColor = (color: ColorStyleValue | undefined, theme: ThemeSettings): string => {
+    if (!color) return 'transparent';
+    if (color.type === 'global') {
+        return theme[color.value as ThemeColorKey] || 'transparent';
+    }
+    return color.value;
+};
 
 interface PublicSiteProps {
     slug?: string;
@@ -118,7 +125,7 @@ const PublicSite: React.FC<PublicSiteProps> = ({ slug, pageData: initialPageData
         return (
             <div
                 key={section.id}
-                style={{ backgroundColor: section.styles.backgroundColor, position: 'relative' }}
+                style={{ backgroundColor: resolveColor(section.styles.backgroundColor, theme), position: 'relative' }}
             >
                 <div style={{ display: 'grid', gridTemplateColumns: `repeat(${section.gridSettings.columns}, 1fr)`, gridAutoRows: `${section.gridSettings.rowHeight}px`, gap: `${section.gridSettings.gap}px`, position: 'relative' }}>
                     {section.blocks.map(block => (
@@ -155,7 +162,7 @@ const PublicSite: React.FC<PublicSiteProps> = ({ slug, pageData: initialPageData
 
     return (
         <div style={{ backgroundColor: settings.backgroundColor }}>
-             <style>{`:root { --primary-color: ${theme.primaryColor}; --secondary-color: ${theme.secondaryColor}; --heading-font: ${theme.headingFont}; --body-font: ${theme.bodyFont}; }`}</style>
+             <style>{`:root { --primary-color: ${theme.primaryColor}; --secondary-color: ${theme.secondaryColor}; --heading-font: ${theme.headingFont}; --body-font: ${theme.bodyFont}; --background-color: ${theme.backgroundColor}; --surface-color: ${theme.surfaceColor}; --text-color: ${theme.textColor}; --text-secondary-color: ${theme.textSecondaryColor}; }`}</style>
              <div style={isEditing ? {} : mainPadding}>
                 <main className="relative mx-auto">
                     {sections.map(section =>

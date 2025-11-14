@@ -1,5 +1,4 @@
-
-import { PageBlock, Section, GridSettings, BlockLayout, ContainerStyles, TextStyles, FixedContainer, AnimationSettings, SiteData, ThemeSettings, FixedContainerPosition, MenuItem, StyledText } from '../../../types';
+import { PageBlock, Section, GridSettings, BlockLayout, ContainerStyles, TextStyles, FixedContainer, AnimationSettings, SiteData, ThemeSettings, FixedContainerPosition, MenuItem, StyledText, ColorStyleValue } from '../../../types';
 
 const generateId = (prefix = 'id') => `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -13,22 +12,31 @@ export const defaultResponsiveLayout: { desktop: BlockLayout; tablet: BlockLayou
 
 export const defaultAnimation: AnimationSettings = { type: 'none', delay: 0, duration: 1000 };
 
-export const defaultContainerStyles: ContainerStyles = { backgroundColor: '#1e293b', backgroundOpacity: 1, textOpacity: 1, borderRadius: 'medium', zIndex: 0 };
+export const defaultContainerStyles: ContainerStyles = { backgroundColor: { type: 'global', value: 'surface' }, backgroundOpacity: 1, textOpacity: 1, borderRadius: 'medium', zIndex: 0 };
 
-export const defaultTextStyles: TextStyles = { textColor: '#cbd5e1', textAlign: 'left', fontWeight: 'normal', fontStyle: 'normal', fontFamily: 'sans-serif', fontSize: 16};
+export const defaultTextStyles: TextStyles = { textColor: { type: 'global', value: 'text' }, textAlign: 'left', fontWeight: 'normal', fontStyle: 'normal', fontFamily: 'sans-serif', fontSize: 16};
 
 export const defaultFixedContainer: FixedContainer = { enabled: false, size: 60, isCollapsed: false, collapsible: true, toggleButtonPosition: 'center', blocks: [] };
 
 export const createNewSection = (): Section => ({
     id: generateId('section'),
-    styles: { backgroundColor: '#1e293b', backgroundOpacity: 0.2 },
+    styles: { backgroundColor: { type: 'global', value: 'surface' }, backgroundOpacity: 0.2 },
     gridSettings: { ...defaultGridSettings },
     blocks: []
 });
 
 export const defaultPageContent: SiteData = {
     settings: { brandName: 'Nova Marca', backgroundColor: '#0f172a' },
-    theme: { primaryColor: '#0891b2', secondaryColor: '#64748b', headingFont: 'sans-serif', bodyFont: 'sans-serif' },
+    theme: { 
+        primaryColor: '#38bdf8',
+        secondaryColor: '#818cf8',
+        backgroundColor: '#0f172a',
+        surfaceColor: '#1e293b',
+        textColor: '#e2e8f0',
+        textSecondaryColor: '#94a3b8',
+        headingFont: 'sans-serif',
+        bodyFont: 'sans-serif'
+    },
     fixedContainers: {
         top: { ...defaultFixedContainer, size: 80 },
         left: { ...defaultFixedContainer, size: 240 },
@@ -59,8 +67,8 @@ export const createNewBlock = (type: PageBlock['type']): PageBlock => {
                     mobile: { ...defaultResponsiveLayout.mobile, colEnd: 5, rowEnd: 22 }
                 },
                 content: {
-                    title: { text: 'Título do Herói', styles: {...defaultTextStyles, fontSize: 48, textAlign: 'center', fontWeight: 'bold'}},
-                    subtitle: { text: 'Subtítulo atraente.', styles: {...defaultTextStyles, fontSize: 20, textAlign: 'center'}},
+                    title: { text: 'Título do Herói', styles: {...defaultTextStyles, textColor: { type: 'global', value: 'text' }, fontSize: 48, textAlign: 'center', fontWeight: 'bold'}},
+                    subtitle: { text: 'Subtítulo atraente.', styles: {...defaultTextStyles, textColor: { type: 'global', value: 'textSecondary' }, fontSize: 20, textAlign: 'center'}},
                     ctaText: 'Saiba Mais',
                     ctaLink: '#',
                     ctaEnabled: true
@@ -77,7 +85,7 @@ export const createNewBlock = (type: PageBlock['type']): PageBlock => {
                 },
                 content: {
                     heading: { text: 'Nova Seção', styles: {...defaultTextStyles, fontSize: 32, fontWeight: 'bold'} },
-                    body: { text: 'Texto padrão.', styles: {...defaultTextStyles, fontSize: 16}}
+                    body: { text: 'Texto padrão.', styles: {...defaultTextStyles, textColor: { type: 'global', value: 'textSecondary' }, fontSize: 16}}
                 }
             };
         case 'image':
@@ -93,6 +101,7 @@ export const createNewBlock = (type: PageBlock['type']): PageBlock => {
             return {
                 ...baseBlock,
                 type,
+                styles: {...defaultContainerStyles, backgroundColor: { type: 'global', value: 'primary' }},
                 layout: {
                     desktop: { ...defaultResponsiveLayout.desktop, colStart: 5, colEnd: 9, rowEnd: 3 },
                     tablet: { ...defaultResponsiveLayout.tablet, colStart: 3, colEnd: 7, rowEnd: 3 },

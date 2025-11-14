@@ -1,105 +1,72 @@
-
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { DragDropContext, Droppable, Draggable, OnDragEndResponder } from 'react-beautiful-dnd';
-import { Page, PageBlock, Section } from '../../types';
+import { Page, PageBlock, Section, Selection } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
-import { ArrowLeftIcon, SaveIcon, EyeIcon, SeoIcon, XCircleIcon, TypeIcon, ImageIcon, PaletteIcon } from '../../components/icons/Icons';
+import { ArrowLeftIcon, SaveIcon, EyeIcon, SeoIcon, XCircleIcon, TypeIcon, PaletteIcon } from '../../components/icons/Icons';
 import PublicSite from './PublicSite';
 import SEOModal from './components/SEOModal';
 import { createNewBlock } from './utils/defaults';
-// FIX: Import the missing BlockRenderer component.
 import BlockRenderer from './components/BlockRenderer';
-
-// --- Painel de Edição do Bloco ---
-const BlockEditPanel: React.FC<{
-    block: PageBlock;
-    onUpdate: (blockId: string, sectionId: string, updatedContent: Partial<PageBlock['content']>) => void;
-    sectionId: string;
-}> = ({ block, onUpdate, sectionId }) => {
-
-    const handleContentChange = (field: string, value: any) => {
-        onUpdate(block.id, sectionId, { ...block.content, [field]: value });
-    };
-    
-    const renderContentFields = () => {
-        const content = block.content as any;
-        return Object.keys(content).map(key => {
-            const value = content[key];
-            if (typeof value === 'string') {
-                return (
-                    <div key={key}>
-                        <label className="capitalize block text-slate-400 mb-1">{key.replace(/([A-Z])/g, ' $1')}</label>
-                        <input
-                            type="text"
-                            value={value}
-                            onChange={e => handleContentChange(key, e.target.value)}
-                            className="w-full bg-slate-800 border border-slate-700 rounded-md p-2"
-                        />
-                    </div>
-                );
-            }
-            if (typeof value === 'object' && value && 'text' in value) {
-                 return (
-                    <div key={key}>
-                        <label className="capitalize block text-slate-400 mb-1">{key.replace(/([A-Z])/g, ' $1')}</label>
-                        <textarea
-                            value={value.text}
-                            onChange={e => handleContentChange(key, { ...value, text: e.target.value })}
-                            className="w-full bg-slate-800 border border-slate-700 rounded-md p-2"
-                            rows={4}
-                        />
-                    </div>
-                );
-            }
-             if (typeof value === 'boolean') {
-                 return (
-                     <div key={key} className="flex items-center justify-between">
-                         <label className="capitalize block text-slate-300">{key.replace(/([A-Z])/g, ' $1')}</label>
-                         <input
-                            type="checkbox"
-                            checked={value}
-                            onChange={e => handleContentChange(key, e.target.checked)}
-                            className="w-4 h-4 text-cyan-600 bg-gray-700 border-gray-600 rounded focus:ring-cyan-600"
-                        />
-                     </div>
-                 )
-             }
-            return null;
-        });
-    };
-
-    return (
-        <div className="p-4 space-y-4">
-            <h4 className="font-bold text-lg text-cyan-400 border-b border-slate-700 pb-2">Conteúdo do Bloco</h4>
-            {renderContentFields()}
-        </div>
-    );
-};
+import ContentPanel from './components/panels/ContentPanel';
+import StylePanel from './components/panels/StylePanel';
+import ThemePanel from './components/panels/ThemePanel';
 
 
 // --- Painel Lateral Principal ---
 const EditorSidePanel: React.FC<{
-    selection: { type: 'block', block: PageBlock, sectionId: string } | null;
+    selection: Selection;
+    pageData: Page;
     onClose: () => void;
-    onUpdateBlock: (blockId: string, sectionId: string, updatedContent: Partial<PageBlock['content']>) => void;
-}> = ({ selection, onClose, onUpdateBlock }) => {
+    onUpdateBlock: (updatedBlock: PageBlock, sectionId: string) => void;
+    onUpdateTheme: (updatedTheme: Page['content']['theme']) => void;
+
+}> = ({ selection, pageData, onClose, onUpdateBlock, onUpdateTheme }) => {
+    const [activeTab, setActiveTab] = useState('content');
+    
+    useEffect(() => {
+        if (selection?.type === 'block') {
+            setActiveTab('content');
+        }
+    }, [selection]);
+
+    const renderContent = () => {
+        if (!selection) {
+            return <ThemePanel theme={pageData.content.theme} onUpdateTheme={onUpdateTheme} />;
+        }
+
+        if (selection.type === 'block') {
+            const section = pageData.content.sections.find(s => s.id === selection.sectionId);
+            const block = section?.blocks.find(b => b.id === selection.id);
+            if (!block) return null;
+
+            return (
+                <>
+                    <div className="p-4 border-b border-slate-700 flex-shrink-0">
+                        <h4 className="font-bold text-lg text-cyan-400 capitalize">{block.type} Block</h4>
+                         <div className="flex items-center gap-2 mt-2">
+                            <button onClick={() => setActiveTab('content')} className={`px-3 py-1 text-sm rounded-md ${activeTab === 'content' ? 'bg-cyan-600 text-white' : 'bg-slate-700 text-slate-300'}`}>Conteúdo</button>
+                            <button onClick={() => setActiveTab('style')} className={`px-3 py-1 text-sm rounded-md ${activeTab === 'style' ? 'bg-cyan-600 text-white' : 'bg-slate-700 text-slate-300'}`}>Estilo</button>
+                         </div>
+                    </div>
+                    {activeTab === 'content' && <ContentPanel block={block} sectionId={selection.sectionId} onUpdateBlock={onUpdateBlock} />}
+                    {activeTab === 'style' && <StylePanel block={block} sectionId={selection.sectionId} onUpdateBlock={onUpdateBlock} theme={pageData.content.theme} />}
+                </>
+            );
+        }
+        // TODO: Adicionar painel de edição de seção aqui
+        return <div className="p-4 text-slate-400">Edição de seção ainda não implementada.</div>;
+    };
+
     return (
         <div className="fixed top-16 right-0 h-[calc(100vh-64px)] w-80 bg-slate-900 border-l border-slate-700 z-[1000] flex flex-col text-sm shadow-2xl">
             <div className="flex justify-between items-center p-4 border-b border-slate-700 flex-shrink-0">
-                <h3 className="font-bold text-lg text-white">Editor</h3>
+                <h3 className="font-bold text-lg text-white">{selection ? 'Inspetor' : 'Tema Global'}</h3>
                 <button onClick={onClose} className="p-1 text-slate-400 hover:text-white" title="Fechar painel">
                     <XCircleIcon className="w-6 h-6"/>
                 </button>
             </div>
             <div className="flex-grow overflow-y-auto">
-                {selection?.type === 'block' ? (
-                     <BlockEditPanel block={selection.block} onUpdate={onUpdateBlock} sectionId={selection.sectionId}/>
-                ) : (
-                    <div className="p-4 text-slate-400">
-                        <p>Selecione um bloco na página para ver suas opções de edição.</p>
-                    </div>
-                )}
+                {renderContent()}
             </div>
         </div>
     );
@@ -112,8 +79,9 @@ const AiPoweredEditor: React.FC<{ slug: string }> = ({ slug }) => {
     const [pageData, setPageData] = useState<Page | null>(null);
     const [savedPageData, setSavedPageData] = useState<Page | null>(null);
     const [status, setStatus] = useState<'loading' | 'success' | 'not_found' | 'error' | 'saving'>('loading');
-    const [selection, setSelection] = useState<{ type: 'block', block: PageBlock, sectionId: string } | null>(null);
+    const [selection, setSelection] = useState<Selection>(null);
     const [isSeoModalOpen, setIsSeoModalOpen] = useState(false);
+    const [isSidePanelOpen, setIsSidePanelOpen] = useState(true);
 
     const hasUnsavedChanges = JSON.stringify(pageData) !== JSON.stringify(savedPageData);
 
@@ -164,24 +132,26 @@ const AiPoweredEditor: React.FC<{ slug: string }> = ({ slug }) => {
         });
     };
 
-    const handleBlockUpdate = (blockId: string, sectionId: string, updatedContent: Partial<PageBlock['content']>) => {
+    const handleBlockUpdate = (updatedBlock: PageBlock, sectionId: string) => {
         updatePageData(draft => {
-            const section = draft.content?.sections.find(s => s.id === sectionId);
+            const section = draft.content.sections.find(s => s.id === sectionId);
             if (section) {
-                const blockIndex = section.blocks.findIndex(b => b.id === blockId);
+                const blockIndex = section.blocks.findIndex(b => b.id === updatedBlock.id);
                 if (blockIndex > -1) {
-                    section.blocks[blockIndex].content = { ...section.blocks[blockIndex].content, ...updatedContent };
-                    // Atualiza a seleção também para o painel refletir a mudança
-                    if (selection && selection.block.id === blockId) {
-                        setSelection({ ...selection, block: section.blocks[blockIndex] });
-                    }
+                    section.blocks[blockIndex] = updatedBlock;
                 }
             }
         });
     };
 
+    const handleThemeUpdate = (updatedTheme: Page['content']['theme']) => {
+        updatePageData(draft => {
+            draft.content.theme = updatedTheme;
+        });
+    };
+
     const onDragEnd: OnDragEndResponder = (result) => {
-        const { source, destination, draggableId } = result;
+        const { source, destination } = result;
         if (!destination) return;
 
         // Movendo uma Seção
@@ -212,6 +182,11 @@ const AiPoweredEditor: React.FC<{ slug: string }> = ({ slug }) => {
             }
         });
     };
+    
+    const handleSelection = (newSelection: Selection) => {
+        setSelection(newSelection);
+        setIsSidePanelOpen(true);
+    };
 
     const renderSectionWithEditorGrid = (section: Section, context: 'main' | 'footer') => (
         <Droppable droppableId={`blocks-droppable-${section.id}`} key={section.id}>
@@ -231,6 +206,7 @@ const AiPoweredEditor: React.FC<{ slug: string }> = ({ slug }) => {
                                  <div 
                                      style={{ display: 'grid', gridTemplateColumns: `repeat(${s.gridSettings.columns}, 1fr)`, gridAutoRows: `${s.gridSettings.rowHeight}px`, gap: `${s.gridSettings.gap}px` }}
                                      className="relative"
+                                     onClick={() => handleSelection(null)}
                                  >
                                      {s.blocks.map((block, index) => (
                                          <Draggable key={block.id} draggableId={block.id} index={index}>
@@ -239,8 +215,8 @@ const AiPoweredEditor: React.FC<{ slug: string }> = ({ slug }) => {
                                                      ref={provided.innerRef}
                                                      {...provided.draggableProps}
                                                      {...provided.dragHandleProps}
-                                                     onClick={() => setSelection({ type: 'block', block, sectionId: s.id })}
-                                                     className={`relative group cursor-pointer border-2 ${selection?.block.id === block.id ? 'border-cyan-400' : 'border-transparent'} ${snapshot.isDragging ? 'shadow-2xl' : ''}`}
+                                                     onClick={(e) => { e.stopPropagation(); handleSelection({ type: 'block', id: block.id, blockType: block.type, sectionId: s.id, context: 'main' }); }}
+                                                     className={`relative group cursor-pointer border-2 ${selection?.type === 'block' && selection.id === block.id ? 'border-cyan-400' : 'border-transparent'} ${snapshot.isDragging ? 'shadow-2xl' : ''}`}
                                                      style={{
                                                          gridColumn: `${block.layout.desktop.colStart} / ${block.layout.desktop.colEnd}`,
                                                          gridRow: `${block.layout.desktop.rowStart} / ${block.layout.desktop.rowEnd}`,
@@ -249,7 +225,7 @@ const AiPoweredEditor: React.FC<{ slug: string }> = ({ slug }) => {
                                                  >
                                                      <div className="absolute -top-3 left-0 bg-cyan-600 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-10">{block.type}</div>
                                                      <div className="w-full h-full pointer-events-none">
-                                                        <BlockRenderer block={block} theme={pageData!.content!.theme} viewport="desktop" isEditing={false} />
+                                                        <BlockRenderer block={block} theme={pageData!.content!.theme} viewport="desktop" isEditing={true} />
                                                      </div>
                                                  </div>
                                              )}
@@ -270,7 +246,7 @@ const AiPoweredEditor: React.FC<{ slug: string }> = ({ slug }) => {
 
     return (
         <DragDropContext onDragEnd={onDragEnd}>
-            <div className="min-h-screen" style={{ backgroundColor: pageData.content?.settings.backgroundColor, paddingTop: '64px', paddingRight: selection ? '320px' : '0', transition: 'padding-right 0.3s ease' }}>
+            <div className="min-h-screen" style={{ backgroundColor: pageData.content?.settings.backgroundColor, paddingTop: '64px', paddingRight: isSidePanelOpen ? '320px' : '0', transition: 'padding-right 0.3s ease' }}>
                 {/* Top Toolbar */}
                 <div className="fixed top-0 left-0 right-0 h-16 bg-slate-900/80 backdrop-blur-sm border-b border-slate-700 z-[1001] flex items-center justify-between px-4">
                     <div className="flex items-center gap-4">
@@ -290,7 +266,7 @@ const AiPoweredEditor: React.FC<{ slug: string }> = ({ slug }) => {
                 </div>
 
                 {/* Canvas */}
-                <div className="p-4">
+                <div className="p-4" onClick={() => handleSelection(null)}>
                     <Droppable droppableId="sections-droppable">
                         {(provided) => (
                             <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-4">
@@ -310,7 +286,7 @@ const AiPoweredEditor: React.FC<{ slug: string }> = ({ slug }) => {
                 </div>
                 
                 {/* Painel Lateral */}
-                {selection && <EditorSidePanel selection={selection} onClose={() => setSelection(null)} onUpdateBlock={handleBlockUpdate} />}
+                {isSidePanelOpen && <EditorSidePanel selection={selection} pageData={pageData} onClose={() => setIsSidePanelOpen(false)} onUpdateBlock={handleBlockUpdate} onUpdateTheme={handleThemeUpdate}/>}
                 
                 {/* Modal de SEO */}
                 {isSeoModalOpen && <SEOModal pageData={pageData} setPageData={setPageData} onClose={() => setIsSeoModalOpen(false)} />}

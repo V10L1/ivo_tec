@@ -11,7 +11,7 @@ declare const process: {
 import { Pool } from 'pg';
 import dotenv from 'dotenv';
 import { ROLE_PERMISSIONS, APP_MODULES } from '../constants';
-import { UserRole, TextStyles, FixedContainer, BlockLayout, AnimationSettings, ThemeSettings } from '../types';
+import { UserRole, TextStyles, FixedContainer, BlockLayout, AnimationSettings, ThemeSettings, ColorStyleValue } from '../types';
 
 dotenv.config();
 
@@ -109,15 +109,20 @@ export const initializeDatabase = async () => {
         // Inserir página inicial padrão se não houver nenhuma
         const pagesCheck = await client.query('SELECT COUNT(*) FROM pages');
         if (parseInt(pagesCheck.rows[0].count, 10) === 0) {
-            const defaultTextStyles: TextStyles = { textColor: '#cbd5e1', textAlign: 'left', fontWeight: 'normal', fontStyle: 'normal', fontFamily: 'sans-serif', fontSize: 16};
+            const defaultGlobalTextColor: ColorStyleValue = { type: 'global', value: 'text' };
+            const defaultTextStyles: Omit<TextStyles, 'textColor'> = { textAlign: 'left', fontWeight: 'normal', fontStyle: 'normal', fontFamily: 'sans-serif', fontSize: 16};
             const defaultFixedContainer: Omit<FixedContainer, 'blocks'> = { enabled: false, size: 60, isCollapsed: false, collapsible: true, toggleButtonPosition: 'center' };
-            const defaultResponsiveLayout: { desktop: BlockLayout; tablet: BlockLayout; mobile: BlockLayout } = {
-                desktop: { colStart: 1, colEnd: 13, rowStart: 1, rowEnd: 10, alignSelf: 'stretch', justifySelf: 'stretch' },
-                tablet: { colStart: 1, colEnd: 9, rowStart: 1, rowEnd: 10, alignSelf: 'stretch', justifySelf: 'stretch' },
-                mobile: { colStart: 1, colEnd: 5, rowStart: 1, rowEnd: 10, alignSelf: 'stretch', justifySelf: 'stretch' },
-            };
             const defaultAnimation: AnimationSettings = { type: 'none', delay: 0, duration: 1000 };
-            const defaultTheme: ThemeSettings = { primaryColor: '#0891b2', secondaryColor: '#64748b', headingFont: 'sans-serif', bodyFont: 'sans-serif' };
+            const defaultTheme: ThemeSettings = {
+                primaryColor: '#38bdf8', // light-blue-400
+                secondaryColor: '#818cf8', // indigo-400
+                backgroundColor: '#0f172a', // slate-900
+                surfaceColor: '#1e293b', // slate-800
+                textColor: '#e2e8f0', // slate-200
+                textSecondaryColor: '#94a3b8', // slate-400
+                headingFont: 'sans-serif',
+                bodyFont: 'sans-serif'
+            };
 
              const initialContent = {
                 settings: {
@@ -134,7 +139,7 @@ export const initializeDatabase = async () => {
                 sections: [
                     {
                         id: 'section_1',
-                        styles: { backgroundColor: 'transparent', backgroundOpacity: 1 },
+                        styles: { backgroundColor: { type: 'global', value: 'background' }, backgroundOpacity: 1 },
                         gridSettings: { columns: 12, rowHeight: 20, gap: 16 },
                         blocks: [
                             {
@@ -146,10 +151,10 @@ export const initializeDatabase = async () => {
                                     mobile: { colStart: 1, colEnd: 5, rowStart: 2, rowEnd: 15, alignSelf: 'stretch', justifySelf: 'stretch' },
                                 },
                                 animation: { ...defaultAnimation, type: 'fadeInUp' },
-                                styles: { backgroundColor: "#1e293b", backgroundOpacity: 1, textOpacity: 1, borderRadius: 'medium', zIndex: 1 },
+                                styles: { backgroundColor: { type: 'global', value: 'surface' }, backgroundOpacity: 1, textOpacity: 1, borderRadius: 'medium', zIndex: 1 },
                                 content: {
-                                    title: { text: "Bem-vindo ao Mundo Moto", styles: { ...defaultTextStyles, textColor: '#ffffff', textAlign: 'center', fontWeight: 'bold', fontSize: 48 } },
-                                    subtitle: { text: "Sua parada única para as melhores motos do planeta. Comece sua aventura hoje.", styles: { ...defaultTextStyles, textColor: '#ffffff', textAlign: 'center', fontSize: 18 } },
+                                    title: { text: "Bem-vindo ao Mundo Moto", styles: { ...defaultTextStyles, textColor: { type: 'global', value: 'text' }, textAlign: 'center', fontWeight: 'bold', fontSize: 48 } },
+                                    subtitle: { text: "Sua parada única para as melhores motos do planeta. Comece sua aventura hoje.", styles: { ...defaultTextStyles, textColor: { type: 'global', value: 'textSecondary' }, textAlign: 'center', fontSize: 18 } },
                                     ctaText: "Explorar Coleção", ctaLink: "#", ctaEnabled: true
                                 }
                             }

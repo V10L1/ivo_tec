@@ -1,91 +1,11 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Page } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRouter } from '../../contexts/RouterContext';
 import { Wand2Icon, EditIcon, Trash2Icon, CopyIcon, StarIcon } from '../../components/icons/Icons';
+import NewPageWizardModal from './wizards/NewPageWizardModal';
 
 type PageSummary = Pick<Page, 'id' | 'title' | 'slug' | 'is_homepage' | 'is_published' | 'updated_at'>;
-
-const AiGenerationModal: React.FC<{
-    onClose: () => void;
-    onPageCreated: (page: Page) => void;
-}> = ({ onClose, onPageCreated }) => {
-    const [title, setTitle] = useState('');
-    const [prompt, setPrompt] = useState('');
-    const [status, setStatus] = useState<'idle' | 'submitting'>('idle');
-    const [error, setError] = useState<string | null>(null);
-    const { token } = useAuth();
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setStatus('submitting');
-        setError(null);
-        try {
-            const response = await fetch('/api/ai/generate/page', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ title, prompt })
-            });
-            const data = await response.json();
-            if (!response.ok) {
-                throw new Error(data.message || 'Falha ao gerar a página com IA.');
-            }
-            onPageCreated(data);
-        } catch (err: any) {
-            setError(err.message);
-        } finally {
-            setStatus('idle');
-        }
-    };
-
-    return (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-            <div className="bg-slate-800 rounded-lg shadow-xl w-full max-w-2xl border border-slate-700">
-                <form onSubmit={handleSubmit}>
-                    <div className="p-6">
-                        <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
-                            <Wand2Icon className="w-5 h-5 text-cyan-400" />
-                            Criar Página com Assistente de IA
-                        </h3>
-                        <p className="text-sm text-slate-400 mb-4">Descreva o site que você quer criar. A IA irá gerar uma estrutura completa para você refinar.</p>
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-1">Título da Página</label>
-                                <input
-                                    type="text"
-                                    value={title}
-                                    onChange={e => setTitle(e.target.value)}
-                                    required
-                                    className="w-full bg-slate-900 border border-slate-700 rounded-md p-2"
-                                    placeholder="Ex: Oficina de Motos Garagem 55"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-slate-400 mb-1">Descrição para a IA</label>
-                                <textarea
-                                    value={prompt}
-                                    onChange={e => setPrompt(e.target.value)}
-                                    required
-                                    rows={5}
-                                    className="w-full bg-slate-900 border border-slate-700 rounded-md p-2"
-                                    placeholder="Ex: Crie um site para minha oficina de motos customizadas. O estilo deve ser rústico e moderno. Inclua uma seção de 'Sobre', nossos 'Serviços' (pintura, motor, escapamento) e uma 'Galeria' de fotos."
-                                />
-                            </div>
-                            {error && <p className="text-sm text-red-400">{error}</p>}
-                        </div>
-                    </div>
-                    <div className="px-6 py-4 bg-slate-800/50 border-t border-slate-700 flex justify-end gap-3">
-                        <button type="button" onClick={onClose} className="bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold py-2 px-4 rounded-lg">Cancelar</button>
-                        <button type="submit" className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-4 rounded-lg" disabled={status === 'submitting'}>
-                            {status === 'submitting' ? 'Gerando...' : 'Gerar Página'}
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    );
-};
 
 const PageManager: React.FC = () => {
     const [pages, setPages] = useState<PageSummary[]>([]);
@@ -119,8 +39,8 @@ const PageManager: React.FC = () => {
         setTimeout(() => setFeedback(null), 4000);
     };
 
-    const handlePageCreatedByAI = (page: Page) => {
-        handleFeedback('success', 'Página gerada! Redirecionando para o editor...');
+    const handlePageCreated = (page: Page) => {
+        handleFeedback('success', 'Página criada! Redirecionando para o editor...');
         setIsCreateModalOpen(false);
         window.location.hash = `/${page.slug}?edit=true`;
     };
@@ -238,7 +158,7 @@ const PageManager: React.FC = () => {
                     disabled={status === 'submitting'}
                 >
                     <Wand2Icon className="w-5 h-5" />
-                    Criar Página com IA
+                    Criar Nova Página
                 </button>
             </div>
 
@@ -284,9 +204,9 @@ const PageManager: React.FC = () => {
             </div>
 
             {isCreateModalOpen && (
-                <AiGenerationModal
+                <NewPageWizardModal
                     onClose={() => setIsCreateModalOpen(false)}
-                    onPageCreated={handlePageCreatedByAI}
+                    onPageCreated={handlePageCreated}
                 />
             )}
         </div>

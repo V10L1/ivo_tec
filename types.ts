@@ -16,9 +16,18 @@ export interface AppModule {
   Icon: React.ComponentType<{ className?: string }>;
 }
 
+// --- Novos Tipos de Estilo em Cascata ---
+export type ThemeColorKey = 'primary' | 'secondary' | 'background' | 'surface' | 'text' | 'textSecondary';
+
+export interface ColorStyleValue {
+    type: 'global' | 'custom';
+    ref?: ThemeColorKey; // Apenas se o tipo for 'global'
+    value: string; // ref para global (ex: 'primary') ou valor hex para custom
+}
+
 // Rich text styles for individual text elements
 export interface TextStyles {
-  textColor?: string;
+  textColor?: ColorStyleValue;
   textAlign?: 'left' | 'center' | 'right' | 'justify';
   fontWeight?: 'normal' | 'bold';
   fontStyle?: 'normal' | 'italic';
@@ -86,7 +95,7 @@ export interface SpacerBlockContent {
 
 // Styles for the block container
 export interface ContainerStyles {
-  backgroundColor?: string;
+  backgroundColor?: ColorStyleValue;
   backgroundOpacity?: number; // 0 to 1
   textOpacity?: number; // 0 to 1
   borderRadius?: 'none' | 'medium' | 'full';
@@ -166,6 +175,10 @@ export interface SiteSettings {
 export interface ThemeSettings {
     primaryColor: string;
     secondaryColor: string;
+    backgroundColor: string;
+    surfaceColor: string;
+    textColor: string;
+    textSecondaryColor: string;
     headingFont: string;
     bodyFont: string;
 }
