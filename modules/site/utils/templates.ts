@@ -132,10 +132,10 @@ export const templates: Template[] = [
                 styles: { backgroundColor: { type: 'global', value: 'background' } },
                 gridSettings: { columns: 12, rowHeight: 20, gap: 16 },
                 blocks: [
-                    {...image1, layout: { desktop: { colStart: 1, colEnd: 7, rowStart: 1, rowEnd: 15, ...image1.layout.desktop }, ...image1.layout }},
-                    {...image2, layout: { desktop: { colStart: 7, colEnd: 13, rowStart: 1, rowEnd: 15, ...image2.layout.desktop }, ...image2.layout }},
-                    {...image3, layout: { desktop: { colStart: 1, colEnd: 7, rowStart: 16, rowEnd: 30, ...image3.layout.desktop }, ...image3.layout }},
-                    {...image4, layout: { desktop: { colStart: 7, colEnd: 13, rowStart: 16, rowEnd: 30, ...image4.layout.desktop }, ...image4.layout }},
+                    {...image1, layout: { ...image1.layout, desktop: { ...image1.layout.desktop, colStart: 1, colEnd: 7, rowStart: 1, rowEnd: 15 } }},
+                    {...image2, layout: { ...image2.layout, desktop: { ...image2.layout.desktop, colStart: 7, colEnd: 13, rowStart: 1, rowEnd: 15 } }},
+                    {...image3, layout: { ...image3.layout, desktop: { ...image3.layout.desktop, colStart: 1, colEnd: 7, rowStart: 16, rowEnd: 30 } }},
+                    {...image4, layout: { ...image4.layout, desktop: { ...image4.layout.desktop, colStart: 7, colEnd: 13, rowStart: 16, rowEnd: 30 } }},
                 ]
             });
             return data;
