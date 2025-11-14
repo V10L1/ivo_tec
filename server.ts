@@ -11,7 +11,8 @@ declare const __dirname: string;
 
 // server.ts - O Orquestrador Principal
 // FIX: Resolve express type conflicts by using a combined import.
-import express from 'express';
+// FIX: Changed import to explicitly include Request, Response, and NextFunction types.
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -31,7 +32,8 @@ app.use(express.json());
 
 // --- Rota de Verificação de Saúde ---
 // FIX: Correctly type req and res parameters to resolve property access errors.
-app.get('/api/health', async (req: express.Request, res: express.Response) => {
+// FIX: Used explicit Request and Response types.
+app.get('/api/health', async (req: Request, res: Response) => {
     try {
         const client = await pool.connect();
         await client.query('SELECT 1');
@@ -103,7 +105,8 @@ const serveFrontend = () => {
 
     // Rota "catch-all" melhorada para lidar com APIs não encontradas
     // FIX: Correctly type req and res parameters to resolve property access errors.
-    app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+    // FIX: Used explicit Request, Response, and NextFunction types.
+    app.use((req: Request, res: Response, next: NextFunction) => {
         if (req.path.startsWith('/api/')) {
             // Se chegou até aqui, é uma rota de API que não foi encontrada.
             return res.status(404).json({ message: `Endpoint da API não encontrado: ${req.method} ${req.path}` });

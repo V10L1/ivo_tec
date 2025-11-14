@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Page, PageBlock, Section, Viewport, FixedContainerPosition, SiteData, ThemeSettings, ColorStyleValue, ThemeColorKey } from '../../types';
 import BlockRenderer from './components/BlockRenderer';
+import { defaultPageContent } from './utils/defaults';
 
 // Função utilitária para resolver a cor com base no tema
 export const resolveColor = (color: ColorStyleValue | undefined, theme: ThemeSettings): string => {
     if (!color) return 'transparent';
     if (color.type === 'global') {
-        return theme[color.value as ThemeColorKey] || 'transparent';
+        const themeKey = color.value as ThemeColorKey;
+        return theme[themeKey] || 'transparent';
     }
     return color.value;
 };
@@ -108,18 +110,23 @@ const PublicSite: React.FC<PublicSiteProps> = ({ slug, pageData: initialPageData
         return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Carregando...</div>;
     }
     
-    if ((status === 'not_found' || status === 'error' || !pageData || !pageData.content) && !isEditing) {
+    if ((status === 'not_found' || status === 'error' || !pageData) && !isEditing) {
         return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Página não encontrada.</div>;
     }
     
-    if (!pageData || !pageData.content) {
-        // No modo de edição, o editor lida com o estado de carregamento, mas ainda podemos retornar um fallback
+    if (!pageData) {
         return null;
     }
 
+    // FIX: Garante que o conteúdo e o tema tenham valores padrão para evitar travamentos.
+    const { 
+        settings = defaultPageContent.settings, 
+        fixedContainers = defaultPageContent.fixedContainers, 
+        sections = [], 
+        footerSections = [], 
+        theme = defaultPageContent.theme 
+    } = pageData.content || {};
 
-    const { settings, fixedContainers, sections, footerSections, theme } = pageData.content;
-    const viewport: Viewport = 'desktop'; // Public view is always responsive via CSS
 
     const renderSectionForPublic = (section: Section) => {
         return (
@@ -134,13 +141,13 @@ const PublicSite: React.FC<PublicSiteProps> = ({ slug, pageData: initialPageData
                             data-animation={!isEditing ? block.animation.type : 'none'}
                             data-animation-delay={block.animation.delay}
                             data-animation-duration={block.animation.duration}
-                            style={{ gridColumn: `${block.layout[viewport].colStart} / ${block.layout[viewport].colEnd}`, gridRow: `${block.layout[viewport].rowStart} / ${block.layout[viewport].rowEnd}`, zIndex: block.styles?.zIndex || 'auto', position: 'relative' }}
+                            style={{ gridColumn: `${block.layout.desktop.colStart} / ${block.layout.desktop.colEnd}`, gridRow: `${block.layout.desktop.rowStart} / ${block.layout.desktop.rowEnd}`, zIndex: block.styles?.zIndex || 'auto', position: 'relative' }}
                             className={`${!isEditing && block.animation.type !== 'none' ? 'opacity-0' : ''}`}
                         >
                             <BlockRenderer
                                 block={block}
                                 theme={theme}
-                                viewport={viewport}
+                                viewport={'desktop'}
                                 isEditing={isEditing}
                                 onToggleContainer={handleToggleContainer}
                             />

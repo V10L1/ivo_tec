@@ -5,7 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { ArrowLeftIcon, SaveIcon, EyeIcon, SeoIcon, XCircleIcon, TypeIcon, PaletteIcon } from '../../components/icons/Icons';
 import PublicSite from './PublicSite';
 import SEOModal from './components/SEOModal';
-import { createNewBlock } from './utils/defaults';
+import { createNewBlock, defaultPageContent } from './utils/defaults';
 import BlockRenderer from './components/BlockRenderer';
 import ContentPanel from './components/panels/ContentPanel';
 import StylePanel from './components/panels/StylePanel';
@@ -30,8 +30,11 @@ const EditorSidePanel: React.FC<{
     }, [selection]);
 
     const renderContent = () => {
+        // FIX: Garante que o tema tenha um valor padrão se não estiver definido.
+        const theme = pageData.content?.theme || defaultPageContent.theme;
+
         if (!selection) {
-            return <ThemePanel theme={pageData.content.theme} onUpdateTheme={onUpdateTheme} />;
+            return <ThemePanel theme={theme} onUpdateTheme={onUpdateTheme} />;
         }
 
         if (selection.type === 'block') {
@@ -49,7 +52,7 @@ const EditorSidePanel: React.FC<{
                          </div>
                     </div>
                     {activeTab === 'content' && <ContentPanel block={block} sectionId={selection.sectionId} onUpdateBlock={onUpdateBlock} />}
-                    {activeTab === 'style' && <StylePanel block={block} sectionId={selection.sectionId} onUpdateBlock={onUpdateBlock} theme={pageData.content.theme} />}
+                    {activeTab === 'style' && <StylePanel block={block} sectionId={selection.sectionId} onUpdateBlock={onUpdateBlock} theme={theme} />}
                 </>
             );
         }
@@ -146,7 +149,9 @@ const AiPoweredEditor: React.FC<{ slug: string }> = ({ slug }) => {
 
     const handleThemeUpdate = (updatedTheme: Page['content']['theme']) => {
         updatePageData(draft => {
-            draft.content.theme = updatedTheme;
+            if (draft.content) {
+                draft.content.theme = updatedTheme;
+            }
         });
     };
 
@@ -202,6 +207,7 @@ const AiPoweredEditor: React.FC<{ slug: string }> = ({ slug }) => {
                         isEditing={true}
                         renderSectionWithEditorGrid={(s, c) => {
                              if (s.id !== section.id) return null; // Apenas renderiza a seção atual
+                             const theme = pageData?.content?.theme || defaultPageContent.theme;
                              return (
                                  <div 
                                      style={{ display: 'grid', gridTemplateColumns: `repeat(${s.gridSettings.columns}, 1fr)`, gridAutoRows: `${s.gridSettings.rowHeight}px`, gap: `${s.gridSettings.gap}px` }}
@@ -225,7 +231,7 @@ const AiPoweredEditor: React.FC<{ slug: string }> = ({ slug }) => {
                                                  >
                                                      <div className="absolute -top-3 left-0 bg-cyan-600 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-10">{block.type}</div>
                                                      <div className="w-full h-full pointer-events-none">
-                                                        <BlockRenderer block={block} theme={pageData!.content!.theme} viewport="desktop" isEditing={true} />
+                                                        <BlockRenderer block={block} theme={theme} viewport="desktop" isEditing={true} />
                                                      </div>
                                                  </div>
                                              )}
@@ -244,9 +250,11 @@ const AiPoweredEditor: React.FC<{ slug: string }> = ({ slug }) => {
     if (status === 'loading') return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Carregando editor...</div>;
     if (status === 'not_found' || status === 'error' || !pageData) return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-red-400"><h1>Erro ao carregar a página.</h1></div>;
 
+    const content = pageData.content || defaultPageContent;
+
     return (
         <DragDropContext onDragEnd={onDragEnd}>
-            <div className="min-h-screen" style={{ backgroundColor: pageData.content?.settings.backgroundColor, paddingTop: '64px', paddingRight: isSidePanelOpen ? '320px' : '0', transition: 'padding-right 0.3s ease' }}>
+            <div className="min-h-screen" style={{ backgroundColor: content.settings.backgroundColor, paddingTop: '64px', paddingRight: isSidePanelOpen ? '320px' : '0', transition: 'padding-right 0.3s ease' }}>
                 {/* Top Toolbar */}
                 <div className="fixed top-0 left-0 right-0 h-16 bg-slate-900/80 backdrop-blur-sm border-b border-slate-700 z-[1001] flex items-center justify-between px-4">
                     <div className="flex items-center gap-4">
@@ -270,7 +278,7 @@ const AiPoweredEditor: React.FC<{ slug: string }> = ({ slug }) => {
                     <Droppable droppableId="sections-droppable">
                         {(provided) => (
                             <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-4">
-                                {pageData.content?.sections.map((section, index) => (
+                                {content.sections.map((section, index) => (
                                     <Draggable key={section.id} draggableId={section.id} index={index}>
                                         {(provided) => (
                                             <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}>
