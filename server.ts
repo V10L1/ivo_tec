@@ -1,6 +1,3 @@
-
-
-
 // HACK: Declare Node.js globals to resolve TypeScript errors when @types/node is not available.
 declare const process: {
     env: {
@@ -9,6 +6,7 @@ declare const process: {
     cwd(): string;
     exit(code?: number): never;
 };
+declare const __filename: string;
 declare const __dirname: string;
 
 // server.ts - O Orquestrador Principal
@@ -62,8 +60,17 @@ const loadApiModules = async () => {
                     const manifestContent = await fs.readFile(manifestPath, 'utf-8');
                     const manifest = JSON.parse(manifestContent);
                     
-                    // Constrói o caminho absoluto para o arquivo de rotas compilado, garantindo a resolução correta.
-                    const absoluteRoutesPath = path.resolve(compiledBaseDir, 'api', moduleName, manifest.routesFile);
+                    // FIX: Ajusta o caminho e a extensão do arquivo de rotas para funcionar
+                    // tanto em desenvolvimento (ts-node, .ts) quanto em produção (.js).
+                    const isDev = __filename.endsWith('.ts');
+                    const routesFile = isDev 
+                        ? manifest.routesFile.replace(/\.js$/, '.ts')
+                        : manifest.routesFile;
+
+                    // Constrói o caminho absoluto para o arquivo de rotas.
+                    // Em dev, __dirname é a raiz do projeto. Em prod, é dist/server.
+                    // A estrutura de pastas 'api/moduleName/routesFile' é a mesma em ambos.
+                    const absoluteRoutesPath = path.resolve(compiledBaseDir, 'api', moduleName, routesFile);
 
                     const { default: router } = await import(absoluteRoutesPath);
                     
