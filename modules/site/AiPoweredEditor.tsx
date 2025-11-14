@@ -1,102 +1,143 @@
 
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { DragDropContext, Droppable, Draggable, OnDragEndResponder } from 'react-beautiful-dnd';
-import { Page, SiteData, PageBlock, Section } from '../../types';
+import { Page, PageBlock, Section } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
-import { ArrowLeftIcon, SaveIcon, EyeIcon, SeoIcon } from '../../components/icons/Icons';
+import { ArrowLeftIcon, SaveIcon, EyeIcon, SeoIcon, XCircleIcon, TypeIcon, ImageIcon, PaletteIcon } from '../../components/icons/Icons';
 import PublicSite from './PublicSite';
 import SEOModal from './components/SEOModal';
+import { createNewBlock } from './utils/defaults';
+// FIX: Import the missing BlockRenderer component.
+import BlockRenderer from './components/BlockRenderer';
 
-const EditPanel: React.FC<{
+// --- Painel de Edição do Bloco ---
+const BlockEditPanel: React.FC<{
     block: PageBlock;
-    onUpdate: (field: string, value: any) => void;
-    onClose: () => void;
-}> = ({ block, onUpdate, onClose }) => {
+    onUpdate: (blockId: string, sectionId: string, updatedContent: Partial<PageBlock['content']>) => void;
+    sectionId: string;
+}> = ({ block, onUpdate, sectionId }) => {
+
+    const handleContentChange = (field: string, value: any) => {
+        onUpdate(block.id, sectionId, { ...block.content, [field]: value });
+    };
     
     const renderContentFields = () => {
-        switch (block.type) {
-            case 'hero': return ( <> <label>Título</label> <input type="text" value={block.content.title.text} onChange={e => onUpdate('title', { ...block.content.title, text: e.target.value })}/> <label>Subtítulo</label> <textarea value={block.content.subtitle.text} onChange={e => onUpdate('subtitle', { ...block.content.subtitle, text: e.target.value })}/> </> );
-            case 'text': return ( <> <label>Cabeçalho</label> <input type="text" value={block.content.heading.text} onChange={e => onUpdate('heading', { ...block.content.heading, text: e.target.value })}/> <label>Corpo</label> <textarea value={block.content.body.text} onChange={e => onUpdate('body', { ...block.content.body, text: e.target.value })}/> </> );
-            case 'image': return ( <> <label>URL da Imagem</label> <input type="text" value={block.content.imageUrl} onChange={e => onUpdate('imageUrl', e.target.value)}/> <label>Texto Alternativo</label> <input type="text" value={block.content.altText} onChange={e => onUpdate('altText', e.target.value)}/> </> );
-            default: return <p className="text-sm text-slate-400">Este tipo de bloco não possui conteúdo editável.</p>;
-        }
+        const content = block.content as any;
+        return Object.keys(content).map(key => {
+            const value = content[key];
+            if (typeof value === 'string') {
+                return (
+                    <div key={key}>
+                        <label className="capitalize block text-slate-400 mb-1">{key.replace(/([A-Z])/g, ' $1')}</label>
+                        <input
+                            type="text"
+                            value={value}
+                            onChange={e => handleContentChange(key, e.target.value)}
+                            className="w-full bg-slate-800 border border-slate-700 rounded-md p-2"
+                        />
+                    </div>
+                );
+            }
+            if (typeof value === 'object' && value && 'text' in value) {
+                 return (
+                    <div key={key}>
+                        <label className="capitalize block text-slate-400 mb-1">{key.replace(/([A-Z])/g, ' $1')}</label>
+                        <textarea
+                            value={value.text}
+                            onChange={e => handleContentChange(key, { ...value, text: e.target.value })}
+                            className="w-full bg-slate-800 border border-slate-700 rounded-md p-2"
+                            rows={4}
+                        />
+                    </div>
+                );
+            }
+             if (typeof value === 'boolean') {
+                 return (
+                     <div key={key} className="flex items-center justify-between">
+                         <label className="capitalize block text-slate-300">{key.replace(/([A-Z])/g, ' $1')}</label>
+                         <input
+                            type="checkbox"
+                            checked={value}
+                            onChange={e => handleContentChange(key, e.target.checked)}
+                            className="w-4 h-4 text-cyan-600 bg-gray-700 border-gray-600 rounded focus:ring-cyan-600"
+                        />
+                     </div>
+                 )
+             }
+            return null;
+        });
     };
 
     return (
-        <div className="fixed top-16 right-0 h-[calc(100vh-64px)] w-80 bg-slate-900 border-l border-slate-700 z-[1000] p-4 flex flex-col text-sm">
-            <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold text-lg">Editar Bloco</h3>
-                <button onClick={onClose} className="p-1 text-slate-400 hover:text-white">&times;</button>
+        <div className="p-4 space-y-4">
+            <h4 className="font-bold text-lg text-cyan-400 border-b border-slate-700 pb-2">Conteúdo do Bloco</h4>
+            {renderContentFields()}
+        </div>
+    );
+};
+
+
+// --- Painel Lateral Principal ---
+const EditorSidePanel: React.FC<{
+    selection: { type: 'block', block: PageBlock, sectionId: string } | null;
+    onClose: () => void;
+    onUpdateBlock: (blockId: string, sectionId: string, updatedContent: Partial<PageBlock['content']>) => void;
+}> = ({ selection, onClose, onUpdateBlock }) => {
+    return (
+        <div className="fixed top-16 right-0 h-[calc(100vh-64px)] w-80 bg-slate-900 border-l border-slate-700 z-[1000] flex flex-col text-sm shadow-2xl">
+            <div className="flex justify-between items-center p-4 border-b border-slate-700 flex-shrink-0">
+                <h3 className="font-bold text-lg text-white">Editor</h3>
+                <button onClick={onClose} className="p-1 text-slate-400 hover:text-white" title="Fechar painel">
+                    <XCircleIcon className="w-6 h-6"/>
+                </button>
             </div>
-            <div className="space-y-3 overflow-y-auto">
-                {Object.entries(block.content).map(([key, value]) => {
-                    if (typeof value === 'string') {
-                         return (
-                            <div key={key}>
-                                <label className="capitalize block text-slate-400 mb-1">{key}</label>
-                                <input 
-                                    type="text" 
-                                    value={value} 
-                                    onChange={e => onUpdate(key, e.target.value)}
-                                    className="w-full bg-slate-800 border border-slate-700 rounded-md p-2"
-                                />
-                            </div>
-                        );
-                    }
-                    if (typeof value === 'object' && value && 'text' in value) {
-                         return (
-                            <div key={key}>
-                                <label className="capitalize block text-slate-400 mb-1">{key}</label>
-                                <textarea
-                                    value={(value as any).text}
-                                    onChange={e => onUpdate(key, { ...(value as any), text: e.target.value })}
-                                    className="w-full bg-slate-800 border border-slate-700 rounded-md p-2"
-                                    rows={3}
-                                />
-                            </div>
-                        );
-                    }
-                    return null;
-                })}
+            <div className="flex-grow overflow-y-auto">
+                {selection?.type === 'block' ? (
+                     <BlockEditPanel block={selection.block} onUpdate={onUpdateBlock} sectionId={selection.sectionId}/>
+                ) : (
+                    <div className="p-4 text-slate-400">
+                        <p>Selecione um bloco na página para ver suas opções de edição.</p>
+                    </div>
+                )}
             </div>
         </div>
     );
 };
 
+
+// --- Componente Editor Principal ---
 const AiPoweredEditor: React.FC<{ slug: string }> = ({ slug }) => {
     const { token } = useAuth();
     const [pageData, setPageData] = useState<Page | null>(null);
     const [savedPageData, setSavedPageData] = useState<Page | null>(null);
     const [status, setStatus] = useState<'loading' | 'success' | 'not_found' | 'error' | 'saving'>('loading');
-    const [selectedBlock, setSelectedBlock] = useState<PageBlock | null>(null);
+    const [selection, setSelection] = useState<{ type: 'block', block: PageBlock, sectionId: string } | null>(null);
     const [isSeoModalOpen, setIsSeoModalOpen] = useState(false);
 
     const hasUnsavedChanges = JSON.stringify(pageData) !== JSON.stringify(savedPageData);
 
-    useEffect(() => {
-        const fetchContent = async () => {
-            setStatus('loading');
-            try {
-                const finalSlug = slug === '/' || slug === 'home' ? 'home' : slug;
-                const endpoint = finalSlug === 'home' ? '/api/site/pages/admin/home' : `/api/site/pages/admin/slug/${finalSlug}`;
-                const response = await fetch(endpoint, { headers: { 'Authorization': `Bearer ${token}` } });
-
-                if (response.status === 404) { setStatus('not_found'); return; }
-                if (!response.ok) throw new Error('A resposta da rede não foi ok');
-                
-                const data: Page = await response.json();
-                setPageData(data);
-                setSavedPageData(JSON.parse(JSON.stringify(data)));
-                setStatus('success');
-            } catch (error) {
-                console.error("Falha ao buscar o conteúdo da página:", error);
-                setStatus('error');
-            }
-        };
-
-        if (token) { fetchContent(); }
+    const fetchContent = useCallback(async () => {
+        setStatus('loading');
+        try {
+            const finalSlug = slug === '/' || slug === 'home' ? 'home' : slug;
+            const endpoint = finalSlug === 'home' ? '/api/site/pages/admin/home' : `/api/site/pages/admin/slug/${finalSlug}`;
+            const response = await fetch(endpoint, { headers: { 'Authorization': `Bearer ${token}` } });
+            if (response.status === 404) { setStatus('not_found'); return; }
+            if (!response.ok) throw new Error('A resposta da rede não foi ok');
+            const data: Page = await response.json();
+            setPageData(data);
+            setSavedPageData(JSON.parse(JSON.stringify(data)));
+            setStatus('success');
+        } catch (error) {
+            console.error("Falha ao buscar o conteúdo da página:", error);
+            setStatus('error');
+        }
     }, [slug, token]);
+
+    useEffect(() => {
+        if (token) { fetchContent(); }
+    }, [slug, token, fetchContent]);
     
     const handleSaveChanges = async () => {
         if (!pageData) return;
@@ -114,68 +155,126 @@ const AiPoweredEditor: React.FC<{ slug: string }> = ({ slug }) => {
         }
     };
 
-    const onDragEnd: OnDragEndResponder = (result) => {
-        const { source, destination, type } = result;
-        if (!destination || !pageData || !pageData.content) return;
-
-        let newContent = JSON.parse(JSON.stringify(pageData.content));
-
-        if (type === 'SECTIONS') {
-            const [reorderedItem] = newContent.sections.splice(source.index, 1);
-            newContent.sections.splice(destination.index, 0, reorderedItem);
-        } else if (type.startsWith('BLOCKS_')) {
-            const sectionId = type.split('_')[1];
-            const section = newContent.sections.find((s: Section) => s.id === sectionId);
-            if (section) {
-                const [reorderedItem] = section.blocks.splice(source.index, 1);
-                section.blocks.splice(destination.index, 0, reorderedItem);
-            }
-        }
-        setPageData({ ...pageData, content: newContent });
+    const updatePageData = (updater: (draft: Page) => void) => {
+        setPageData(prev => {
+            if (!prev) return null;
+            const draft = JSON.parse(JSON.stringify(prev));
+            updater(draft);
+            return draft;
+        });
     };
 
-    // FIX: Refactor handleBlockUpdate to be type-safe by cloning the entire page data,
-    // applying the update, and then setting both pageData and selectedBlock from the
-    // new consistent data structure, resolving the discriminated union type error.
-    const handleBlockUpdate = (field: string, value: any) => {
-        if (!selectedBlock || !pageData || !pageData.content) return;
-        
-        // Deep clone the entire pageData to avoid mutation
-        const newPageData = JSON.parse(JSON.stringify(pageData)) as Page;
-        let updatedBlockFromClone: PageBlock | null = null;
-        
-        const findAndApplyUpdate = (sections: Section[]) => {
-            for (const section of sections) {
-                const block = section.blocks.find(b => b.id === selectedBlock.id);
-                if (block) {
-                    (block.content as any)[field] = value;
-                    updatedBlockFromClone = block;
-                    return true;
+    const handleBlockUpdate = (blockId: string, sectionId: string, updatedContent: Partial<PageBlock['content']>) => {
+        updatePageData(draft => {
+            const section = draft.content?.sections.find(s => s.id === sectionId);
+            if (section) {
+                const blockIndex = section.blocks.findIndex(b => b.id === blockId);
+                if (blockIndex > -1) {
+                    section.blocks[blockIndex].content = { ...section.blocks[blockIndex].content, ...updatedContent };
+                    // Atualiza a seleção também para o painel refletir a mudança
+                    if (selection && selection.block.id === blockId) {
+                        setSelection({ ...selection, block: section.blocks[blockIndex] });
+                    }
                 }
             }
-            return false;
+        });
+    };
+
+    const onDragEnd: OnDragEndResponder = (result) => {
+        const { source, destination, draggableId } = result;
+        if (!destination) return;
+
+        // Movendo uma Seção
+        if (source.droppableId === 'sections-droppable' && destination.droppableId === 'sections-droppable') {
+            updatePageData(draft => {
+                const [reorderedItem] = draft.content!.sections.splice(source.index, 1);
+                draft.content!.sections.splice(destination.index, 0, reorderedItem);
+            });
+            return;
         }
 
-        // Apply update to the cloned data
-        if(newPageData.content && (findAndApplyUpdate(newPageData.content.sections) || findAndApplyUpdate(newPageData.content.footerSections))){
-            // Set the state with the new, fully-formed objects
-            setPageData(newPageData);
-            if (updatedBlockFromClone) {
-                setSelectedBlock(updatedBlockFromClone);
+        // Movendo um Bloco
+        const sourceSectionId = source.droppableId.replace('blocks-droppable-', '');
+        const destSectionId = destination.droppableId.replace('blocks-droppable-', '');
+        
+        updatePageData(draft => {
+            const sourceSection = draft.content!.sections.find(s => s.id === sourceSectionId);
+            const destSection = draft.content!.sections.find(s => s.id === destSectionId);
+            if (!sourceSection || !destSection) return;
+
+            // Movendo dentro da mesma seção
+            if (sourceSectionId === destSectionId) {
+                const [reorderedItem] = sourceSection.blocks.splice(source.index, 1);
+                destSection.blocks.splice(destination.index, 0, reorderedItem);
+            } else { // Movendo entre seções
+                const [movedItem] = sourceSection.blocks.splice(source.index, 1);
+                destSection.blocks.splice(destination.index, 0, movedItem);
             }
-        }
+        });
     };
+
+    const renderSectionWithEditorGrid = (section: Section, context: 'main' | 'footer') => (
+        <Droppable droppableId={`blocks-droppable-${section.id}`} key={section.id}>
+            {(provided, snapshot) => (
+                <div 
+                    {...provided.droppableProps} 
+                    ref={provided.innerRef}
+                    className={`relative border-2 border-dashed rounded-lg p-2 min-h-[100px] transition-colors ${snapshot.isDraggingOver ? 'border-cyan-500 bg-cyan-900/20' : 'border-slate-700'}`}
+                >
+                    <div className="absolute -top-3 -left-3 bg-slate-700 text-white text-xs px-2 py-1 rounded">Seção</div>
+                    <PublicSite
+                        pageData={pageData}
+                        isEditing={true}
+                        renderSectionWithEditorGrid={(s, c) => {
+                             if (s.id !== section.id) return null; // Apenas renderiza a seção atual
+                             return (
+                                 <div 
+                                     style={{ display: 'grid', gridTemplateColumns: `repeat(${s.gridSettings.columns}, 1fr)`, gridAutoRows: `${s.gridSettings.rowHeight}px`, gap: `${s.gridSettings.gap}px` }}
+                                     className="relative"
+                                 >
+                                     {s.blocks.map((block, index) => (
+                                         <Draggable key={block.id} draggableId={block.id} index={index}>
+                                             {(provided, snapshot) => (
+                                                 <div
+                                                     ref={provided.innerRef}
+                                                     {...provided.draggableProps}
+                                                     {...provided.dragHandleProps}
+                                                     onClick={() => setSelection({ type: 'block', block, sectionId: s.id })}
+                                                     className={`relative group cursor-pointer border-2 ${selection?.block.id === block.id ? 'border-cyan-400' : 'border-transparent'} ${snapshot.isDragging ? 'shadow-2xl' : ''}`}
+                                                     style={{
+                                                         gridColumn: `${block.layout.desktop.colStart} / ${block.layout.desktop.colEnd}`,
+                                                         gridRow: `${block.layout.desktop.rowStart} / ${block.layout.desktop.rowEnd}`,
+                                                         ...provided.draggableProps.style
+                                                     }}
+                                                 >
+                                                     <div className="absolute -top-3 left-0 bg-cyan-600 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-10">{block.type}</div>
+                                                     <div className="w-full h-full pointer-events-none">
+                                                        <BlockRenderer block={block} theme={pageData!.content!.theme} viewport="desktop" isEditing={false} />
+                                                     </div>
+                                                 </div>
+                                             )}
+                                         </Draggable>
+                                     ))}
+                                     {provided.placeholder}
+                                 </div>
+                             );
+                        }}
+                    />
+                </div>
+            )}
+        </Droppable>
+    );
 
     if (status === 'loading') return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Carregando editor...</div>;
     if (status === 'not_found' || status === 'error' || !pageData) return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-red-400"><h1>Erro ao carregar a página.</h1></div>;
 
     return (
         <DragDropContext onDragEnd={onDragEnd}>
-            <div className="min-h-screen" style={{ backgroundColor: pageData.content?.settings.backgroundColor, paddingTop: '64px', paddingRight: selectedBlock ? '320px' : '0' }}>
+            <div className="min-h-screen" style={{ backgroundColor: pageData.content?.settings.backgroundColor, paddingTop: '64px', paddingRight: selection ? '320px' : '0', transition: 'padding-right 0.3s ease' }}>
                 {/* Top Toolbar */}
                 <div className="fixed top-0 left-0 right-0 h-16 bg-slate-900/80 backdrop-blur-sm border-b border-slate-700 z-[1001] flex items-center justify-between px-4">
                     <div className="flex items-center gap-4">
-                        <button onClick={() => { window.location.hash = '/administrator/SITE' }} className="flex items-center gap-2 text-slate-300 hover:text-white"><ArrowLeftIcon className="w-5 h-5" /> Sair</button>
+                        <button onClick={() => { window.location.hash = '/administrator' }} className="flex items-center gap-2 text-slate-300 hover:text-white"><ArrowLeftIcon className="w-5 h-5" /> Sair</button>
                         <span className="text-slate-500">|</span>
                         <h2 className="text-lg font-bold text-white truncate">{pageData.title}</h2>
                         <button onClick={() => setIsSeoModalOpen(true)} className="flex items-center gap-2 text-sm text-slate-300 hover:text-white"><SeoIcon className="w-4 h-4"/> SEO</button>
@@ -191,40 +290,29 @@ const AiPoweredEditor: React.FC<{ slug: string }> = ({ slug }) => {
                 </div>
 
                 {/* Canvas */}
-                <Droppable droppableId="sections" type="SECTIONS">
-                    {(provided) => (
-                        <div {...provided.droppableProps} ref={provided.innerRef} className="p-4 space-y-4">
-                            {pageData.content?.sections.map((section, index) => (
-                                <Draggable key={section.id} draggableId={section.id} index={index}>
-                                    {(provided) => (
-                                        <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className="p-2 border-2 border-dashed border-slate-700 rounded-lg hover:border-cyan-500">
-                                            <Droppable droppableId={section.id} type={`BLOCKS_${section.id}`}>
-                                                {(provided) => (
-                                                    <div {...provided.droppableProps} ref={provided.innerRef}>
-                                                        {section.blocks.map((block, index) => (
-                                                            <Draggable key={block.id} draggableId={block.id} index={index}>
-                                                                {(provided) => (
-                                                                    <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} onClick={() => setSelectedBlock(block)} className="p-2 my-2 border border-slate-800 bg-slate-800/50 rounded cursor-pointer hover:border-cyan-600">
-                                                                        <strong className="text-cyan-400">{block.type}</strong>: {(block.content as any).title?.text || (block.content as any).heading?.text || "Bloco sem título"}
-                                                                    </div>
-                                                                )}
-                                                            </Draggable>
-                                                        ))}
-                                                        {provided.placeholder}
-                                                    </div>
-                                                )}
-                                            </Droppable>
-                                        </div>
-                                    )}
-                                </Draggable>
-                            ))}
-                            {provided.placeholder}
-                        </div>
-                    )}
-                </Droppable>
+                <div className="p-4">
+                    <Droppable droppableId="sections-droppable">
+                        {(provided) => (
+                            <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-4">
+                                {pageData.content?.sections.map((section, index) => (
+                                    <Draggable key={section.id} draggableId={section.id} index={index}>
+                                        {(provided) => (
+                                            <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}>
+                                                {renderSectionWithEditorGrid(section, 'main')}
+                                            </div>
+                                        )}
+                                    </Draggable>
+                                ))}
+                                {provided.placeholder}
+                            </div>
+                        )}
+                    </Droppable>
+                </div>
                 
-                {/* Editor Panel */}
-                {selectedBlock && <EditPanel block={selectedBlock} onUpdate={handleBlockUpdate} onClose={() => setSelectedBlock(null)} />}
+                {/* Painel Lateral */}
+                {selection && <EditorSidePanel selection={selection} onClose={() => setSelection(null)} onUpdateBlock={handleBlockUpdate} />}
+                
+                {/* Modal de SEO */}
                 {isSeoModalOpen && <SEOModal pageData={pageData} setPageData={setPageData} onClose={() => setIsSeoModalOpen(false)} />}
             </div>
         </DragDropContext>

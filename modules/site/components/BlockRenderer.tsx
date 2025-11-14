@@ -1,7 +1,7 @@
 
 
-import React, { useRef, useEffect } from 'react';
-import { PageBlock, ThemeSettings, Viewport, TextStyles, ContainerStyles, FixedContainerPosition } from '../../../types';
+import React from 'react';
+import { PageBlock, ThemeSettings, Viewport, TextStyles, ContainerStyles, FixedContainerPosition, StyledText } from '../../../types';
 
 // --- UTILITIES ---
 const hexToRgba = (hex: string, alpha: number = 1): string => { if (!hex || !/^#([A-Fa-f0.9]{3}){1,2}$/.test(hex)) { return `rgba(30, 41, 59, ${alpha})`; } let c = hex.substring(1).split(''); if (c.length === 3) { c = [c[0], c[0], c[1], c[1], c[2], c[2]]; } const i = parseInt(c.join(''), 16); return `rgba(${(i >> 16) & 255}, ${(i >> 8) & 255}, ${i & 255}, ${alpha})`; };
@@ -10,7 +10,9 @@ const createTextStyle = (textStyles?: TextStyles, theme?: ThemeSettings, type: '
 const getYouTubeEmbedUrl = (url: string, autoplay?: boolean, controls?: boolean) => { try { if (!url.startsWith('http')) { url = 'https://' + url; } let videoId; if (url.includes('youtube.com/watch')) { videoId = new URL(url).searchParams.get('v'); } else if (url.includes('youtu.be/')) { videoId = new URL(url).pathname.split('/').pop(); } if (!videoId) return null; const embedUrl = new URL(`https://www.youtube.com/embed/${videoId}`); if (autoplay) { embedUrl.searchParams.set('autoplay', '1'); embedUrl.searchParams.set('mute', '1'); } if (controls === false) { embedUrl.searchParams.set('controls', '0'); } return embedUrl.toString(); } catch (error) { console.error("Invalid YouTube URL:", error); return null; } };
 const defaultContainerStyles: ContainerStyles = { backgroundColor: '#1e293b', backgroundOpacity: 1, textOpacity: 1, borderRadius: 'medium', zIndex: 0 };
 
-const EditableText: React.FC<{html: string, isEditing: boolean, onChange: (newHtml: string) => void, onSelect: () => void, className?: string, style?: React.CSSProperties, placeholder?: string, tag?: React.ElementType }> = ({ html, isEditing, onChange, onSelect, placeholder, tag: Tag = 'div', ...props }) => { const ref = useRef<HTMLElement>(null); useEffect(() => { if (ref.current && ref.current.innerHTML !== html) { ref.current.innerHTML = html; } }, [html]); const onBlur = () => { if (ref.current) { onChange(ref.current.innerHTML); } }; return <Tag ref={ref as any} onBlur={onBlur} onFocus={isEditing ? onSelect : undefined} contentEditable={isEditing} suppressContentEditableWarning={true} dangerouslySetInnerHTML={{ __html: html }} data-placeholder={placeholder} {...props} />; };
+const RenderText: React.FC<{ content: StyledText, theme?: ThemeSettings, textOpacity?: number, isHeading?: boolean, tag?: React.ElementType, className?: string }> = ({ content, theme, textOpacity = 1, isHeading = false, tag: Tag = 'div', className }) => {
+    return <Tag className={className} style={createTextStyle(content.styles, theme, isHeading ? 'heading' : 'body', textOpacity)}>{content.text}</Tag>
+}
 
 interface BlockRendererProps {
     block: PageBlock;
@@ -18,34 +20,23 @@ interface BlockRendererProps {
     viewport: Viewport;
     isEditing?: boolean;
     onToggleContainer?: (target: FixedContainerPosition) => void;
-    onInlineUpdate?: (field: string, subfield: 'text' | keyof TextStyles, value: any) => void;
-    onInlineSelect?: () => void;
 }
 
-const BlockRenderer: React.FC<BlockRendererProps> = ({ block, theme, viewport, isEditing = false, onToggleContainer = () => {}, onInlineUpdate = () => {}, onInlineSelect = () => {} }) => {
+const BlockRenderer: React.FC<BlockRendererProps> = ({ block, theme, viewport, isEditing = false, onToggleContainer = () => {} }) => {
     const styles = { ...defaultContainerStyles, ...(block.styles || {}) };
     const borderRadiusClass = getBorderRadiusClass(styles.borderRadius);
     const inlineStyle: React.CSSProperties = { backgroundColor: styles.backgroundOpacity !== 1 ? hexToRgba(styles.backgroundColor || '#000000', styles.backgroundOpacity) : styles.backgroundColor, };
     const pointerEventsClass = isEditing ? 'pointer-events-none' : '';
     const animationClass = !isEditing && block.animation.type !== 'none' ? 'opacity-0' : '';
-
-    const commonProps = (field: 'title' | 'subtitle' | 'heading' | 'body' | 'text' | 'ctaText', isHeading = false, placeholder?: string) => ({
-        html: (block.content as any)[field].text,
-        isEditing,
-        onChange: (v: string) => onInlineUpdate(field, 'text', v),
-        onSelect: onInlineSelect,
-        style: createTextStyle((block.content as any)[field].styles, theme, isHeading ? 'heading' : 'body', styles.textOpacity),
-        placeholder: placeholder,
-    });
     
     switch (block.type) {
-        case 'hero': return ( <div style={inlineStyle} className={`w-full h-full flex flex-col p-4 text-center items-center justify-center ${borderRadiusClass} ${animationClass}`}> <EditableText tag="h1" {...commonProps('title', true, 'Título do Herói')} className="text-4xl md:text-5xl font-extrabold mb-4" /> <EditableText tag="p" {...commonProps('subtitle', false, 'Subtítulo atraente.')} className="text-md md:text-lg text-slate-300 max-w-2xl mx-auto mb-6" /> {block.content.ctaEnabled && ( <a href={block.content.ctaLink} className={`bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-8 rounded-full text-lg transition-transform transform hover:scale-105 ${pointerEventsClass}`} style={{ opacity: styles.textOpacity }}> <EditableText tag="span" {...commonProps('ctaText')} /> </a> )} </div> );
-        case 'text': return ( <div style={inlineStyle} className={`w-full h-full flex flex-col p-4 text-left ${borderRadiusClass} ${animationClass}`}> <EditableText tag="h2" {...commonProps('heading', true, 'Título da Seção')} className="text-3xl font-bold mb-4" /> <EditableText tag="div" {...commonProps('body', false, 'Escreva seu conteúdo aqui...')} className="text-slate-400 whitespace-pre-wrap leading-relaxed" /> </div> );
+        case 'hero': return ( <div style={inlineStyle} className={`w-full h-full flex flex-col p-4 text-center items-center justify-center ${borderRadiusClass} ${animationClass}`}> <RenderText tag="h1" content={block.content.title} theme={theme} textOpacity={styles.textOpacity} isHeading className="text-4xl md:text-5xl font-extrabold mb-4" /> <RenderText tag="p" content={block.content.subtitle} theme={theme} textOpacity={styles.textOpacity} className="text-md md:text-lg text-slate-300 max-w-2xl mx-auto mb-6" /> {block.content.ctaEnabled && ( <a href={block.content.ctaLink} className={`bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-8 rounded-full text-lg transition-transform transform hover:scale-105 ${pointerEventsClass}`} style={{ opacity: styles.textOpacity }}> {block.content.ctaText} </a> )} </div> );
+        case 'text': return ( <div style={inlineStyle} className={`w-full h-full flex flex-col p-4 text-left ${borderRadiusClass} ${animationClass}`}> <RenderText tag="h2" content={block.content.heading} theme={theme} textOpacity={styles.textOpacity} isHeading className="text-3xl font-bold mb-4" /> <RenderText tag="div" content={block.content.body} theme={theme} textOpacity={styles.textOpacity} className="text-slate-400 whitespace-pre-wrap leading-relaxed" /> </div> );
         case 'image': return ( <img src={block.content.imageUrl} alt={block.content.altText} className={`w-full h-full object-cover shadow-lg ${borderRadiusClass} ${pointerEventsClass} ${animationClass}`} style={{opacity: styles.backgroundOpacity}}/> );
         case 'button': {
             const buttonCombinedStyles: React.CSSProperties = {...inlineStyle, ...createTextStyle(block.content.text.styles, theme, 'body', styles.textOpacity)};
             const commonButtonClasses = `text-white font-bold py-3 px-8 inline-block transition-colors ${borderRadiusClass}`;
-            const buttonText = <EditableText tag="span" {...commonProps('text', false, 'Texto do Botão')} />;
+            const buttonText = <RenderText tag="span" content={block.content.text} theme={theme} textOpacity={styles.textOpacity}/>
             const Wrapper = ({children}: {children: React.ReactNode}) => <div className={`w-full h-full flex flex-col items-center justify-center ${animationClass}`}>{children}</div>;
             if (block.content.actionType === 'toggleContainer' && block.content.actionTarget) {
                  const target = block.content.actionTarget;

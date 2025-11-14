@@ -8,6 +8,7 @@ interface PublicSiteProps {
     slug?: string;
     pageData?: Page | null;
     isEditing?: boolean;
+    // Esta prop será usada pelo editor para injetar os controles de arrastar e soltar
     renderSectionWithEditorGrid?: (section: Section, context: 'main' | 'footer') => React.ReactNode;
 }
 
@@ -15,8 +16,17 @@ const PublicSite: React.FC<PublicSiteProps> = ({ slug, pageData: initialPageData
     const [pageData, setPageData] = useState<Page | null>(initialPageData || null);
     const [status, setStatus] = useState<'loading' | 'success' | 'not_found' | 'error'>(initialPageData ? 'success' : 'loading');
 
+    // Sincroniza o estado interno se a prop pageData mudar (importante para o editor)
     useEffect(() => {
-        if (slug && !initialPageData) {
+        if (initialPageData) {
+            setPageData(initialPageData);
+            setStatus('success');
+        }
+    }, [initialPageData]);
+    
+    // Busca os dados da página se estiver em modo público e não tiver dados iniciais
+    useEffect(() => {
+        if (slug && !initialPageData && !isEditing) {
             const fetchPageData = async () => {
                 setStatus('loading');
                 try {
@@ -36,11 +46,8 @@ const PublicSite: React.FC<PublicSiteProps> = ({ slug, pageData: initialPageData
                 }
             };
             fetchPageData();
-        } else if (initialPageData) {
-            setPageData(initialPageData);
-            setStatus('success');
         }
-    }, [slug, initialPageData]);
+    }, [slug, initialPageData, isEditing]);
 
 
     const [collapsedStates, setCollapsedStates] = useState({ top: false, left: false, right: false, bottom: false });
@@ -90,12 +97,17 @@ const PublicSite: React.FC<PublicSiteProps> = ({ slug, pageData: initialPageData
         setCollapsedStates(prev => ({ ...prev, [target]: !prev[target] }));
     };
     
-    if (status === 'loading') {
+    if (status === 'loading' && !isEditing) {
         return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Carregando...</div>;
     }
     
-    if (status === 'not_found' || status === 'error' || !pageData || !pageData.content) {
+    if ((status === 'not_found' || status === 'error' || !pageData || !pageData.content) && !isEditing) {
         return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Página não encontrada.</div>;
+    }
+    
+    if (!pageData || !pageData.content) {
+        // No modo de edição, o editor lida com o estado de carregamento, mas ainda podemos retornar um fallback
+        return null;
     }
 
 
@@ -106,24 +118,23 @@ const PublicSite: React.FC<PublicSiteProps> = ({ slug, pageData: initialPageData
         return (
             <div
                 key={section.id}
-                style={{ backgroundColor: section.styles.backgroundColor }}
-                className="relative"
+                style={{ backgroundColor: section.styles.backgroundColor, position: 'relative' }}
             >
-                <div className="relative" style={{ display: 'grid', gridTemplateColumns: `repeat(${section.gridSettings.columns}, 1fr)`, gridAutoRows: `${section.gridSettings.rowHeight}px`, gap: `${section.gridSettings.gap}px` }}>
+                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${section.gridSettings.columns}, 1fr)`, gridAutoRows: `${section.gridSettings.rowHeight}px`, gap: `${section.gridSettings.gap}px`, position: 'relative' }}>
                     {section.blocks.map(block => (
                         <div
                             key={block.id}
-                            data-animation={block.animation.type}
+                            data-animation={!isEditing ? block.animation.type : 'none'}
                             data-animation-delay={block.animation.delay}
                             data-animation-duration={block.animation.duration}
-                            style={{ gridColumn: `${block.layout[viewport].colStart} / ${block.layout[viewport].colEnd}`, gridRow: `${block.layout[viewport].rowStart} / ${block.layout[viewport].rowEnd}`, zIndex: block.styles?.zIndex || 'auto' }}
-                            className={`${block.animation.type !== 'none' ? 'opacity-0' : ''}`}
+                            style={{ gridColumn: `${block.layout[viewport].colStart} / ${block.layout[viewport].colEnd}`, gridRow: `${block.layout[viewport].rowStart} / ${block.layout[viewport].rowEnd}`, zIndex: block.styles?.zIndex || 'auto', position: 'relative' }}
+                            className={`${!isEditing && block.animation.type !== 'none' ? 'opacity-0' : ''}`}
                         >
                             <BlockRenderer
                                 block={block}
                                 theme={theme}
                                 viewport={viewport}
-                                isEditing={false}
+                                isEditing={isEditing}
                                 onToggleContainer={handleToggleContainer}
                             />
                         </div>
