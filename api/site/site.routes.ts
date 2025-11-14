@@ -1,7 +1,6 @@
 // api/site/site.routes.ts
-// FIX: Separate express value and type imports to resolve type conflicts.
-import express from 'express';
-import type { Request, Response } from 'express';
+// FIX: Resolve express type conflicts by using a combined import.
+import express, { Request, Response } from 'express';
 import { pool } from '../../core/db';
 import { verifyToken, checkModulePermission } from '../../core/auth.middleware';
 import { SiteData, FixedContainer, ThemeSettings } from '../../types';

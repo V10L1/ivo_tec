@@ -1,7 +1,6 @@
 // api/usuario/usuario.routes.ts
-import express from 'express';
-// FIX: Use `import type` to prevent type conflicts with Express Request/Response.
-import type { Request, Response } from 'express';
+// FIX: Resolve express type conflicts by using a combined import.
+import express, { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { pool } from '../../core/db';

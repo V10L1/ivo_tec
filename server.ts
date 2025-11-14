@@ -10,9 +10,8 @@ declare const __filename: string;
 declare const __dirname: string;
 
 // server.ts - O Orquestrador Principal
-// FIX: Separate express value and type imports to resolve type conflicts.
-import express from 'express';
-import type { Request, Response, NextFunction } from 'express';
+// FIX: Resolve express type conflicts by using a combined import.
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -62,7 +61,8 @@ const loadApiModules = async () => {
                     
                     // FIX: Ajusta o caminho e a extensão do arquivo de rotas para funcionar
                     // tanto em desenvolvimento (ts-node, .ts) quanto em produção (.js).
-                    const isDev = __filename.endsWith('.ts');
+                    // A verificação `process.env.TS_NODE_DEV` é mais confiável do que `__filename.endsWith('.ts')`.
+                    const isDev = !!process.env.TS_NODE_DEV;
                     const routesFile = isDev 
                         ? manifest.routesFile.replace(/\.js$/, '.ts')
                         : manifest.routesFile;
