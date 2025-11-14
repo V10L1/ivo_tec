@@ -10,7 +10,8 @@ declare const __filename: string;
 declare const __dirname: string;
 
 // server.ts - O Orquestrador Principal
-import express from 'express';
+// FIX: Import Request, Response, NextFunction directly from express to resolve type errors.
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -33,13 +34,16 @@ app.use(cors());
 app.use(express.json());
 
 // --- Rota de Verificação de Saúde ---
-app.get('/api/health', async (req: express.Request, res: express.Response) => {
+// FIX: Use imported Request and Response types.
+app.get('/api/health', async (req: Request, res: Response) => {
     try {
         const client = await pool.connect();
         await client.query('SELECT 1');
         client.release();
+        // FIX: Correctly call status() and json() on the Response object.
         res.status(200).json({ status: 'ok', message: 'Backend está rodando e conectado ao banco de dados.' });
     } catch (error) {
+        // FIX: Correctly call status() and json() on the Response object.
         res.status(503).json({ status: 'error', message: 'Falha ao conectar ao banco de dados.' });
     }
 });
@@ -63,16 +67,22 @@ const serveFrontend = () => {
     const clientDistPath = path.join(projectRoot, 'dist', 'client');
     const staticRootPath = projectRoot;
 
+    // FIX: app.use is correctly typed now.
     app.use('/dist/client', express.static(clientDistPath));
+    // FIX: app.use is correctly typed now.
     app.use(express.static(staticRootPath));
 
     // Rota "catch-all" melhorada para lidar com APIs não encontradas
-    app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+    // FIX: Use imported Request, Response, and NextFunction types.
+    app.use((req: Request, res: Response, next: NextFunction) => {
+        // FIX: 'path' property exists on the correctly typed Request object.
         if (req.path.startsWith('/api/')) {
             // Se chegou até aqui, é uma rota de API que não foi encontrada.
+            // FIX: status(), json(), and properties on req are now correctly typed.
             return res.status(404).json({ message: `Endpoint da API não encontrado: ${req.method} ${req.path}` });
         }
         // Se não for uma rota de API, serve o frontend.
+        // FIX: 'sendFile' exists on the correctly typed Response object.
         res.sendFile(path.join(staticRootPath, 'index.html'));
     });
 };
