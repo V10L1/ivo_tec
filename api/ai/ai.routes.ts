@@ -1,11 +1,11 @@
 // api/ai/ai.routes.ts
-// FIX: Import Router, Request, and Response directly from express to resolve type errors.
-import { Router, Request, Response } from 'express';
+// FIX: Use namespaced express types (e.g., express.Request) to prevent conflicts with global DOM types.
+import express from 'express';
 import { verifyToken, checkModulePermission } from '../../core/auth.middleware';
 import { pool } from '../../core/db';
 import { SiteData } from '../../types';
 
-const router = Router();
+const router = express.Router();
 
 // Middleware para garantir que apenas usuários autorizados com permissão 'SITE' possam usar os recursos de IA
 router.use(verifyToken, checkModulePermission('SITE'));
@@ -139,12 +139,9 @@ const siteDataSchema = {
     required: ['settings', 'theme', 'sections']
 };
 
-// FIX: Use imported Request and Response types.
-router.post('/generate/page', async (req: Request, res: Response) => {
-    // FIX: 'body' property exists on the correctly typed Request object.
+router.post('/generate/page', async (req: express.Request, res: express.Response) => {
     const { title, prompt } = req.body;
     if (!title || !prompt) {
-        // FIX: 'status' method exists on the correctly typed Response object.
         return res.status(400).json({ message: 'Título e prompt são obrigatórios.' });
     }
 
@@ -198,39 +195,31 @@ router.post('/generate/page', async (req: Request, res: Response) => {
             [title, slug, JSON.stringify(finalContent), title, prompt.substring(0, 160)]
         );
 
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(201).json(result.rows[0]);
 
     } catch (error: any) {
         console.error('Erro ao gerar página com IA:', error);
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(500).json({ message: 'Erro ao se comunicar com a API de IA.', details: error.message });
     }
 });
 
 
 // Endpoint para geração de texto
-// FIX: Use imported Request and Response types.
-router.post('/generate/text', async (req: Request, res: Response) => {
-    // FIX: 'body' property exists on the correctly typed Request object.
+router.post('/generate/text', async (req: express.Request, res: express.Response) => {
     const { prompt } = req.body;
     if (!prompt) return res.status(400).json({ message: 'O prompt é obrigatório.' });
     try {
         const ai = await getAiClient();
         const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
-        // FIX: 'json' method exists on the correctly typed Response object.
         res.json({ text: response.text });
     } catch (error: any) {
         console.error('Erro na API Gemini:', error);
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(500).json({ message: 'Erro ao gerar texto.', details: error.message });
     }
 });
 
 // Endpoint para geração de imagem
-// FIX: Use imported Request and Response types.
-router.post('/generate/image', async (req: Request, res: Response) => {
-    // FIX: 'body' property exists on the correctly typed Request object.
+router.post('/generate/image', async (req: express.Request, res: express.Response) => {
     const { prompt } = req.body;
     if (!prompt) return res.status(400).json({ message: 'O prompt é obrigatório.' });
     try {
@@ -242,14 +231,12 @@ router.post('/generate/image', async (req: Request, res: Response) => {
         });
         if (response.generatedImages?.[0]?.image?.imageBytes) {
             const imageUrl = `data:image/jpeg;base64,${response.generatedImages[0].image.imageBytes}`;
-            // FIX: 'json' method exists on the correctly typed Response object.
             res.json({ imageUrl });
         } else {
             throw new Error('Nenhuma imagem foi gerada.');
         }
     } catch (error: any) {
         console.error('Erro na API Imagen:', error);
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(500).json({ message: 'Erro ao gerar imagem.', details: error.message });
     }
 });

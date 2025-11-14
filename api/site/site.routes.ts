@@ -1,12 +1,12 @@
 // api/site/site.routes.ts
-// FIX: Import Router, Request, and Response directly from express to resolve type errors.
-import { Router, Request, Response } from 'express';
+// FIX: Use namespaced express types (e.g., express.Request) to prevent conflicts with global DOM types.
+import express from 'express';
 import { pool } from '../../core/db';
 import { verifyToken, checkModulePermission } from '../../core/auth.middleware';
 import { SiteData, FixedContainer, ThemeSettings } from '../../types';
-import { getTemplate } from '../../modules/site/utils/templates';
+import { getTemplate } from '../../modules/site/utils/template-data';
 
-const router = Router();
+const router = express.Router();
 
 const defaultFixedContainer: Omit<FixedContainer, 'blocks'> = { enabled: false, size: 60, isCollapsed: false, collapsible: true, toggleButtonPosition: 'center' };
 const defaultTheme: ThemeSettings = { 
@@ -43,43 +43,32 @@ const defaultNewPageContent: SiteData = {
 // --- Rotas Públicas (sem autenticação) ---
 
 // Obter página pela Home
-// FIX: Use imported Request and Response types.
-router.get('/pages/public/home', async (req: Request, res: Response) => {
+router.get('/pages/public/home', async (req: express.Request, res: express.Response) => {
     try {
-        // FIX: 'setHeader' method exists on the correctly typed Response object.
         res.setHeader('Cache-Control', 'no-store');
         const result = await pool.query('SELECT * FROM pages WHERE is_homepage = TRUE AND is_published = TRUE LIMIT 1');
         if (result.rows.length === 0) {
-            // FIX: 'status' method exists on the correctly typed Response object.
             return res.status(404).json({ message: 'Nenhuma página inicial publicada foi encontrada.' });
         }
-        // FIX: 'json' method exists on the correctly typed Response object.
         res.json(result.rows[0]);
     } catch (error) {
         console.error('Erro ao buscar página inicial:', error);
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(500).json({ message: 'Falha ao buscar o conteúdo do site' });
     }
 });
 
 // Obter página pelo slug
-// FIX: Use imported Request and Response types.
-router.get('/pages/public/slug/:slug', async (req: Request, res: Response) => {
+router.get('/pages/public/slug/:slug', async (req: express.Request, res: express.Response) => {
     try {
-        // FIX: 'setHeader' method exists on the correctly typed Response object.
         res.setHeader('Cache-Control', 'no-store');
-        // FIX: 'params' property exists on the correctly typed Request object.
         const { slug } = req.params;
         const result = await pool.query('SELECT * FROM pages WHERE slug = $1 AND is_published = TRUE', [slug]);
         if (result.rows.length === 0) {
-            // FIX: 'status' method exists on the correctly typed Response object.
             return res.status(404).json({ message: 'Página não encontrada.' });
         }
-        // FIX: 'json' method exists on the correctly typed Response object.
         res.json(result.rows[0]);
     } catch (error) {
         console.error('Erro ao buscar página por slug:', error);
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(500).json({ message: 'Falha ao buscar o conteúdo do site' });
     }
 });
@@ -89,69 +78,52 @@ router.get('/pages/public/slug/:slug', async (req: Request, res: Response) => {
 
 // --- Rotas para Admin visualizar QUALQUER página (publicada ou não) ---
 // Obter página HOME para admin
-// FIX: Use imported Request and Response types.
-router.get('/pages/admin/home', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
+router.get('/pages/admin/home', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     try {
-        // FIX: 'setHeader' method exists on the correctly typed Response object.
         res.setHeader('Cache-Control', 'no-store');
         const result = await pool.query('SELECT * FROM pages WHERE is_homepage = TRUE LIMIT 1');
         if (result.rows.length === 0) {
-            // FIX: 'status' method exists on the correctly typed Response object.
             return res.status(404).json({ message: 'Nenhuma página inicial foi encontrada.' });
         }
-        // FIX: 'json' method exists on the correctly typed Response object.
         res.json(result.rows[0]);
     } catch (error) {
         console.error('Erro ao buscar página inicial para admin:', error);
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(500).json({ message: 'Falha ao buscar o conteúdo do site' });
     }
 });
 
 // Obter página por slug para admin
-// FIX: Use imported Request and Response types.
-router.get('/pages/admin/slug/:slug', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
+router.get('/pages/admin/slug/:slug', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     try {
-        // FIX: 'setHeader' method exists on the correctly typed Response object.
         res.setHeader('Cache-Control', 'no-store');
-        // FIX: 'params' property exists on the correctly typed Request object.
         const { slug } = req.params;
         const result = await pool.query('SELECT * FROM pages WHERE slug = $1', [slug]);
         if (result.rows.length === 0) {
-            // FIX: 'status' method exists on the correctly typed Response object.
             return res.status(404).json({ message: 'Página não encontrada.' });
         }
-        // FIX: 'json' method exists on the correctly typed Response object.
         res.json(result.rows[0]);
     } catch (error) {
         console.error('Erro ao buscar página por slug para admin:', error);
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(500).json({ message: 'Falha ao buscar o conteúdo do site' });
     }
 });
 
 
 // Listar todas as páginas
-// FIX: Use imported Request and Response types.
-router.get('/pages', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
+router.get('/pages', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     try {
         const result = await pool.query('SELECT id, title, slug, is_homepage, is_published, updated_at FROM pages ORDER BY title');
-        // FIX: 'json' method exists on the correctly typed Response object.
         res.json(result.rows);
     } catch (error) {
         console.error('Erro ao listar páginas:', error);
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(500).json({ message: 'Falha ao buscar páginas' });
     }
 });
 
 // Criar uma nova página
-// FIX: Use imported Request and Response types.
-router.post('/pages', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
-    // FIX: 'body' property exists on the correctly typed Request object.
+router.post('/pages', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     const { title, slug } = req.body;
     if (!title || !slug) {
-        // FIX: 'status' method exists on the correctly typed Response object.
         return res.status(400).json({ message: 'Título e slug são obrigatórios.' });
     }
     try {
@@ -160,34 +132,27 @@ router.post('/pages', verifyToken, checkModulePermission('SITE'), async (req: Re
             'INSERT INTO pages (title, slug, content, meta_title, meta_description) VALUES ($1, $2, $3, $4, $5) RETURNING *',
             [title, slug, JSON.stringify(defaultNewPageContent), title, `Esta é a descrição para a página ${title}`]
         );
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(201).json(result.rows[0]);
     } catch (error: any) {
         if (error.code === '23505') { // unique_violation
-            // FIX: 'status' method exists on the correctly typed Response object.
             return res.status(409).json({ message: 'Este slug já está em uso.' });
         }
         console.error('Erro ao criar página:', error);
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(500).json({ message: 'Falha ao criar página' });
     }
 });
 
 // Criar uma nova página a partir de um template
-// FIX: Use imported Request and Response types.
-router.post('/pages/from-template', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
-    // FIX: 'body' property exists on the correctly typed Request object.
+router.post('/pages/from-template', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     const { title, templateId, theme } = req.body;
 
     if (!title || !templateId || !theme) {
-        // FIX: 'status' method exists on the correctly typed Response object.
         return res.status(400).json({ message: 'Título, ID do template e tema são obrigatórios.' });
     }
 
     try {
         const templateContent = getTemplate(templateId);
         if (!templateContent) {
-            // FIX: 'status' method exists on the correctly typed Response object.
             return res.status(404).json({ message: 'Template não encontrado.' });
         }
         
@@ -202,29 +167,23 @@ router.post('/pages/from-template', verifyToken, checkModulePermission('SITE'), 
             [title, slug, JSON.stringify(templateContent), title, `Página sobre ${title}`]
         );
 
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(201).json(result.rows[0]);
     } catch (error: any) {
          if (error.code === '23505') {
-            // FIX: 'status' method exists on the correctly typed Response object.
             return res.status(409).json({ message: 'Este slug já está em uso. Por favor, escolha um título diferente.' });
         }
         console.error('Erro ao criar página a partir do template:', error);
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(500).json({ message: 'Falha ao criar página' });
     }
 });
 
 
 // Duplicar uma página
-// FIX: Use imported Request and Response types.
-router.post('/pages/duplicate/:id', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
-    // FIX: 'params' property exists on the correctly typed Request object.
+router.post('/pages/duplicate/:id', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     const { id } = req.params;
     try {
         const originalPageResult = await pool.query('SELECT * FROM pages WHERE id = $1', [id]);
         if (originalPageResult.rows.length === 0) {
-            // FIX: 'status' method exists on the correctly typed Response object.
             return res.status(404).json({ message: 'Página original não encontrada.' });
         }
         const originalPage = originalPageResult.rows[0];
@@ -249,46 +208,35 @@ router.post('/pages/duplicate/:id', verifyToken, checkModulePermission('SITE'), 
             [newTitle, newSlug, JSON.stringify(originalPage.content), `Cópia de ${originalPage.meta_title}`, originalPage.meta_description, originalPage.social_image_url]
         );
 
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(201).json(result.rows[0]);
     } catch (error) {
         console.error('Erro ao duplicar página:', error);
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(500).json({ message: 'Falha ao duplicar página' });
     }
 });
 
 
 // Obter dados de uma página específica para edição
-// FIX: Use imported Request and Response types.
-router.get('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
+router.get('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     try {
-        // FIX: 'params' property exists on the correctly typed Request object.
         const { id } = req.params;
         const result = await pool.query('SELECT * FROM pages WHERE id = $1', [id]);
         if (result.rows.length === 0) {
-            // FIX: 'status' method exists on the correctly typed Response object.
             return res.status(404).json({ message: 'Página não encontrada.' });
         }
-        // FIX: 'json' method exists on the correctly typed Response object.
         res.json(result.rows[0]);
     } catch (error) {
         console.error('Erro ao buscar página:', error);
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(500).json({ message: 'Falha ao buscar dados da página' });
     }
 });
 
 // Atualizar uma página
-// FIX: Use imported Request and Response types.
-router.put('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
-    // FIX: 'params' property exists on the correctly typed Request object.
+router.put('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     const { id } = req.params;
-    // FIX: 'body' property exists on the correctly typed Request object.
     const { title, slug, is_published, content, metaTitle, metaDescription, socialImageUrl } = req.body;
 
     if (!title || !slug || !content) {
-        // FIX: 'status' method exists on the correctly typed Response object.
         return res.status(400).json({ message: 'Título, slug e conteúdo são obrigatórios.' });
     }
 
@@ -307,58 +255,44 @@ router.put('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req:
             [title, slug, is_published, JSON.stringify(content), metaTitle, metaDescription, socialImageUrl, id]
         );
         if (result.rowCount === 0) {
-            // FIX: 'status' method exists on the correctly typed Response object.
             return res.status(404).json({ message: 'Página não encontrada.' });
         }
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(200).json(result.rows[0]);
     } catch (error: any) {
          if (error.code === '23505') {
-            // FIX: 'status' method exists on the correctly typed Response object.
             return res.status(409).json({ message: 'Este slug já está em uso por outra página.' });
         }
         console.error('Erro ao atualizar página:', error);
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(500).json({ message: 'Falha ao salvar a página' });
     }
 });
 
 // Excluir uma página
-// FIX: Use imported Request and Response types.
-router.delete('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
-    // FIX: 'params' property exists on the correctly typed Request object.
+router.delete('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     const { id } = req.params;
     try {
         const pageCheck = await pool.query('SELECT is_homepage FROM pages WHERE id = $1', [id]);
         if (pageCheck.rows.length > 0 && pageCheck.rows[0].is_homepage) {
-            // FIX: 'status' method exists on the correctly typed Response object.
             return res.status(403).json({ message: 'Não é possível excluir a página inicial.' });
         }
 
         const result = await pool.query('DELETE FROM pages WHERE id = $1', [id]);
         if (result.rowCount === 0) {
-            // FIX: 'status' method exists on the correctly typed Response object.
             return res.status(404).json({ message: 'Página não encontrada.' });
         }
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(204).send();
     } catch (error) {
         console.error('Erro ao excluir página:', error);
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(500).json({ message: 'Falha ao excluir a página' });
     }
 });
 
 // Alternar status de publicação da página
-// FIX: Use imported Request and Response types.
-router.patch('/pages/:id/status', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
-    // FIX: 'params' property exists on the correctly typed Request object.
+router.patch('/pages/:id/status', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     const { id } = req.params;
-    // FIX: 'body' property exists on the correctly typed Request object.
     const { is_published } = req.body;
 
     if (typeof is_published !== 'boolean') {
-        // FIX: 'status' method exists on the correctly typed Response object.
         return res.status(400).json({ message: 'O status de publicação é obrigatório e deve ser um booleano.' });
     }
 
@@ -367,7 +301,6 @@ router.patch('/pages/:id/status', verifyToken, checkModulePermission('SITE'), as
         if (is_published === false) {
              const pageCheck = await pool.query('SELECT is_homepage FROM pages WHERE id = $1', [id]);
              if (pageCheck.rows.length > 0 && pageCheck.rows[0].is_homepage) {
-                // FIX: 'status' method exists on the correctly typed Response object.
                  return res.status(403).json({ message: 'Não é possível despublicar a página inicial.' });
              }
         }
@@ -378,22 +311,17 @@ router.patch('/pages/:id/status', verifyToken, checkModulePermission('SITE'), as
         );
 
         if (result.rowCount === 0) {
-            // FIX: 'status' method exists on the correctly typed Response object.
             return res.status(404).json({ message: 'Página não encontrada.' });
         }
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(200).json(result.rows[0]);
     } catch (error) {
         console.error('Erro ao alterar status da página:', error);
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(500).json({ message: 'Falha ao alterar o status da página' });
     }
 });
 
 // Definir uma página como a página inicial
-// FIX: Use imported Request and Response types.
-router.patch('/pages/:id/set-homepage', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
-    // FIX: 'params' property exists on the correctly typed Request object.
+router.patch('/pages/:id/set-homepage', verifyToken, checkModulePermission('SITE'), async (req: express.Request, res: express.Response) => {
     const { id } = req.params;
     const client = await pool.connect();
     try {
@@ -413,12 +341,10 @@ router.patch('/pages/:id/set-homepage', verifyToken, checkModulePermission('SITE
         }
 
         await client.query('COMMIT');
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(200).json(result.rows[0]);
     } catch (error) {
         await client.query('ROLLBACK');
         console.error('Erro ao definir a página inicial:', error);
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(500).json({ message: 'Falha ao definir a página inicial' });
     } finally {
         client.release();

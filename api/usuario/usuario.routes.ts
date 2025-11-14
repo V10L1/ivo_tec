@@ -1,43 +1,36 @@
 // api/usuario/usuario.routes.ts
-// FIX: Import Request, Response, and Router directly from express to resolve type errors.
-import { Router, Request, Response } from 'express';
+// FIX: Use namespaced express types (e.g., express.Request) to prevent conflicts with global DOM types.
+import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { pool } from '../../core/db';
 import { verifyToken, checkModulePermission } from '../../core/auth.middleware';
 import { UserRole } from '../../types';
 
-const router = Router();
+const router = express.Router();
 
 // --- Rotas de Setup e Saúde (parte do núcleo de usuário) ---
 
-// FIX: Use imported Request and Response types.
-router.get('/setup/status', async (req: Request, res: Response) => {
+router.get('/setup/status', async (req: express.Request, res: express.Response) => {
     try {
         const result = await pool.query('SELECT COUNT(*) FROM users');
         const userCount = parseInt(result.rows[0].count, 10);
-        // FIX: 'json' method exists on the correctly typed Response object.
         res.json({ needsSetup: userCount === 0 });
     } catch (error) {
         console.error('Erro ao verificar o status da configuração:', error);
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(500).json({ message: 'Erro interno do servidor' });
     }
 });
 
-// FIX: Use imported Request and Response types.
-router.post('/setup/initialize', async (req: Request, res: Response) => {
+router.post('/setup/initialize', async (req: express.Request, res: express.Response) => {
     try {
         const userCheck = await pool.query('SELECT COUNT(*) FROM users');
         if (parseInt(userCheck.rows[0].count, 10) > 0) {
-            // FIX: 'status' method exists on the correctly typed Response object.
             return res.status(403).json({ message: 'A configuração já foi concluída.' });
         }
 
-        // FIX: 'body' property exists on the correctly typed Request object.
         const { name, email, password } = req.body;
         if (!name || !email || !password) {
-            // FIX: 'status' method exists on the correctly typed Response object.
             return res.status(400).json({ message: 'Nome, e-mail e senha são obrigatórios.' });
         }
 
@@ -49,23 +42,18 @@ router.post('/setup/initialize', async (req: Request, res: Response) => {
             [name, email.toLowerCase(), UserRole.DEVELOPER, passwordHash]
         );
 
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(201).json({ message: 'Primeiro usuário administrador criado com sucesso.' });
 
     } catch (error) {
         console.error('Erro ao inicializar:', error);
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(500).json({ message: 'Erro interno do servidor' });
     }
 });
 
 // --- Rotas de Autenticação ---
-// FIX: Use imported Request and Response types.
-router.post('/auth/login', async (req: Request, res: Response) => {
-    // FIX: 'body' property exists on the correctly typed Request object.
+router.post('/auth/login', async (req: express.Request, res: express.Response) => {
     const { email, password } = req.body;
     if (!email || !password) {
-        // FIX: 'status' method exists on the correctly typed Response object.
         return res.status(400).json({ message: 'E-mail e senha são obrigatórios' });
     }
 
@@ -74,14 +62,12 @@ router.post('/auth/login', async (req: Request, res: Response) => {
         const user = userResult.rows[0];
 
         if (!user) {
-            // FIX: 'status' method exists on the correctly typed Response object.
             return res.status(401).json({ message: 'Credenciais inválidas' });
         }
 
         const isPasswordValid = await bcrypt.compare(password, user.password_hash);
 
         if (!isPasswordValid) {
-            // FIX: 'status' method exists on the correctly typed Response object.
             return res.status(401).json({ message: 'Credenciais inválidas' });
         }
 
@@ -108,32 +94,25 @@ router.post('/auth/login', async (req: Request, res: Response) => {
         const JWT_SECRET = process.env.JWT_SECRET;
         if (!JWT_SECRET) {
             console.error("ERRO FATAL: JWT_SECRET não está definido no momento do login.");
-            // FIX: 'status' method exists on the correctly typed Response object.
             return res.status(500).json({ message: 'Erro de configuração do servidor.' });
         }
 
         const token = jwt.sign({ user: userPayload }, JWT_SECRET, { expiresIn: '24h' });
         
-        // FIX: 'json' method exists on the correctly typed Response object.
         res.json({ token, user: userPayload, permissions });
 
     } catch (error) {
         console.error('Erro de login:', error);
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(500).json({ message: 'Erro interno do servidor' });
     }
 });
 
 // Rota para verificar um token e obter dados do usuário atual
-// FIX: Use imported Request and Response types.
-router.get('/auth/me', verifyToken, async (req: Request, res: Response) => {
-    // FIX: 'user' property exists on the correctly typed Request object.
+router.get('/auth/me', verifyToken, async (req: express.Request, res: express.Response) => {
     if (!req.user) {
-        // FIX: 'status' method exists on the correctly typed Response object.
         return res.status(401).json({ message: 'Não autenticado' });
     }
     try {
-        // FIX: 'user' property exists on the correctly typed Request object.
         const permissionsResult = await pool.query('SELECT permissions FROM role_permissions WHERE role = $1', [req.user.role]);
         
         let permissions = [];
@@ -147,21 +126,16 @@ router.get('/auth/me', verifyToken, async (req: Request, res: Response) => {
             }
         }
         
-        // FIX: 'json' and 'user' are now correctly typed.
         res.json({ user: req.user, permissions });
     } catch (error) {
         console.error('Erro ao buscar permissões do usuário:', error);
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(500).json({ message: 'Erro interno do servidor' });
     }
 });
 
-// FIX: Use imported Request and Response types.
-router.post('/auth/register', async (req: Request, res: Response) => {
-    // FIX: 'body' property exists on the correctly typed Request object.
+router.post('/auth/register', async (req: express.Request, res: express.Response) => {
     const { name, email, password } = req.body;
     if (!name || !email || !password) {
-        // FIX: 'status' method exists on the correctly typed Response object.
         return res.status(400).json({ message: 'Nome, e-mail e senha são obrigatórios.' });
     }
 
@@ -174,26 +148,20 @@ router.post('/auth/register', async (req: Request, res: Response) => {
             [name, email.toLowerCase(), UserRole.DEVELOPER, passwordHash]
         );
         
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(201).json(result.rows[0]);
 
     } catch (error: any) {
         if (error.code === '23505') {
-            // FIX: 'status' method exists on the correctly typed Response object.
             return res.status(409).json({ message: 'O e-mail já está em uso.' });
         }
         console.error('Erro ao registrar usuário:', error);
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(500).json({ message: 'Erro interno do servidor.' });
     }
 });
 
-// FIX: Use imported Request and Response types.
-router.post('/auth/reset-password', async (req: Request, res: Response) => {
-    // FIX: 'body' property exists on the correctly typed Request object.
+router.post('/auth/reset-password', async (req: express.Request, res: express.Response) => {
     const { email, password } = req.body;
     if (!email || !password) {
-        // FIX: 'status' method exists on the correctly typed Response object.
         return res.status(400).json({ message: 'E-mail e nova senha são obrigatórios.' });
     }
 
@@ -207,41 +175,32 @@ router.post('/auth/reset-password', async (req: Request, res: Response) => {
         );
 
         if (result.rowCount === 0) {
-            // FIX: 'status' method exists on the correctly typed Response object.
             return res.status(404).json({ message: 'Usuário não encontrado com este e-mail.' });
         }
 
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(200).json({ message: 'Senha redefinida com sucesso.' });
 
     } catch (error) {
         console.error('Erro ao redefinir senha:', error);
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(500).json({ message: 'Erro interno do servidor.' });
     }
 });
 
 // --- Rotas de Gerenciamento de Usuários (Protegidas) ---
 
-// FIX: Use imported Request and Response types.
-router.get('/users', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
+router.get('/users', verifyToken, checkModulePermission('USERS'), async (req: express.Request, res: express.Response) => {
     try {
         const result = await pool.query('SELECT id, name, email, role FROM users ORDER BY name');
-        // FIX: 'json' method exists on the correctly typed Response object.
         res.json(result.rows);
     } catch (error) {
         console.error('Erro ao buscar usuários:', error);
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(500).json({ message: 'Erro interno do servidor' });
     }
 });
 
-// FIX: Use imported Request and Response types.
-router.post('/users', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
-    // FIX: 'body' property exists on the correctly typed Request object.
+router.post('/users', verifyToken, checkModulePermission('USERS'), async (req: express.Request, res: express.Response) => {
     const { name, email, password, role } = req.body;
     if (!name || !email || !password || !role) {
-        // FIX: 'status' method exists on the correctly typed Response object.
         return res.status(400).json({ message: 'Todos os campos são obrigatórios' });
     }
 
@@ -254,34 +213,25 @@ router.post('/users', verifyToken, checkModulePermission('USERS'), async (req: R
             [name, email.toLowerCase(), role, passwordHash]
         );
         
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(201).json(result.rows[0]);
     } catch (error: any) {
         if (error.code === '23505') {
-            // FIX: 'status' method exists on the correctly typed Response object.
             return res.status(409).json({ message: 'O e-mail já está em uso.' });
         }
         console.error('Erro ao criar usuário:', error);
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(500).json({ message: 'Erro interno do servidor' });
     }
 });
 
-// FIX: Use imported Request and Response types.
-router.put('/users/:id', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
-    // FIX: 'params' property exists on the correctly typed Request object.
+router.put('/users/:id', verifyToken, checkModulePermission('USERS'), async (req: express.Request, res: express.Response) => {
     const { id } = req.params;
-    // FIX: 'body' property exists on the correctly typed Request object.
     const { role } = req.body;
 
-    // FIX: 'user' property exists on the correctly typed Request object.
     if (req.user?.id === id) {
-        // FIX: 'status' method exists on the correctly typed Response object.
         return res.status(403).json({ message: 'Não é permitido alterar a própria função.' });
     }
 
     if (!role || !Object.values(UserRole).includes(role as UserRole) && typeof role !== 'string') { // Allow dynamic roles
-        // FIX: 'status' method exists on the correctly typed Response object.
         return res.status(400).json({ message: 'Função inválida fornecida.' });
     }
     
@@ -291,130 +241,100 @@ router.put('/users/:id', verifyToken, checkModulePermission('USERS'), async (req
             [role, id]
         );
         if (result.rowCount === 0) {
-            // FIX: 'status' method exists on the correctly typed Response object.
             return res.status(404).json({ message: 'Usuário não encontrado.' });
         }
-        // FIX: 'json' method exists on the correctly typed Response object.
         res.json(result.rows[0]);
     } catch (error) {
         console.error('Erro ao atualizar usuário:', error);
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(500).json({ message: 'Erro interno do servidor' });
     }
 });
 
-// FIX: Use imported Request and Response types.
-router.delete('/users/:id', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
-    // FIX: 'params' property exists on the correctly typed Request object.
+router.delete('/users/:id', verifyToken, checkModulePermission('USERS'), async (req: express.Request, res: express.Response) => {
     const { id } = req.params;
 
-    // FIX: 'user' property exists on the correctly typed Request object.
     if (req.user?.id === id) {
-        // FIX: 'status' method exists on the correctly typed Response object.
         return res.status(403).json({ message: 'Não é permitido remover a si mesmo.' });
     }
     
     try {
         const result = await pool.query('DELETE FROM users WHERE id = $1', [id]);
         if (result.rowCount === 0) {
-            // FIX: 'status' method exists on the correctly typed Response object.
             return res.status(404).json({ message: 'Usuário não encontrado.' });
         }
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(204).send();
     } catch (error) {
         console.error('Erro ao remover usuário:', error);
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(500).json({ message: 'Erro interno do servidor' });
     }
 });
 
 // --- Rotas de Gerenciamento de Permissões (Protegidas) ---
 
-// FIX: Use imported Request and Response types.
-router.get('/permissions', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
+router.get('/permissions', verifyToken, checkModulePermission('USERS'), async (req: express.Request, res: express.Response) => {
     try {
         const result = await pool.query('SELECT role, permissions FROM role_permissions');
         const permissionsByRole = result.rows.reduce((acc, row) => {
             acc[row.role] = row.permissions;
             return acc;
         }, {});
-        // FIX: 'json' method exists on the correctly typed Response object.
         res.json(permissionsByRole);
     } catch (error) {
         console.error('Erro ao buscar permissões:', error);
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(500).json({ message: 'Erro interno do servidor' });
     }
 });
 
-// FIX: Use imported Request and Response types.
-router.post('/permissions', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
-    // FIX: 'body' property exists on the correctly typed Request object.
+router.post('/permissions', verifyToken, checkModulePermission('USERS'), async (req: express.Request, res: express.Response) => {
     const { role, permissions = [] } = req.body;
 
     if (!role || typeof role !== 'string' || role.trim() === '') {
-        // FIX: 'status' method exists on the correctly typed Response object.
         return res.status(400).json({ message: 'O nome do grupo é obrigatório.' });
     }
     if (!Array.isArray(permissions)) {
-        // FIX: 'status' method exists on the correctly typed Response object.
         return res.status(400).json({ message: 'As permissões devem ser um array.' });
     }
 
     try {
         const existingRole = await pool.query('SELECT 1 FROM role_permissions WHERE role = $1', [role]);
         if (existingRole.rows.length > 0) {
-            // FIX: 'status' method exists on the correctly typed Response object.
             return res.status(409).json({ message: 'Um grupo com este nome já existe.' });
         }
         
         await pool.query('INSERT INTO role_permissions (role, permissions) VALUES ($1, $2)', [role, JSON.stringify(permissions)]);
         
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(201).json({ message: `Grupo '${role}' criado com sucesso.` });
     } catch (error) {
         console.error('Erro ao criar grupo de permissões:', error);
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(500).json({ message: 'Erro interno do servidor.' });
     }
 });
 
-// FIX: Use imported Request and Response types.
-router.put('/permissions/:role', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
-    // FIX: 'params' property exists on the correctly typed Request object.
+router.put('/permissions/:role', verifyToken, checkModulePermission('USERS'), async (req: express.Request, res: express.Response) => {
     const { role } = req.params;
-    // FIX: 'body' property exists on the correctly typed Request object.
     const { permissions } = req.body;
 
     if (!role) {
-        // FIX: 'status' method exists on the correctly typed Response object.
         return res.status(400).json({ message: 'Função inválida.' });
     }
     if (!Array.isArray(permissions)) {
-        // FIX: 'status' method exists on the correctly typed Response object.
         return res.status(400).json({ message: 'As permissões devem ser um array.' });
     }
 
     try {
         await pool.query('UPDATE role_permissions SET permissions = $1 WHERE role = $2', [JSON.stringify(permissions), role]);
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(200).json({ message: `Permissões para '${role}' atualizadas com sucesso.` });
     } catch (error) {
         console.error('Erro ao atualizar permissões:', error);
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(500).json({ message: 'Erro interno do servidor' });
     }
 });
 
-// FIX: Use imported Request and Response types.
-router.delete('/permissions/:role', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
-    // FIX: 'params' property exists on the correctly typed Request object.
+router.delete('/permissions/:role', verifyToken, checkModulePermission('USERS'), async (req: express.Request, res: express.Response) => {
     const { role } = req.params;
 
     // Prevenir a exclusão de grupos de sistema essenciais
     if (role === UserRole.DEVELOPER || role === UserRole.ADMIN) {
-        // FIX: 'status' method exists on the correctly typed Response object.
         return res.status(403).json({ message: 'Não é permitido remover grupos de sistema essenciais.' });
     }
     
@@ -424,22 +344,18 @@ router.delete('/permissions/:role', verifyToken, checkModulePermission('USERS'),
         const userCount = parseInt(userCheckResult.rows[0].count, 10);
 
         if (userCount > 0) {
-            // FIX: 'status' method exists on the correctly typed Response object.
             return res.status(409).json({ message: `Não é possível remover o grupo, pois ${userCount} usuário(s) estão atribuídos a ele. Reatribua os usuários antes de remover o grupo.` });
         }
 
         // Excluir o grupo
         const deleteResult = await pool.query('DELETE FROM role_permissions WHERE role = $1', [role]);
         if (deleteResult.rowCount === 0) {
-            // FIX: 'status' method exists on the correctly typed Response object.
             return res.status(404).json({ message: 'Grupo não encontrado.' });
         }
 
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(204).send(); // Sucesso, sem conteúdo
     } catch (error) {
         console.error(`Erro ao remover o grupo '${role}':`, error);
-        // FIX: 'status' method exists on the correctly typed Response object.
         res.status(500).json({ message: 'Erro interno do servidor' });
     }
 });
