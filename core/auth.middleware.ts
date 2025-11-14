@@ -7,9 +7,7 @@ declare const process: {
 };
 
 // core/auth.middleware.ts - Middlewares de Autenticação e Autorização
-// FIX: Use a standard import for Express types to resolve conflicts.
-// FIX: Changed import to explicitly include Request, Response, and NextFunction types.
-import express, { Request, Response, NextFunction } from 'express';
+import express from 'express';
 import jwt from 'jsonwebtoken';
 import { UserRole, AppKey } from '../types';
 import { pool } from './db';
@@ -27,8 +25,7 @@ declare global {
     }
 }
 
-// FIX: Used explicit Request, Response, and NextFunction types.
-export const verifyToken = (req: Request, res: Response, next: NextFunction) => {
+export const verifyToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
@@ -51,8 +48,7 @@ export const verifyToken = (req: Request, res: Response, next: NextFunction) => 
     });
 };
 
-// FIX: Used explicit Request, Response, and NextFunction types.
-export const isDeveloper = (req: Request, res: Response, next: NextFunction) => {
+export const isDeveloper = (req: express.Request, res: express.Response, next: express.NextFunction) => {
     if (req.user?.role !== UserRole.DEVELOPER) {
         return res.status(403).json({ message: 'Acesso negado. Apenas desenvolvedores.' });
     }
@@ -60,8 +56,7 @@ export const isDeveloper = (req: Request, res: Response, next: NextFunction) => 
 };
 
 export const checkModulePermission = (requiredPermission: AppKey) => {
-    // FIX: Used explicit Request, Response, and NextFunction types.
-    return async (req: Request, res: Response, next: NextFunction) => {
+    return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
         if (!req.user) {
             return res.status(401).json({ message: 'Não autenticado' });
         }
