@@ -1,6 +1,6 @@
 import React from 'react';
 import { LayoutIcon, ListIcon, ImageIcon, SquareIcon } from '../../../components/icons/Icons';
-import { templates as templateData, TemplateData } from './template-data';
+import { templates as templateData, TemplateData } from '../../../core/site/template-data';
 
 export interface Template extends TemplateData {
     Icon: React.FC<{ className?: string }>;
@@ -21,4 +21,4 @@ export const templates: Template[] = templateData.map(data => ({
 // A função getTemplate foi movida para template-data.ts para ser acessível pelo backend.
 // A exportamos aqui novamente por conveniência, se algum componente frontend a necessitar,
 // mas a fonte da verdade para o backend é o novo arquivo.
-export { getTemplate } from './template-data';
+export { getTemplate } from '../../../core/site/template-data';

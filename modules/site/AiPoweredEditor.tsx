@@ -5,7 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { ArrowLeftIcon, SaveIcon, EyeIcon, SeoIcon, XCircleIcon, TypeIcon, PaletteIcon } from '../../components/icons/Icons';
 import PublicSite from './PublicSite';
 import SEOModal from './components/SEOModal';
-import { createNewBlock, defaultPageContent } from './utils/defaults';
+import { createNewBlock, defaultPageContent } from '../../core/site/defaults';
 import BlockRenderer from './components/BlockRenderer';
 import ContentPanel from './components/panels/ContentPanel';
 import StylePanel from './components/panels/StylePanel';

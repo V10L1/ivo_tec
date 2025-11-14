@@ -1,7 +1,9 @@
 
+
 import React from 'react';
 import { PageBlock } from '../../../types';
-import { createNewSection } from '../utils/defaults';
+// FIX: Correct the import path for createNewSection utility.
+import { createNewSection } from '../../../core/site/defaults';
 import { MotorcycleIcon, TypeIcon, ImageIcon, CodeIcon, MenuIcon, VideoIcon, DividerIcon, SparklesIcon, SectionIcon } from '../../../components/icons/Icons';
 
 const blockComponentList: { type: PageBlock['type']; label: string; Icon: React.FC<any> }[] = [

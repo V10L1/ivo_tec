@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Page, PageBlock, Section, Viewport, FixedContainerPosition, SiteData, ThemeSettings, ColorStyleValue, ThemeColorKey } from '../../types';
 import BlockRenderer from './components/BlockRenderer';
-import { defaultPageContent } from './utils/defaults';
+import { defaultPageContent } from '../../core/site/defaults';
 
 // Função utilitária para resolver a cor com base no tema
 export const resolveColor = (color: ColorStyleValue | undefined, theme: ThemeSettings): string => {

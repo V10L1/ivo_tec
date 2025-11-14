@@ -7,8 +7,8 @@ declare const process: {
 };
 
 // core/auth.middleware.ts - Middlewares de Autenticação e Autorização
-// FIX: Use namespaced express types (e.g., express.Request) to prevent conflicts with global DOM types.
-import express from 'express';
+// FIX: Explicitly import Request, Response, and NextFunction to prevent type conflicts.
+import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { UserRole, AppKey } from '../types';
 import { pool } from './db';
@@ -26,7 +26,7 @@ declare global {
     }
 }
 
-export const verifyToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+export const verifyToken = (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
@@ -49,7 +49,7 @@ export const verifyToken = (req: express.Request, res: express.Response, next: e
     });
 };
 
-export const isDeveloper = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+export const isDeveloper = (req: Request, res: Response, next: NextFunction) => {
     if (req.user?.role !== UserRole.DEVELOPER) {
         return res.status(403).json({ message: 'Acesso negado. Apenas desenvolvedores.' });
     }
@@ -57,7 +57,7 @@ export const isDeveloper = (req: express.Request, res: express.Response, next: e
 };
 
 export const checkModulePermission = (requiredPermission: AppKey) => {
-    return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    return async (req: Request, res: Response, next: NextFunction) => {
         if (!req.user) {
             return res.status(401).json({ message: 'Não autenticado' });
         }
