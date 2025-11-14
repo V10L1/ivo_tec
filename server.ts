@@ -10,16 +10,18 @@ declare const __filename: string;
 declare const __dirname: string;
 
 // server.ts - O Orquestrador Principal
-// FIX: Resolve express type conflicts by using a combined import.
-// FIX: Changed import to explicitly include Request, Response, and NextFunction types.
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
-import fs from 'fs/promises';
 
 // Importa a função de inicialização do núcleo do banco de dados
 import { initializeDatabase, pool } from './core/db';
+
+// --- Importação Estática das Rotas dos Módulos ---
+import aiRoutes from './api/ai/ai.routes';
+import siteRoutes from './api/site/site.routes';
+import iamRoutes from './api/usuario/usuario.routes';
 
 // Carrega as variáveis de ambiente antes de qualquer outra coisa
 dotenv.config();
@@ -31,8 +33,6 @@ app.use(cors());
 app.use(express.json());
 
 // --- Rota de Verificação de Saúde ---
-// FIX: Correctly type req and res parameters to resolve property access errors.
-// FIX: Used explicit Request and Response types.
 app.get('/api/health', async (req: Request, res: Response) => {
     try {
         const client = await pool.connect();
@@ -45,52 +45,15 @@ app.get('/api/health', async (req: Request, res: Response) => {
 });
 
 
-// --- Carregador de Módulos Dinâmico (Refatorado para Robustez) ---
-const loadApiModules = async () => {
-    const sourceApiDir = path.join(process.cwd(), 'api');
-    const compiledBaseDir = __dirname; // O diretório base dos arquivos compilados (ex: dist/server)
-
-    try {
-        const moduleFolders = await fs.readdir(sourceApiDir, { withFileTypes: true });
-
-        for (const folder of moduleFolders) {
-            if (folder.isDirectory()) {
-                const moduleName = folder.name;
-                const manifestPath = path.join(sourceApiDir, moduleName, 'manifest.json');
-                
-                try {
-                    const manifestContent = await fs.readFile(manifestPath, 'utf-8');
-                    const manifest = JSON.parse(manifestContent);
-                    
-                    // FIX: Ajusta o caminho e a extensão do arquivo de rotas para funcionar
-                    // tanto em desenvolvimento (ts-node, .ts) quanto em produção (.js).
-                    // A verificação `process.env.TS_NODE_DEV` é mais confiável do que `__filename.endsWith('.ts')`.
-                    const isDev = !!process.env.TS_NODE_DEV;
-                    const routesFile = isDev 
-                        ? manifest.routesFile.replace(/\.js$/, '.ts')
-                        : manifest.routesFile;
-
-                    // Constrói o caminho absoluto para o arquivo de rotas.
-                    // Em dev, __dirname é a raiz do projeto. Em prod, é dist/server.
-                    // A estrutura de pastas 'api/moduleName/routesFile' é a mesma em ambos.
-                    const absoluteRoutesPath = path.resolve(compiledBaseDir, 'api', moduleName, routesFile);
-
-                    const { default: router } = await import(absoluteRoutesPath);
-                    
-                    if (router) {
-                        app.use(manifest.prefix, router);
-                        console.log(`[Module Loader] Módulo '${moduleName}' carregado com sucesso no prefixo '${manifest.prefix}'.`);
-                    } else {
-                         console.warn(`[Module Loader] Módulo '${moduleName}' em '${absoluteRoutesPath}' não possui uma exportação padrão.`);
-                    }
-                } catch (e: any) {
-                    console.error(`[Module Loader] Falha ao carregar o módulo '${moduleName}'. Verifique o manifest.json e o arquivo de rotas.`, e);
-                }
-            }
-        }
-    } catch (error) {
-        console.error("[Module Loader] Erro crítico ao ler o diretório da API. A pasta 'api/' existe?", error);
-    }
+// --- Carregamento Estático das Rotas da API ---
+const loadApiModules = () => {
+    console.log("[Module Loader] Carregando rotas da API estaticamente...");
+    app.use('/api/ai', aiRoutes);
+    console.log("[Module Loader] Módulo 'ai' carregado com sucesso no prefixo '/api/ai'.");
+    app.use('/api/site', siteRoutes);
+    console.log("[Module Loader] Módulo 'site' carregado com sucesso no prefixo '/api/site'.");
+    app.use('/api/iam', iamRoutes);
+    console.log("[Module Loader] Módulo 'usuario' (iam) carregado com sucesso no prefixo '/api/iam'.");
 };
 
 
@@ -104,8 +67,6 @@ const serveFrontend = () => {
     app.use(express.static(staticRootPath));
 
     // Rota "catch-all" melhorada para lidar com APIs não encontradas
-    // FIX: Correctly type req and res parameters to resolve property access errors.
-    // FIX: Used explicit Request, Response, and NextFunction types.
     app.use((req: Request, res: Response, next: NextFunction) => {
         if (req.path.startsWith('/api/')) {
             // Se chegou até aqui, é uma rota de API que não foi encontrada.
@@ -122,7 +83,7 @@ const startServer = async () => {
     const dbInitialized = await initializeDatabase();
     
     if (dbInitialized) {
-        await loadApiModules();
+        loadApiModules(); // Carrega as rotas de forma síncrona
         serveFrontend();
         app.listen(PORT, () => {
             console.log(`Servidor unificado e modular está rodando em http://localhost:${PORT}`);
