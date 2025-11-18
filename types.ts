@@ -16,19 +16,36 @@ export interface AppModule {
   Icon: React.ComponentType<{ className?: string }>;
 }
 
+// Rich text styles for individual text elements
+export interface TextStyles {
+  textColor?: string;
+  textAlign?: 'left' | 'center' | 'right' | 'justify';
+  fontWeight?: 'normal' | 'bold';
+  fontStyle?: 'normal' | 'italic';
+  fontFamily?: string;
+  fontSize?: number;
+}
+
+// Represents a piece of text with its own styling
+export interface StyledText {
+  text: string;
+  styles: TextStyles;
+}
+
+
 // --- Tipos de Conteúdo do Construtor de Páginas ---
 
 export interface HeroBlockContent {
-  title: string;
-  subtitle: string;
+  title: StyledText;
+  subtitle: StyledText;
   ctaText: string;
   ctaLink: string;
   ctaEnabled: boolean;
 }
 
 export interface TextBlockContent {
-  heading: string;
-  body: string;
+  heading: StyledText;
+  body: StyledText;
 }
 
 export interface ImageBlockContent {
@@ -37,8 +54,10 @@ export interface ImageBlockContent {
 }
 
 export interface ButtonBlockContent {
-  text: string;
-  link: string;
+  text: StyledText;
+  actionType: 'link' | 'toggleContainer';
+  linkUrl: string;
+  actionTarget: FixedContainerPosition | null;
 }
 
 export interface MenuItem {
@@ -65,16 +84,13 @@ export interface SpacerBlockContent {
   // No content needed, layout controls height
 }
 
-export interface BlockStyles {
+// Styles for the block container
+export interface ContainerStyles {
   backgroundColor?: string;
-  opacity?: number; // 0 to 1
-  textColor?: string;
+  backgroundOpacity?: number; // 0 to 1
+  textOpacity?: number; // 0 to 1
+  borderRadius?: 'none' | 'medium' | 'full';
   zIndex?: number;
-  // Rich text styles
-  textAlign?: 'left' | 'center' | 'right' | 'justify';
-  fontWeight?: 'normal' | 'bold';
-  fontStyle?: 'normal' | 'italic';
-  fontFamily?: string;
 }
 
 
@@ -95,7 +111,7 @@ export type PageBlock = {
     desktop: BlockLayout;
     // Futuramente: tablet: BlockLayout; mobile: BlockLayout;
   };
-  styles?: BlockStyles;
+  styles?: ContainerStyles;
 } & (
   | { type: 'hero'; content: HeroBlockContent }
   | { type: 'text'; content: TextBlockContent }
@@ -121,6 +137,25 @@ export interface SiteSettings {
   backgroundColor: string;
 }
 
+export interface FixedContainer {
+  enabled: boolean;
+  size: number; // height for top/bottom, width for left/right in pixels
+  isCollapsed: boolean; // default state for public view
+  collapsible: boolean; // can the user collapse this container?
+  toggleButtonPosition: 'left' | 'center' | 'right' | 'none';
+  blocks: PageBlock[];
+}
+
+export type FixedContainerPosition = 'top' | 'left' | 'right' | 'bottom';
+
+export interface FixedContainers {
+  top: FixedContainer;
+  left: FixedContainer;
+  right: FixedContainer;
+  bottom: FixedContainer;
+}
+
+
 // Representa o objeto de conteúdo JSONB dentro de cada página
 export interface SiteData {
   settings: SiteSettings;
@@ -128,8 +163,8 @@ export interface SiteData {
     desktop: GridSettings;
     // Futuramente: tablet: GridSettings; mobile: GridSettings;
   };
-  headerBlocks: PageBlock[];
-  contentBlocks: PageBlock[];
+  fixedContainers: FixedContainers;
+  mainBlocks: PageBlock[];
   footerBlocks: PageBlock[];
 }
 

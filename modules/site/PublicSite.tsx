@@ -1,232 +1,248 @@
-import React, { useState, useEffect } from 'react';
-import { Page, PageBlock, SiteData } from '../../types';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { Page, SiteData, PageBlock, SiteSettings, HeroBlockContent, TextBlockContent, ImageBlockContent, ButtonBlockContent, MenuBlockContent, VideoBlockContent, MenuItem, GridSettings, BlockLayout, ContainerStyles, TextStyles, StyledText, FixedContainer, FixedContainerPosition } from '../../types';
+import { useAuth } from '../../contexts/AuthContext';
+import { useRouter } from '../../App';
+import { PlusCircleIcon, SettingsIcon, Trash2Icon, MotorcycleIcon, TypeIcon, ImageIcon, CodeIcon, ChevronLeftIcon, SaveIcon, ArrowLeftIcon, LayoutIcon, MenuIcon, PointerIcon, AlignStartVerticalIcon, AlignCenterVerticalIcon, AlignEndVerticalIcon, AlignStartHorizontalIcon, AlignCenterHorizontalIcon, AlignEndHorizontalIcon, GridIcon, VideoIcon, DividerIcon, SparklesIcon, BringToFrontIcon, SendToBackIcon, BoldIcon, ItalicIcon, AlignLeftIcon, AlignCenterIcon, AlignRightIcon, AlignJustifyIcon, SquareIcon, RoundedSquareIcon, CircleIcon, PanelTopIcon, PanelLeftIcon, PanelRightIcon, PanelBottomIcon, EyeIcon, EyeOffIcon, PanelOpenIcon, PanelCloseIcon, AlignHorizontalStartIcon, AlignHorizontalCenterIcon, AlignHorizontalEndIcon, XCircleIcon, ChevronsUpIcon, ChevronsDownIcon } from '../../components/icons/Icons';
 
-const getYouTubeEmbedUrl = (url: string, autoplay?: boolean, controls?: boolean) => {
-    let videoId;
-    try {
-        if (url.includes('youtube.com/watch')) {
-            videoId = new URL(url).searchParams.get('v');
-        } else if (url.includes('youtu.be/')) {
-            videoId = new URL(url).pathname.split('/').pop();
-        }
-        if (!videoId) return null;
+// --- UTILITIES, HELPERS, AND DEFAULTS ---
 
-        const embedUrl = new URL(`https://www.youtube.com/embed/${videoId}`);
-        if (autoplay) {
-            embedUrl.searchParams.set('autoplay', '1');
-            embedUrl.searchParams.set('mute', '1'); // Autoplay requires mute
-        }
-        if (controls === false) {
-            embedUrl.searchParams.set('controls', '0');
-        }
-        return embedUrl.toString();
-    } catch (error) {
-        console.error("Invalid video URL:", url, error);
-        return null;
-    }
-};
+const generateId = (prefix = 'id') => `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+const hexToRgba = (hex: string, alpha: number = 1): string => { if (!hex || !/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)) { return `rgba(30, 41, 59, ${alpha})`; } let c = hex.substring(1).split(''); if (c.length === 3) { c = [c[0], c[0], c[1], c[1], c[2], c[2]]; } const i = parseInt(c.join(''), 16); return `rgba(${(i >> 16) & 255}, ${(i >> 8) & 255}, ${i & 255}, ${alpha})`; };
+const getBorderRadiusClass = (radius: ContainerStyles['borderRadius']) => { switch (radius) { case 'full': return 'rounded-full'; case 'none': return 'rounded-none'; case 'medium': default: return 'rounded-lg'; } }
+const createTextStyle = (textStyles?: TextStyles, textOpacity: number = 1): React.CSSProperties => { if (!textStyles) return {}; return { color: textStyles.textColor, textAlign: textStyles.textAlign, fontWeight: textStyles.fontWeight, fontStyle: textStyles.fontStyle, fontFamily: textStyles.fontFamily, fontSize: textStyles.fontSize ? `${textStyles.fontSize}px` : undefined, opacity: textOpacity, }; };
+const getYouTubeEmbedUrl = (url: string, autoplay?: boolean, controls?: boolean) => { try { let videoId; if (url.includes('youtube.com/watch')) { videoId = new URL(url).searchParams.get('v'); } else if (url.includes('youtu.be/')) { videoId = new URL(url).pathname.split('/').pop(); } if (!videoId) return null; const embedUrl = new URL(`https://www.youtube.com/embed/${videoId}`); if (autoplay) { embedUrl.searchParams.set('autoplay', '1'); embedUrl.searchParams.set('mute', '1'); } if (controls === false) { embedUrl.searchParams.set('controls', '0'); } return embedUrl.toString(); } catch { return null; } };
 
-// --- Renderizadores de Bloco Dinâmicos ---
-const BlockRenderer: React.FC<{ block: PageBlock }> = ({ block }) => {
+const defaultGridSettings: GridSettings = { columns: 48, rowHeight: 10, gap: 8 };
+const defaultLayout: BlockLayout = { colStart: 1, colEnd: 13, rowStart: 1, rowEnd: 13, alignSelf: 'stretch', justifySelf: 'stretch' };
+const defaultContainerStyles: ContainerStyles = { backgroundColor: '#1e293b', backgroundOpacity: 1, textOpacity: 1, borderRadius: 'medium', zIndex: 0 };
+const defaultTextStyles: TextStyles = { textColor: '#cbd5e1', textAlign: 'left', fontWeight: 'normal', fontStyle: 'normal', fontFamily: 'sans-serif', fontSize: 16};
+const defaultFixedContainer: FixedContainer = { enabled: false, size: 60, isCollapsed: false, collapsible: true, toggleButtonPosition: 'center', blocks: [] };
+const defaultPageContent: SiteData = { settings: { brandName: 'Nova Marca', backgroundColor: '#0f172a' }, gridSettings: { desktop: defaultGridSettings }, fixedContainers: { top: { ...defaultFixedContainer, size: 80 }, left: { ...defaultFixedContainer, size: 240 }, right: { ...defaultFixedContainer, size: 240 }, bottom: { ...defaultFixedContainer, size: 60 }, }, mainBlocks: [], footerBlocks: [], };
+const createNewBlock = (type: PageBlock['type']): PageBlock => { const id = generateId('block'); const baseBlock = { id, layout: { desktop: {...defaultLayout} }, styles: {...defaultContainerStyles} }; switch (type) { case 'hero': return { ...baseBlock, type, content: { title: { text: 'Título do Herói', styles: {...defaultTextStyles, fontSize: 48, textAlign: 'center', fontWeight: 'bold'}}, subtitle: { text: 'Subtítulo atraente.', styles: {...defaultTextStyles, fontSize: 20, textAlign: 'center'}}, ctaText: 'Saiba Mais', ctaLink: '#', ctaEnabled: true } }; case 'text': return { ...baseBlock, type, content: { heading: { text: 'Nova Seção', styles: {...defaultTextStyles, fontSize: 32, fontWeight: 'bold'} }, body: { text: 'Texto padrão.', styles: {...defaultTextStyles, fontSize: 16}} } }; case 'image': return { ...baseBlock, type, content: { imageUrl: 'https://via.placeholder.com/600x400.png/1e293b/94a3b8?text=Imagem', altText: 'Imagem de Exemplo' } }; case 'button': return { ...baseBlock, type, content: { text: { text: 'Clique Aqui', styles: {...defaultTextStyles, fontSize: 16, textAlign: 'center'}}, actionType: 'link', linkUrl: '#', actionTarget: null } }; case 'menu': return { ...baseBlock, type, content: { items: [{ id: generateId('menuitem'), label: 'Home', link: '#/'}, { id: generateId('menuitem'), label: 'Sobre', link: '#/sobre'}] } }; case 'video': return { ...baseBlock, type, content: { videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', autoplay: false, controls: true } }; case 'divider': return { ...baseBlock, type, content: {} }; case 'spacer': return { ...baseBlock, type, content: {} }; default: return { ...baseBlock, type: 'text', content: { heading: { text: 'Bloco Desconhecido', styles: defaultTextStyles }, body: { text: '', styles: defaultTextStyles } } }; } };
+const componentList: { type: PageBlock['type']; label: string; Icon: React.FC<any> }[] = [ { type: 'hero', label: 'Herói', Icon: MotorcycleIcon }, { type: 'text', label: 'Texto', Icon: TypeIcon }, { type: 'image', label: 'Imagem', Icon: ImageIcon }, { type: 'button', label: 'Botão', Icon: CodeIcon }, { type: 'menu', label: 'Menu', Icon: MenuIcon }, { type: 'video', label: 'Vídeo', Icon: VideoIcon }, { type: 'divider', label: 'Divisor', Icon: DividerIcon }, { type: 'spacer', label: 'Espaçador', Icon: SparklesIcon }, ];
+type EditorContext = 'main' | 'footer' | FixedContainerPosition;
+
+// --- EDITOR SUB-COMPONENTS (INJECTED FOR INLINE EDITING) ---
+const InputField: React.FC<{ label: string; value: string | number; onChange: (value: string) => void; type?: string; placeholder?: string; min?: number; max?: number; step?: number; }> = ({ label, value, onChange, type = "text", placeholder, min, max, step }) => ( <div> <label className="block text-sm font-medium text-slate-400 mb-1">{label}</label> <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} type={type} min={min} max={max} step={step} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-sm" /> </div> );
+const ColorField: React.FC<{ label: string; value: string; onChange: (value: string) => void }> = ({ label, value, onChange }) => ( <div> <label className="block text-sm font-medium text-slate-400 mb-1">{label}</label> <div className="flex items-center gap-2"> <input type="color" value={value} onChange={e => onChange(e.target.value)} className="w-8 h-8 p-0 border-none rounded bg-slate-900" /> <input value={value} onChange={e => onChange(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-sm" /> </div> </div> );
+const ToggleField: React.FC<{ label: string; checked: boolean; onChange: (checked: boolean) => void; }> = ({ label, checked, onChange }) => ( <div className="flex items-center justify-between"> <label className="text-sm font-medium text-slate-400">{label}</label> <button onClick={() => onChange(!checked)} className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${checked ? 'bg-cyan-600' : 'bg-slate-700'}`}> <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'}`} /> </button> </div>);
+const ButtonGroupField: React.FC<{ label?: string; value: any; options: { value: any; icon: React.FC<{className?: string}>; title: string }[]; onChange: (value: any) => void; isToggle?: boolean }> = ({ label, value, options, onChange, isToggle=false }) => (<div>{label && <label className="block text-sm font-medium text-slate-400 mb-1">{label}</label>}<div className="flex rounded-md bg-slate-900 border border-slate-700 p-1">{options.map(opt => <button key={opt.value} title={opt.title} onClick={() => onChange(isToggle ? (value === opt.value ? undefined : opt.value) : opt.value)} className={`flex-1 p-1 rounded ${value === opt.value ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:bg-slate-700'}`}><opt.icon className="w-4 h-4 mx-auto"/></button>)}</div></div>);
+const SelectField: React.FC<{ label: string; value: string | null; options: { value: string; label: string }[]; onChange: (value: string) => void; }> = ({ label, value, options, onChange }) => ( <div> <label className="block text-sm font-medium text-slate-400 mb-1">{label}</label> <select value={value || ''} onChange={e => onChange(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-sm"> {options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)} </select> </div> );
+const RichTextToolbar: React.FC<{ styles: TextStyles, onStyleChange: (field: keyof TextStyles, value: any) => void }> = ({ styles, onStyleChange }) => ( <div className="p-2 bg-slate-800 rounded-md border border-slate-600 space-y-3"> <select value={styles.fontFamily || 'sans-serif'} onChange={e => onStyleChange('fontFamily', e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-xs"> <option value="sans-serif">Sans-serif</option> <option value="serif">Serif</option> <option value="monospace">Monospace</option> <option value="cursive">Cursive</option> </select> <div className="grid grid-cols-2 gap-2"> <ColorField label="Cor" value={styles.textColor || '#cbd5e1'} onChange={v => onStyleChange('textColor', v)} /> <InputField label="Tamanho (px)" type="number" value={styles.fontSize || 16} onChange={v => onStyleChange('fontSize', parseInt(v) || 16)} /> </div> <div className="grid grid-cols-2 gap-1"> <ButtonGroupField value={styles.fontWeight} options={[{ value: 'bold', icon: BoldIcon, title: 'Negrito'}]} onChange={v => onStyleChange('fontWeight', v)} isToggle /> <ButtonGroupField value={styles.fontStyle} options={[{ value: 'italic', icon: ItalicIcon, title: 'Itálico'}]} onChange={v => onStyleChange('fontStyle', v)} isToggle /> </div> <ButtonGroupField label="Alinhamento" value={styles.textAlign} options={[ { value: 'left', icon: AlignLeftIcon, title: 'Esquerda' }, { value: 'center', icon: AlignCenterIcon, title: 'Centro' }, { value: 'right', icon: AlignRightIcon, title: 'Direita' }, { value: 'justify', icon: AlignJustifyIcon, title: 'Justificado' }, ]} onChange={v => onStyleChange('textAlign', v)} /> </div> );
+const RichTextInputWithToolbar: React.FC<{ label: string; value: StyledText; onChange: (value: StyledText) => void; isTextarea?: boolean; }> = ({ label, value, onChange, isTextarea = false }) => { const handleStyleChange = (field: keyof TextStyles, styleValue: any) => { onChange({ ...value, styles: { ...(value.styles || defaultTextStyles), [field]: styleValue } }); }; const handleTextChange = (text: string) => { onChange({ ...value, text }); }; return ( <div className="space-y-2"> <label className="block text-sm font-medium text-slate-400">{label}</label> <RichTextToolbar styles={value.styles || defaultTextStyles} onStyleChange={handleStyleChange} /> {isTextarea ? ( <textarea value={value.text} onChange={e => handleTextChange(e.target.value)} rows={5} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-sm" /> ) : ( <input value={value.text} onChange={e => handleTextChange(e.target.value)} type="text" className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-sm" /> )} </div> ); };
+const InspectorPanel: React.FC<{ selectedBlock: PageBlock | null; selectedContainerId: FixedContainerPosition | null; pageData: SiteData | null; onUpdateBlock: (updatedBlock: PageBlock) => void; onUpdatePageSettings: (field: keyof SiteSettings, value: string) => void; onUpdateGridSettings: (field: keyof GridSettings, value: number) => void; onUpdateContainer: (id: FixedContainerPosition, field: keyof FixedContainer, value: any) => void; onZIndexChange: (direction: 'front' | 'back') => void; }> = ({ selectedBlock, selectedContainerId, pageData, onUpdateBlock, onUpdatePageSettings, onUpdateGridSettings, onUpdateContainer, onZIndexChange }) => { if (!pageData) return null; const handleLayoutChange = (field: keyof BlockLayout, value: string | number) => { if (!selectedBlock) return; const newLayout = { ...selectedBlock.layout.desktop, [field]: value }; onUpdateBlock({ ...selectedBlock, layout: { ...selectedBlock.layout, desktop: newLayout } }); }; const handleStyleChange = (field: keyof ContainerStyles, value: string | number) => { if (!selectedBlock) return; const newStyles = { ...defaultContainerStyles, ...selectedBlock.styles, [field]: value }; onUpdateBlock({ ...selectedBlock, styles: newStyles }); }; const renderBlockInspector = () => { if (!selectedBlock) return null; const layout = selectedBlock.layout.desktop; const styles = { ...defaultContainerStyles, ...selectedBlock.styles }; let contentInspector; switch (selectedBlock.type) { case 'hero': { const handleContentChange = (field: keyof HeroBlockContent, value: any) => { onUpdateBlock({ ...selectedBlock, content: { ...selectedBlock.content, [field]: value } }); }; contentInspector = <> <RichTextInputWithToolbar label="Título" value={selectedBlock.content.title} onChange={v => handleContentChange('title', v)} /> <RichTextInputWithToolbar label="Subtítulo" value={selectedBlock.content.subtitle} onChange={v => handleContentChange('subtitle', v)} isTextarea/> <ToggleField label="Botão Ativo" checked={selectedBlock.content.ctaEnabled} onChange={v => handleContentChange('ctaEnabled', v)} /> {selectedBlock.content.ctaEnabled && <> <InputField label="Texto do Botão" value={selectedBlock.content.ctaText} onChange={v => handleContentChange('ctaText', v)} /> <InputField label="Link do Botão" value={selectedBlock.content.ctaLink} onChange={v => handleContentChange('ctaLink', v)} /> </>} </>; break; } case 'text': { const handleContentChange = (field: keyof TextBlockContent, value: StyledText) => { onUpdateBlock({ ...selectedBlock, content: { ...selectedBlock.content, [field]: value } }); }; contentInspector = <> <RichTextInputWithToolbar label="Cabeçalho" value={selectedBlock.content.heading} onChange={v => handleContentChange('heading', v)} /> <RichTextInputWithToolbar label="Corpo do Texto" value={selectedBlock.content.body} onChange={v => handleContentChange('body', v)} isTextarea /> </>; break; } case 'image': { const handleContentChange = (field: keyof ImageBlockContent, value: string) => { onUpdateBlock({ ...selectedBlock, content: { ...selectedBlock.content, [field]: value } }); }; contentInspector = <> <InputField label="URL da Imagem" value={selectedBlock.content.imageUrl} onChange={v => handleContentChange('imageUrl', v)} /> <InputField label="Texto Alternativo" value={selectedBlock.content.altText} onChange={v => handleContentChange('altText', v)} /> </>; break; } case 'button': { const content = selectedBlock.content; const handleContentChange = (field: keyof ButtonBlockContent, value: any) => { const newContent = { ...content, [field]: value }; if (field === 'actionType' && value === 'link') { newContent.actionTarget = null; } if (field === 'actionType' && value === 'toggleContainer') { newContent.linkUrl = '#'; } onUpdateBlock({ ...selectedBlock, content: newContent }); }; contentInspector = <> <RichTextInputWithToolbar label="Texto do Botão" value={content.text} onChange={v => handleContentChange('text', v)} /> <SelectField label="Ação do Botão" value={content.actionType} options={[{value: 'link', label: 'Abrir Link'}, {value: 'toggleContainer', label: 'Alternar Contêiner'}]} onChange={v => handleContentChange('actionType', v)} /> {content.actionType === 'link' && <InputField label="URL do Link" value={content.linkUrl} onChange={v => handleContentChange('linkUrl', v)} />} {content.actionType === 'toggleContainer' && <SelectField label="Contêiner Alvo" value={content.actionTarget} options={Object.keys(pageData.fixedContainers).map(pos => ({value: pos, label: pos.charAt(0).toUpperCase() + pos.slice(1)}))} onChange={v => handleContentChange('actionTarget', v)} />} </>; break; } case 'menu': { const menuContent = selectedBlock.content; const handleItemChange = (itemId: string, field: 'label' | 'link', value: string) => { const newItems = menuContent.items.map(item => item.id === itemId ? { ...item, [field]: value } : item); onUpdateBlock({ ...selectedBlock, content: { ...menuContent, items: newItems }}); }; contentInspector = <> <h4 className="text-md font-semibold text-slate-300 mb-2">Itens do Menu</h4> {menuContent.items.map(item => ( <div key={item.id} className="p-2 border border-slate-700 rounded mb-2 space-y-2"> <InputField label="Rótulo" value={item.label} onChange={v => handleItemChange(item.id, 'label', v)} /> <InputField label="Link" value={item.link} onChange={v => handleItemChange(item.id, 'link', v)} /> </div> ))} </>; break; } case 'video': { const handleContentChange = (field: keyof VideoBlockContent, value: string | boolean) => { onUpdateBlock({ ...selectedBlock, content: { ...(selectedBlock.content as VideoBlockContent), [field]: value } }); }; const videoContent = selectedBlock.content; contentInspector = <> <InputField label="URL do Vídeo (YouTube)" value={videoContent.videoUrl} onChange={v => handleContentChange('videoUrl', v)} /> <ToggleField label="Autoplay (com mudo)" checked={videoContent.autoplay || false} onChange={v => handleContentChange('autoplay', v)} /> <ToggleField label="Mostrar Controles" checked={videoContent.controls !== false} onChange={v => handleContentChange('controls', v)} /> </>; break; } case 'divider': case 'spacer': contentInspector = <p className="text-sm text-slate-500">Este bloco não possui conteúdo editável.</p>; break; default: contentInspector = <p>Inspetor não disponível.</p>; } return ( <> <h4 className="text-md font-semibold text-slate-300 mb-2 mt-4 border-t border-slate-700 pt-4">Conteúdo</h4> {contentInspector} <h4 className="text-md font-semibold text-slate-300 mb-2 mt-4 border-t border-slate-700 pt-4">Estilos do Contêiner</h4> <div className="space-y-4"> <ColorField label="Cor de Fundo" value={styles.backgroundColor || '#1e293b'} onChange={v => handleStyleChange('backgroundColor', v)} /> <InputField label="Opacidade do Fundo" type="range" value={styles.backgroundOpacity || 1} onChange={v => handleStyleChange('backgroundOpacity', parseFloat(v))} min={0} max={1} step={0.05} /> <InputField label="Opacidade da Letra" type="range" value={styles.textOpacity || 1} onChange={v => handleStyleChange('textOpacity', parseFloat(v))} min={0} max={1} step={0.05} /> <ButtonGroupField label="Bordas" value={styles.borderRadius || 'medium'} options={[ { value: 'none', icon: SquareIcon, title: 'Quadrado' }, { value: 'medium', icon: RoundedSquareIcon, title: 'Arredondado' }, { value: 'full', icon: CircleIcon, title: 'Redondo' }, ]} onChange={v => handleStyleChange('borderRadius', v)} /> <div> <label className="block text-sm font-medium text-slate-400 mb-1">Camadas</label> <div className="flex gap-2"> <button onClick={() => onZIndexChange('back')} className="flex-1 p-2 bg-slate-700 hover:bg-slate-600 rounded-md flex items-center justify-center gap-2"><SendToBackIcon className="w-4 h-4"/> Para Trás</button> <button onClick={() => onZIndexChange('front')} className="flex-1 p-2 bg-slate-700 hover:bg-slate-600 rounded-md flex items-center justify-center gap-2"><BringToFrontIcon className="w-4 h-4"/> Para Frente</button> </div> </div> </div> <h4 className="text-md font-semibold text-slate-300 mb-2 mt-4 border-t border-slate-700 pt-4">Layout</h4> <div className="grid grid-cols-2 gap-2"> <InputField label="Col Início" type="number" value={layout.colStart} onChange={v => handleLayoutChange('colStart', parseInt(v))} min={1} max={pageData?.gridSettings.desktop.columns} /> <InputField label="Col Fim" type="number" value={layout.colEnd} onChange={v => handleLayoutChange('colEnd', parseInt(v))} min={1} max={(pageData?.gridSettings.desktop.columns || 12) + 1}/> <InputField label="Linha Início" type="number" value={layout.rowStart} onChange={v => handleLayoutChange('rowStart', parseInt(v))} /> <InputField label="Linha Fim" type="number" value={layout.rowEnd} onChange={v => handleLayoutChange('rowEnd', parseInt(v))} /> </div> <div className="grid grid-cols-2 gap-2 mt-2"> <ButtonGroupField label="Alinhar Vertical" value={layout.alignSelf} options={[{value: 'start', icon: AlignStartVerticalIcon, title: 'Início'}, {value: 'center', icon: AlignCenterVerticalIcon, title: 'Centro'}, {value: 'end', icon: AlignEndVerticalIcon, title: 'Fim'}, {value: 'stretch', icon: GridIcon, title: 'Esticar'}]} onChange={v => handleLayoutChange('alignSelf', v)} /> <ButtonGroupField label="Alinhar Horizontal" value={layout.justifySelf} options={[{value: 'start', icon: AlignStartHorizontalIcon, title: 'Início'}, {value: 'center', icon: AlignCenterHorizontalIcon, title: 'Centro'}, {value: 'end', icon: AlignEndHorizontalIcon, title: 'Fim'}, {value: 'stretch', icon: GridIcon, title: 'Esticar'}]} onChange={v => handleLayoutChange('justifySelf', v)} /> </div> </> ) }; const renderContainerInspector = () => { if (!selectedContainerId || !pageData.fixedContainers) return null; const container = pageData.fixedContainers[selectedContainerId]; const isHorizontal = selectedContainerId === 'top' || selectedContainerId === 'bottom'; return ( <div className="space-y-4"> <ToggleField label="Habilitado" checked={container.enabled} onChange={v => onUpdateContainer(selectedContainerId, 'enabled', v)} /> <InputField label={isHorizontal ? 'Altura (px)' : 'Largura (px)'} type="number" value={container.size} onChange={v => onUpdateContainer(selectedContainerId, 'size', parseInt(v) || 0)} min={20} max={1000} /> <ToggleField label="Recolhido por Padrão" checked={container.isCollapsed} onChange={v => onUpdateContainer(selectedContainerId, 'isCollapsed', v)} /> <div className="pt-4 border-t border-slate-700 space-y-4"> <ToggleField label="Retrátil" checked={container.collapsible} onChange={v => onUpdateContainer(selectedContainerId, 'collapsible', v)} /> {container.collapsible && ( <ButtonGroupField label="Posição do Botão" value={container.toggleButtonPosition} options={[ { value: 'left', icon: AlignHorizontalStartIcon, title: 'Esquerda' }, { value: 'center', icon: AlignHorizontalCenterIcon, title: 'Centro' }, { value: 'right', icon: AlignHorizontalEndIcon, title: 'Direita' }, { value: 'none', icon: XCircleIcon, title: 'Nenhum' }, ]} onChange={v => onUpdateContainer(selectedContainerId, 'toggleButtonPosition', v)} /> )} </div> </div> ); }; const renderPageInspector = () => { const settings = pageData?.settings; const grid = pageData?.gridSettings.desktop; if (!settings || !grid) return null; return ( <> <h4 className="text-md font-semibold text-slate-300 mb-2">Configurações Gerais</h4> <InputField label="Nome da Marca (Título da Página)" value={settings.brandName} onChange={v => onUpdatePageSettings('brandName', v)} /> <ColorField label="Cor de Fundo da Página" value={settings.backgroundColor} onChange={v => onUpdatePageSettings('backgroundColor', v)} /> <h4 className="text-md font-semibold text-slate-300 mb-2 mt-4 border-t border-slate-700 pt-4">Configurações da Grade</h4> <InputField label="Colunas" type="number" value={grid.columns} onChange={v => onUpdateGridSettings('columns', parseInt(v))} min={1} max={48} /> <InputField label="Altura da Linha (px)" type="number" value={grid.rowHeight} onChange={v => onUpdateGridSettings('rowHeight', parseInt(v))} min={1} /> <InputField label="Espaçamento (px)" type="number" value={grid.gap} onChange={v => onUpdateGridSettings('gap', parseInt(v))} min={0} /> </> ) }; const getTitle = () => { if (selectedBlock) return `Bloco: ${selectedBlock.type}`; if (selectedContainerId) return `Contêiner: ${selectedContainerId}`; return "Configurações da Página"; }; const getIcon = () => { if (selectedBlock) {return <TypeIcon className="w-5 h-5"/>;} if (selectedContainerId) { return <LayoutIcon className="w-5 h-5"/>; } return <SettingsIcon className="w-5 h-5"/>; }; return ( <div className="p-4 space-y-4"> <h3 className="text-lg font-bold text-cyan-400 capitalize flex items-center gap-2"> {getIcon()} {getTitle()} </h3> <div className="space-y-4"> {!selectedBlock && !selectedContainerId && renderPageInspector()} {selectedBlock && renderBlockInspector()} {selectedContainerId && renderContainerInspector()} </div> </div> ); };
+
+// --- RENDERIZADORES DE BLOCO E PÁGINA (Público e Editor) ---
+const BlockRenderer: React.FC<{ block: PageBlock; isEditing?: boolean, onToggleContainer?: (target: FixedContainerPosition) => void; }> = ({ block, isEditing = false, onToggleContainer = () => {} }) => {
     const commonClasses = "w-full h-full flex flex-col p-4";
-    const styles = block.styles || {};
-    const inlineStyle = {
-        backgroundColor: styles.backgroundColor,
-        opacity: styles.opacity,
-    };
-    
-    const textStyles: React.CSSProperties = {
-        color: styles.textColor,
-        textAlign: styles.textAlign,
-        fontWeight: styles.fontWeight,
-        fontStyle: styles.fontStyle,
-        fontFamily: styles.fontFamily,
-    };
+    const styles = { ...defaultContainerStyles, ...(block.styles || {}) };
+    const borderRadiusClass = getBorderRadiusClass(styles.borderRadius);
+    const inlineStyle: React.CSSProperties = { backgroundColor: styles.backgroundOpacity !== 1 ? hexToRgba(styles.backgroundColor || '#000000', styles.backgroundOpacity) : styles.backgroundColor, };
+    const pointerEventsClass = isEditing ? 'pointer-events-none' : '';
 
     switch (block.type) {
-        case 'hero':
-            return (
-                <div style={inlineStyle} className={`${commonClasses} text-center items-center justify-center rounded-lg`}>
-                    <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-4" style={textStyles}>{block.content.title}</h1>
-                    <p className="text-md md:text-lg text-slate-300 max-w-2xl mx-auto mb-6" style={textStyles}>{block.content.subtitle}</p>
-                    {block.content.ctaEnabled && (
-                         <a href={block.content.ctaLink} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-8 rounded-full text-lg transition-transform transform hover:scale-105" style={{...textStyles, backgroundColor: styles.backgroundColor}}>
-                            {block.content.ctaText}
-                        </a>
-                    )}
-                </div>
-            );
-        case 'text':
-            return (
-                 <div style={inlineStyle} className={`${commonClasses} text-left`}>
-                    <h2 className="text-3xl font-bold mb-4" style={textStyles}>{block.content.heading}</h2>
-                    <p className="text-slate-400 whitespace-pre-wrap leading-relaxed" style={textStyles}>{block.content.body}</p>
-                </div>
-            );
-        case 'image':
-            return (
-                <img src={block.content.imageUrl} alt={block.content.altText} className="w-full h-full object-cover rounded-lg shadow-lg" style={{opacity: styles.opacity}}/>
-            );
-        case 'button':
+        case 'hero': return ( <div style={inlineStyle} className={`${commonClasses} text-center items-center justify-center ${borderRadiusClass} ${pointerEventsClass}`}> <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-4" style={createTextStyle(block.content.title.styles, styles.textOpacity)}>{block.content.title.text}</h1> <p className="text-md md:text-lg text-slate-300 max-w-2xl mx-auto mb-6" style={createTextStyle(block.content.subtitle.styles, styles.textOpacity)}>{block.content.subtitle.text}</p> {block.content.ctaEnabled && ( <a href={block.content.ctaLink} className={`bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-8 rounded-full text-lg transition-transform transform hover:scale-105 ${pointerEventsClass}`} style={{ opacity: styles.textOpacity }}> {block.content.ctaText} </a> )} </div> );
+        case 'text': return ( <div style={inlineStyle} className={`${commonClasses} text-left ${borderRadiusClass} ${pointerEventsClass}`}> <h2 className="text-3xl font-bold mb-4" style={createTextStyle(block.content.heading.styles, styles.textOpacity)}>{block.content.heading.text}</h2> <p className="text-slate-400 whitespace-pre-wrap leading-relaxed" style={createTextStyle(block.content.body.styles, styles.textOpacity)}>{block.content.body.text}</p> </div> );
+        case 'image': return ( <img src={block.content.imageUrl} alt={block.content.altText} className={`w-full h-full object-cover shadow-lg ${borderRadiusClass} ${pointerEventsClass}`} style={{opacity: styles.backgroundOpacity}}/> );
+        case 'button': {
+            const buttonCombinedStyles: React.CSSProperties = {...inlineStyle, ...createTextStyle(block.content.text.styles, styles.textOpacity)};
+            const commonButtonClasses = `text-white font-bold py-3 px-8 inline-block transition-colors ${borderRadiusClass} ${pointerEventsClass}`;
+            
+            if (block.content.actionType === 'toggleContainer' && block.content.actionTarget) {
+                 const target = block.content.actionTarget;
+                 return (
+                     <div className={`${commonClasses} items-center justify-center`}>
+                         <button onClick={() => !isEditing && onToggleContainer(target)} className={commonButtonClasses} style={buttonCombinedStyles}>
+                             {block.content.text.text}
+                         </button>
+                     </div>
+                 );
+            }
+            // Default to link
             return (
                  <div className={`${commonClasses} items-center justify-center`}>
-                    <a href={block.content.link} className="text-white font-bold py-3 px-8 rounded-lg inline-block transition-colors" style={{...inlineStyle, ...textStyles}}>
-                        {block.content.text}
+                    <a href={block.content.linkUrl} className={commonButtonClasses} style={buttonCombinedStyles}>
+                        {block.content.text.text}
                     </a>
                 </div>
             );
-        case 'menu':
-            return (
-                 <nav style={inlineStyle} className={`${commonClasses} flex-row items-center justify-center gap-6`}>
-                    {block.content.items.map(item => (
-                        <a key={item.id} href={item.link} className="text-slate-300 hover:text-cyan-400 font-medium transition-colors" style={textStyles}>
-                            {item.label}
-                        </a>
-                    ))}
-                </nav>
-            );
-        case 'video':
-            const embedUrl = getYouTubeEmbedUrl(block.content.videoUrl, block.content.autoplay, block.content.controls);
-            return embedUrl ? (
-                <div className="w-full h-full rounded-lg overflow-hidden">
-                    <iframe
-                        width="100%"
-                        height="100%"
-                        src={embedUrl}
-                        title="YouTube video player"
-                        frameBorder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                    ></iframe>
-                </div>
-            ) : <div className="p-4 text-red-400">URL de vídeo inválida. Use um link do YouTube.</div>;
-        case 'divider':
-            return <div className="flex items-center justify-center w-full h-full"><hr className="w-full border-slate-700" style={{borderColor: styles.backgroundColor}}/></div>;
-        case 'spacer':
-            return <div style={inlineStyle}></div>; // Spacer is just for layout
-        default:
-            return <div className="p-4 bg-red-900 rounded-lg">Bloco desconhecido</div>;
-    }
-};
-
-interface GridCanvasProps {
-    blocks: PageBlock[] | undefined;
-    gridSettings: SiteData['gridSettings']['desktop'] | undefined;
-}
-
-const GridCanvas: React.FC<GridCanvasProps> = ({ blocks = [], gridSettings }) => {
-    if (!gridSettings) return null;
-
-    const gridStyle = {
-        display: 'grid',
-        gridTemplateColumns: `repeat(${gridSettings.columns}, 1fr)`,
-        gridAutoRows: `${gridSettings.rowHeight}px`,
-        gap: `${gridSettings.gap}px`,
-    };
-
-    return (
-        <div className="container mx-auto px-4 py-8" style={gridStyle}>
-            {blocks.map(block => {
-                const { desktop: layout } = block.layout;
-                const blockStyle = {
-                    gridColumn: `${layout.colStart} / ${layout.colEnd}`,
-                    gridRow: `${layout.rowStart} / ${layout.rowEnd}`,
-                    alignSelf: layout.alignSelf,
-                    justifySelf: layout.justifySelf,
-                    zIndex: block.styles?.zIndex || 'auto',
-                    position: 'relative' as const,
-                };
-                return (
-                    <div key={block.id} style={blockStyle}>
-                        <BlockRenderer block={block} />
-                    </div>
-                );
-            })}
-        </div>
-    );
-};
-
-
-interface PublicSiteProps {
-  slug: string;
-}
-
-const PublicSite: React.FC<PublicSiteProps> = ({ slug }) => {
-  const [page, setPage] = useState<Page | null>(null);
-  const [status, setStatus] = useState<'loading' | 'success' | 'not_found' | 'error'>('loading');
-
-  useEffect(() => {
-    const fetchContent = async () => {
-        setStatus('loading');
-        try {
-            const endpoint = slug === 'home' ? '/api/site/pages/public/home' : `/api/site/pages/public/slug/${slug}`;
-            const response = await fetch(endpoint);
-            if (response.status === 404) {
-                setStatus('not_found');
-                return;
-            }
-            if (!response.ok) throw new Error('A resposta da rede não foi ok');
-            const data: Page = await response.json();
-            setPage(data);
-            setStatus('success');
-        } catch (error) {
-            console.error("Falha ao buscar o conteúdo da página:", error);
-            setStatus('error');
         }
-    };
-    fetchContent();
-  }, [slug]);
-
-  useEffect(() => {
-    if (page?.content?.settings.brandName) {
-      document.title = page.content.settings.brandName;
+        case 'menu': return ( <nav style={inlineStyle} className={`${commonClasses} flex-row items-center justify-center gap-6 ${borderRadiusClass} ${pointerEventsClass}`}> {block.content.items.map(item => ( <a key={item.id} href={item.link} className={`text-slate-300 hover:text-cyan-400 font-medium transition-colors ${pointerEventsClass}`} style={{ opacity: styles.textOpacity }}> {item.label} </a> ))} </nav> );
+        case 'video': const embedUrl = getYouTubeEmbedUrl(block.content.videoUrl, block.content.autoplay, block.content.controls); return embedUrl ? ( <div className={`w-full h-full overflow-hidden ${borderRadiusClass}`}> <iframe width="100%" height="100%" src={embedUrl} title="YouTube video player" frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen className={isEditing ? 'pointer-events-none' : ''}></iframe> </div> ) : <div className="p-4 text-red-400">URL de vídeo inválida.</div>;
+        case 'divider': return <div className="flex items-center justify-center w-full h-full"><hr className="w-full border-slate-700" style={{borderColor: styles.backgroundColor, opacity: styles.backgroundOpacity}}/></div>;
+        case 'spacer': return <div style={inlineStyle} className={borderRadiusClass}></div>;
+        default: return <div className="p-4 bg-red-900 rounded-lg">Bloco desconhecido</div>;
     }
-    // Cleanup function to reset title when component unmounts
-    return () => {
-      document.title = 'Painel de Administração Modular';
+};
+const InteractiveBlock: React.FC<{ block: PageBlock; isSelected: boolean; onMouseDown: (e: React.MouseEvent) => void; onResizeStart: (e: React.MouseEvent, direction: string) => void; }> = ({ block, isSelected, onMouseDown, onResizeStart }) => { const layout = block.layout.desktop; const borderRadiusClass = getBorderRadiusClass(block.styles?.borderRadius); const blockStyle = { gridColumn: `${layout.colStart} / ${layout.colEnd}`, gridRow: `${layout.rowStart} / ${layout.rowEnd}`, alignSelf: layout.alignSelf, justifySelf: layout.justifySelf, zIndex: block.styles?.zIndex || 'auto', }; const resizeHandles = ['ne', 'se', 'sw', 'nw', 'n', 'e', 's', 'w']; return ( <div style={blockStyle} className={`relative group transition-shadow duration-200 ${isSelected ? 'shadow-2xl shadow-cyan-500/30' : ''}`} onMouseDown={onMouseDown} > <div className={`absolute inset-0 ring-2 pointer-events-none transition-all duration-200 ${borderRadiusClass} ${isSelected ? 'ring-cyan-500' : 'ring-transparent group-hover:ring-cyan-500/50'}`}></div> <div className={`w-full h-full overflow-hidden ${borderRadiusClass}`}> <BlockRenderer block={block} isEditing={true} /> </div> {isSelected && resizeHandles.map(dir => ( <div key={dir} className={`absolute w-3 h-3 bg-cyan-500 border-2 border-slate-900 rounded-full resize-handle-${dir} cursor-${dir}-resize z-50`} onMouseDown={(e) => { e.stopPropagation(); onResizeStart(e, dir); }} ></div> ))} </div> ); };
+
+// --- COMPONENTE PRINCIPAL: PublicSite COM EDITOR INTEGRADO ---
+const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
+    const { isAuthenticated, permissions, token } = useAuth();
+    const { navigate } = useRouter();
+    const [pageData, setPageData] = useState<Page | null>(null);
+    const [savedPageData, setSavedPageData] = useState<Page | null>(null);
+    const [status, setStatus] = useState<'loading' | 'success' | 'not_found' | 'error' | 'saving'>('loading');
+    const [collapsedStates, setCollapsedStates] = useState({ top: false, left: false, right: false, bottom: false });
+    const [feedback, setFeedback] = useState<{ type: 'error' | 'success', message: string } | null>(null);
+    
+    // --- Editor State ---
+    const [isEditMode, setIsEditMode] = useState(false);
+    const [isPanelOpen, setIsPanelOpen] = useState(true);
+    const [isToolbarCollapsed, setIsToolbarCollapsed] = useState(false);
+    const [activeTab, setActiveTab] = useState<'components' | 'inspector'>('components');
+    const [selectedBlock, setSelectedBlock] = useState<PageBlock | null>(null);
+    const [selectedContainerId, setSelectedContainerId] = useState<FixedContainerPosition | null>(null);
+    const [interactionState, setInteractionState] = useState<{ type: 'move' | 'resize' | 'new'; block: PageBlock; initialMouse: { x: number; y: number }; initialLayout: BlockLayout; resizeDirection?: string; targetContext: EditorContext; } | null>(null);
+    const canvasRefs = { main: useRef<HTMLDivElement>(null), footer: useRef<HTMLDivElement>(null), top: useRef<HTMLDivElement>(null), left: useRef<HTMLDivElement>(null), right: useRef<HTMLDivElement>(null), bottom: useRef<HTMLDivElement>(null), };
+
+    const canEdit = isAuthenticated && (permissions || []).includes('SITE');
+    const hasUnsavedChanges = useMemo(() => JSON.stringify(pageData) !== JSON.stringify(savedPageData), [pageData, savedPageData]);
+
+    // --- Data Fetching and Management ---
+    useEffect(() => {
+        const fetchContent = async () => { setStatus('loading'); try { const endpoint = slug === 'home' ? '/api/site/pages/public/home' : `/api/site/pages/public/slug/${slug}`; const response = await fetch(endpoint); if (response.status === 404) { setStatus('not_found'); return; } if (!response.ok) throw new Error('A resposta da rede não foi ok'); const data: Page = await response.json(); const content = (data.content || {}) as any; const validatedContent: SiteData = { settings: content?.settings || defaultPageContent.settings, gridSettings: content?.gridSettings || defaultPageContent.gridSettings, fixedContainers: content?.fixedContainers || defaultPageContent.fixedContainers, mainBlocks: content?.mainBlocks || [], footerBlocks: content?.footerBlocks || [], }; data.content = validatedContent; setPageData(data); setSavedPageData(JSON.parse(JSON.stringify(data))); if (data.content?.fixedContainers) { setCollapsedStates({ top: data.content.fixedContainers.top.isCollapsed, left: data.content.fixedContainers.left.isCollapsed, right: data.content.fixedContainers.right.isCollapsed, bottom: data.content.fixedContainers.bottom.isCollapsed }); } setStatus('success'); } catch (error) { console.error("Falha ao buscar o conteúdo da página:", error); setStatus('error'); } };
+        fetchContent();
+    }, [slug]);
+    
+    useEffect(() => { if (pageData?.content?.settings.brandName) { document.title = pageData.content.settings.brandName; } return () => { document.title = 'Painel de Administração Modular'; }; }, [pageData]);
+    
+    // --- Editor Logic Handlers ---
+    const handleFeedback = (type: 'error' | 'success', message: string) => { setFeedback({ type, message }); setTimeout(() => setFeedback(null), 4000); };
+    const updatePageData = (updater: (draft: Page) => void) => { setPageData(prev => { if (!prev) return null; const draft = JSON.parse(JSON.stringify(prev)); updater(draft); return draft; }); };
+    const getBlockArraysForUpdate = (draft: SiteData) => ({ main: draft.mainBlocks, footer: draft.footerBlocks, top: draft.fixedContainers.top.blocks, left: draft.fixedContainers.left.blocks, right: draft.fixedContainers.right.blocks, bottom: draft.fixedContainers.bottom.blocks });
+    const updateBlock = (updatedBlock: PageBlock) => { updatePageData(draft => { if (!draft.content) return; const blockArrays = Object.values(getBlockArraysForUpdate(draft.content)); for (const arr of blockArrays) { const index = arr.findIndex(b => b.id === updatedBlock.id); if (index !== -1) { arr[index] = updatedBlock; setSelectedBlock(updatedBlock); break; } } }); };
+    const handleSaveChanges = async () => { if (!pageData) return; setStatus('saving'); try { const response = await fetch(`/api/site/pages/${pageData.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ title: pageData.title, slug: pageData.slug, is_published: pageData.is_published, content: pageData.content }) }); if (!response.ok) throw new Error((await response.json()).message || 'Falha ao salvar'); const updatedPage = await response.json(); setSavedPageData(JSON.parse(JSON.stringify(updatedPage))); setPageData(updatedPage); handleFeedback('success', 'Salvo com sucesso!'); } catch (error: any) { handleFeedback('error', error.message || 'Falha ao salvar!'); } finally { setStatus('success'); } };
+    const handleDeleteBlock = () => { if (!selectedBlock) return; updatePageData(draft => { if (!draft.content) return; draft.content.mainBlocks = draft.content.mainBlocks.filter(b => b.id !== selectedBlock.id); draft.content.footerBlocks = draft.content.footerBlocks.filter(b => b.id !== selectedBlock.id); if (draft.content.fixedContainers) { (Object.keys(draft.content.fixedContainers) as FixedContainerPosition[]).forEach(pos => { draft.content.fixedContainers[pos].blocks = draft.content.fixedContainers[pos].blocks.filter(b => b.id !== selectedBlock.id); }); } }); setSelectedBlock(null); };
+    const handleZIndexChange = (direction: 'front' | 'back') => { if (!selectedBlock) return; const currentZ = selectedBlock.styles?.zIndex || 0; const newZ = direction === 'front' ? currentZ + 1 : currentZ - 1; updateBlock({ ...selectedBlock, styles: { ...(selectedBlock.styles || {}), zIndex: newZ } }); };
+    const handleToggleContainer = (target: FixedContainerPosition) => { setCollapsedStates(prev => ({ ...prev, [target]: !prev[target] })); };
+
+    // --- Drag, Drop, and Resize Handlers ---
+    const handleNewBlockDragStart = (e: React.MouseEvent, type: PageBlock['type']) => { const newBlock = createNewBlock(type); setInteractionState({ type: 'new', block: newBlock, initialMouse: { x: e.clientX, y: e.clientY }, initialLayout: newBlock.layout.desktop, targetContext: 'main' }); };
+    const handleBlockMouseDown = (e: React.MouseEvent, block: PageBlock, context: EditorContext) => { e.preventDefault(); e.stopPropagation(); if (selectedBlock?.id !== block.id) { setSelectedBlock(block); setSelectedContainerId(null); setActiveTab('inspector'); } setInteractionState({ type: 'move', block, initialMouse: { x: e.clientX, y: e.clientY }, initialLayout: block.layout.desktop, targetContext: context }); };
+    const handleResizeStart = (e: React.MouseEvent, block: PageBlock, direction: string, context: EditorContext) => { e.preventDefault(); e.stopPropagation(); setInteractionState({ type: 'resize', block, resizeDirection: direction, initialMouse: { x: e.clientX, y: e.clientY }, initialLayout: block.layout.desktop, targetContext: context }); };
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => { if (!interactionState || !pageData?.content) return; let currentContext: EditorContext = 'main'; for (const key in canvasRefs) { const ref = canvasRefs[key as keyof typeof canvasRefs]; if (ref.current) { const rect = ref.current.getBoundingClientRect(); if (e.clientX > rect.left && e.clientX < rect.right && e.clientY > rect.top && e.clientY < rect.bottom) { currentContext = key as EditorContext; break; } } } const canvasEl = canvasRefs[currentContext]?.current; if (!canvasEl) return; const grid = pageData.content.gridSettings.desktop; const cellWidth = (canvasEl.getBoundingClientRect().width - (grid.columns - 1) * grid.gap) / grid.columns; const cellHeight = grid.rowHeight; const dx = e.clientX - interactionState.initialMouse.x; const dy = e.clientY - interactionState.initialMouse.y; const dCol = Math.round(dx / (cellWidth + grid.gap)); const dRow = Math.round(dy / (cellHeight + grid.gap)); const { initialLayout } = interactionState; let newLayout = { ...initialLayout }; if (interactionState.type === 'move' || interactionState.type === 'new') { newLayout.colStart = Math.max(1, initialLayout.colStart + dCol); newLayout.rowStart = Math.max(1, initialLayout.rowStart + dRow); newLayout.colEnd = newLayout.colStart + (initialLayout.colEnd - initialLayout.colStart); newLayout.rowEnd = newLayout.rowStart + (initialLayout.rowEnd - initialLayout.rowStart); } else if (interactionState.type === 'resize') { const dir = interactionState.resizeDirection || ''; if (dir.includes('e')) newLayout.colEnd = Math.max(newLayout.colStart + 1, initialLayout.colEnd + dCol); if (dir.includes('w')) newLayout.colStart = Math.min(newLayout.colEnd - 1, initialLayout.colStart + dCol); if (dir.includes('s')) newLayout.rowEnd = Math.max(newLayout.rowStart + 1, initialLayout.rowEnd + dRow); if (dir.includes('n')) newLayout.rowStart = Math.min(newLayout.rowEnd - 1, initialLayout.rowStart + dRow); } const updatedBlock = { ...interactionState.block, layout: { ...interactionState.block.layout, desktop: newLayout } }; if (interactionState.type === 'new') { setInteractionState({...interactionState, block: updatedBlock, targetContext: currentContext }); } else { updateBlock(updatedBlock); } };
+        const handleMouseUp = () => { document.body.style.userSelect = ''; if (interactionState?.type === 'new') { const finalContext = interactionState.targetContext; updatePageData(draft => { if(!draft.content) return; const blockArrays = getBlockArraysForUpdate(draft.content); blockArrays[finalContext].push(interactionState.block); }); setSelectedBlock(interactionState.block); setSelectedContainerId(null); setActiveTab('inspector'); } setInteractionState(null); };
+        if (interactionState) { document.body.style.userSelect = 'none'; window.addEventListener('mousemove', handleMouseMove); window.addEventListener('mouseup', handleMouseUp, { once: true }); }
+        return () => { document.body.style.userSelect = ''; window.removeEventListener('mousemove', handleMouseMove); window.removeEventListener('mouseup', handleMouseUp); };
+    }, [interactionState, pageData?.content?.gridSettings]);
+
+    // Inject styles for resize handles safely
+    useEffect(() => {
+        const styleId = 'resize-handle-styles';
+        if (!document.getElementById(styleId)) {
+            const style = document.createElement('style');
+            style.id = styleId;
+            style.innerHTML = `.resize-handle-ne { top: -6px; right: -6px; } .resize-handle-se { bottom: -6px; right: -6px; } .resize-handle-sw { bottom: -6px; left: -6px; } .resize-handle-nw { top: -6px; left: -6px; } .resize-handle-n { top: -6px; left: 50%; transform: translateX(-50%); cursor: n-resize; } .resize-handle-e { top: 50%; right: -6px; transform: translateY(-50%); cursor: e-resize; } .resize-handle-s { bottom: -6px; left: 50%; transform: translateX(-50%); cursor: s-resize; } .resize-handle-w { top: 50%; left: -6px; transform: translateY(-50%); cursor: w-resize; }`;
+            document.head.appendChild(style);
+        }
+    }, []);
+
+    // --- RENDERERS ---
+    if (status === 'loading') return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Carregando...</div>;
+    if (status === 'not_found') return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white text-center"><div><h1 className="text-4xl font-bold">404 - Página Não Encontrada</h1><p className="text-slate-400 mt-2">A página que você está procurando não existe.</p></div></div>;
+    if (status === 'error' || !pageData?.content) return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-red-400 text-center">Ocorreu um erro ao carregar o conteúdo.</div>;
+    
+    const { settings, gridSettings, fixedContainers, mainBlocks, footerBlocks } = pageData.content;
+    const pageStyle = { backgroundColor: settings?.backgroundColor || '#0f172a' };
+    const mainContentStyle: React.CSSProperties = { paddingTop: (fixedContainers?.top?.enabled && !collapsedStates.top) ? `${fixedContainers.top.size}px` : 0, paddingBottom: (fixedContainers?.bottom?.enabled && !collapsedStates.bottom) ? `${fixedContainers.bottom.size}px` : 0, paddingLeft: (fixedContainers?.left?.enabled && !collapsedStates.left) ? `${fixedContainers.left.size}px` : 0, paddingRight: (fixedContainers?.right?.enabled && !collapsedStates.right) ? `${fixedContainers.right.size}px` : 0, transition: 'padding 0.3s ease-in-out', };
+
+    const GridCanvas = ({ blocks, context, className = "" }: { blocks: PageBlock[]; context: EditorContext; className?: string; }) => {
+        const grid = gridSettings.desktop;
+        const gridStyle = { display: 'grid', gridTemplateColumns: `repeat(${grid.columns}, 1fr)`, gridAutoRows: `${grid.rowHeight}px`, gap: `${grid.gap}px`,};
+        const editorClasses = isEditMode ? '' : '';
+        return ( <div ref={canvasRefs[context]} style={gridStyle} className={`relative w-full h-full ${editorClasses} ${className}`} onMouseDown={(e) => { if (isEditMode && e.target === e.currentTarget) { setSelectedBlock(null); setSelectedContainerId(null); setActiveTab('components'); } }} > {blocks.map(block => isEditMode ? <InteractiveBlock key={block.id} block={block} isSelected={selectedBlock?.id === block.id} onMouseDown={(e) => handleBlockMouseDown(e, block, context)} onResizeStart={(e, dir) => handleResizeStart(e, block, dir, context)} /> : <div key={block.id} style={{ gridColumn: `${block.layout.desktop.colStart} / ${block.layout.desktop.colEnd}`, gridRow: `${block.layout.desktop.rowStart} / ${block.layout.desktop.rowEnd}`, alignSelf: block.layout.desktop.alignSelf, justifySelf: block.layout.desktop.justifySelf, zIndex: block.styles?.zIndex || 'auto', position: 'relative' }}><BlockRenderer block={block} onToggleContainer={handleToggleContainer} /></div>)} </div> );
     };
-  }, [page]);
 
+    const FixedContainerRenderer: React.FC<{position: FixedContainerPosition}> = ({ position }) => {
+        const config = fixedContainers[position];
+        if (!config.enabled && !isEditMode) return null;
+        const isHorizontal = position === 'top' || position === 'bottom';
+        const isCollapsed = collapsedStates[position];
 
-  const siteSettings = page?.content?.settings;
-  const pageStyle = {
-    backgroundColor: siteSettings?.backgroundColor || '#0f172a' // slate-900
-  };
+        const containerStyle: React.CSSProperties = { position: 'fixed', zIndex: 1000, backgroundColor: '#1e293b', transition: 'all 0.3s ease-in-out', ...(isHorizontal ? { left: 0, right: 0, height: `${config.size}px`, transform: isCollapsed && !isEditMode ? `translateY(${position === 'top' ? '-100%' : '100%'})` : 'translateY(0)' } : { top: 0, bottom: 0, width: `${config.size}px`, transform: isCollapsed && !isEditMode ? `translateX(${position === 'left' ? '-100%' : '100%'})` : 'translateX(0)' }), ...(position === 'top' && { top: 0 }), ...(position === 'bottom' && { bottom: 0 }), ...(position === 'left' && { left: 0 }), ...(position === 'right' && { right: 0 }), };
+        if (isEditMode) { containerStyle.position = 'relative'; if(isHorizontal) containerStyle.height = `${config.size}px`; else containerStyle.width = `${config.size}px`; }
 
-  if (status === 'loading') {
-    return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Carregando...</div>;
-  }
-  if (status === 'not_found') {
+        const editorOverlay = isEditMode && <div className={`absolute inset-0 border-2 cursor-pointer ${selectedContainerId === position ? 'border-cyan-500' : 'border-transparent hover:border-cyan-500/50'}`} onClick={() => { setSelectedContainerId(position); setSelectedBlock(null); setActiveTab('inspector'); }}></div>;
+        
+        const toggleButtonPositionClass = {
+            left: 'justify-start',
+            center: 'justify-center',
+            right: 'justify-end',
+            none: 'hidden'
+        }[config.toggleButtonPosition || 'center'];
+
+        return ( <div style={containerStyle} className={`flex-shrink-0 shadow-lg border-slate-700 ${isEditMode ? `p-2 bg-slate-800/50 ${isHorizontal ? 'border-y' : 'border-x'}` : 'border'}`}> {editorOverlay} <GridCanvas blocks={config.blocks} context={position} /> {config.collapsible && !isEditMode && ( <div className={`absolute w-full flex px-2 pointer-events-none ${toggleButtonPositionClass} ${ isHorizontal ? (position === 'top' ? 'bottom-[-16px]' : 'top-[-16px]') : 'top-1/2 -translate-y-1/2' } ${ !isHorizontal ? (position === 'left' ? 'right-[-16px]' : 'left-[-16px]') : '' } `}> <button onClick={() => setCollapsedStates(prev => ({ ...prev, [position]: !prev[position] }))} className={`pointer-events-auto z-10 w-8 h-8 rounded-full flex items-center justify-center text-white bg-slate-700 hover:bg-cyan-600`}> {isCollapsed ? <PanelOpenIcon className="w-4 h-4" /> : <PanelCloseIcon className="w-4 h-4" />} </button> </div>)} </div> );
+    };
+
     return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white text-center">
-            <div>
-                <h1 className="text-4xl font-bold">404 - Página Não Encontrada</h1>
-                <p className="text-slate-400 mt-2">A página que você está procurando não existe.</p>
+        <div className={`min-h-screen font-sans w-full h-full flex flex-col`} style={pageStyle}>
+            {canEdit && (
+                 <div className={`sticky top-0 z-[9998] transition-transform duration-300 ease-in-out ${isToolbarCollapsed ? '-translate-y-full' : 'translate-y-0'}`}>
+                    <header className="bg-slate-900/80 backdrop-blur-sm border-b border-slate-800 flex items-center justify-between h-16 px-6 flex-shrink-0">
+                        <div className="flex items-center gap-4">
+                            <button onClick={() => navigate('/administrator')} className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold py-2 px-4 rounded-lg inline-flex items-center"><ArrowLeftIcon className="w-5 h-5 mr-2" /><span>Painel</span></button>
+                            <h2 className="text-xl font-bold text-slate-100 hidden sm:block">Editor de Site</h2>
+                        </div>
+                        {feedback && <div className={`absolute left-1/2 -translate-x-1/2 text-sm font-semibold ${feedback.type === 'error' ? 'text-red-400' : 'text-green-400'}`}>{feedback.message}</div>}
+                        <div className="flex items-center gap-4">
+                            <div className="h-8 text-sm font-semibold flex items-center">{hasUnsavedChanges ? <span className="text-yellow-400">Alterações não salvas</span> : <span className="text-green-400/80">Sincronizado</span>}</div>
+                            <button onClick={handleSaveChanges} disabled={!hasUnsavedChanges || status === 'saving'} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-3 rounded-lg disabled:bg-slate-600 disabled:cursor-not-allowed flex items-center justify-center gap-2"><SaveIcon className="w-5 h-5"/> <span className="hidden md:inline">{status === 'saving' ? 'Salvando...' : 'Salvar'}</span></button>
+                            <button onClick={() => setIsEditMode(!isEditMode)} className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold py-2 px-3 rounded-lg flex items-center gap-2">{isEditMode ? <><EyeOffIcon className="w-5 h-5"/> <span className="hidden md:inline">Visualizar</span></> : <><EyeIcon className="w-5 h-5"/> <span className="hidden md:inline">Editar</span></>}</button>
+                        </div>
+                    </header>
+                    <button onClick={() => setIsToolbarCollapsed(true)} className="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 p-1 rounded-b-lg text-slate-400 hover:text-white"><ChevronsUpIcon className="w-4 h-4" /></button>
+                 </div>
+            )}
+            {canEdit && isToolbarCollapsed && (
+                <button onClick={() => setIsToolbarCollapsed(false)} className="fixed top-2 left-1/2 -translate-x-1/2 z-50 bg-slate-800/80 backdrop-blur-sm p-2 rounded-b-lg text-slate-400 hover:text-white animate-fade-in">
+                    <ChevronsDownIcon className="w-5 h-5" />
+                </button>
+            )}
+            
+            <div className={`flex flex-1 w-full relative overflow-hidden ${isEditMode ? 'flex-row' : 'flex-col'}`}>
+                {isEditMode && (
+                    <>
+                        <aside className={`flex-shrink-0 bg-slate-800/80 backdrop-blur-sm border-r border-slate-700 transition-all duration-300 ease-in-out overflow-y-auto ${isPanelOpen ? 'w-full max-w-sm' : 'w-0'}`}>
+                            <div className="h-full flex flex-col">
+                                <div className="flex-shrink-0 border-b border-slate-700 flex"> <button onClick={() => setActiveTab('components')} className={`flex-1 p-3 text-sm font-semibold capitalize ${activeTab === 'components' ? 'bg-slate-900 text-cyan-400' : 'text-slate-400 hover:bg-slate-700'}`}>Componentes</button> <button onClick={() => setActiveTab('inspector')} className={`flex-1 p-3 text-sm font-semibold capitalize ${activeTab === 'inspector' ? 'bg-slate-900 text-cyan-400' : 'text-slate-400 hover:bg-slate-700'}`}>Inspector</button> </div>
+                                <div className="flex-grow overflow-y-auto">
+                                   {activeTab === 'inspector' && <InspectorPanel selectedBlock={selectedBlock} selectedContainerId={selectedContainerId} pageData={pageData.content} onUpdateBlock={updateBlock} onUpdatePageSettings={(f, v) => updatePageData(d => { if(d.content) (d.content.settings as any)[f] = v; })} onUpdateGridSettings={(f,v) => updatePageData(d => { if(d.content) (d.content.gridSettings.desktop as any)[f] = v; })} onUpdateContainer={(id, f, v) => updatePageData(d => { if (d.content) (d.content.fixedContainers[id] as any)[f] = v; })} onZIndexChange={handleZIndexChange} />}
+                                   {activeTab === 'components' && ( <div className="p-4 grid grid-cols-2 gap-2"> <h3 className="text-lg font-bold text-cyan-400 mb-2 col-span-2">Componentes</h3> <p className="text-xs text-slate-500 mb-2 col-span-2">Arraste para a página.</p> {componentList.map(({ type, label, Icon }) => ( <div key={type} onMouseDown={(e) => handleNewBlockDragStart(e, type)} className="w-full flex flex-col items-center justify-center gap-2 p-3 bg-slate-700 rounded-md text-center cursor-grab aspect-square"> <Icon className="w-6 h-6 text-cyan-400"/> <span className="text-xs">{label}</span> </div> ))} </div> )}
+                                </div>
+                                {selectedBlock && <div className="flex-shrink-0 p-4 border-t border-slate-700 bg-slate-800"><button onClick={handleDeleteBlock} className="w-full bg-red-800 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2"><Trash2Icon className="w-5 h-5"/> Excluir Bloco</button></div>}
+                            </div>
+                        </aside>
+                         <button 
+                            onClick={() => setIsPanelOpen(!isPanelOpen)}
+                            title={isPanelOpen ? "Recolher Painel" : "Expandir Painel"}
+                            className="absolute top-1/2 -translate-y-1/2 w-6 h-20 bg-slate-800 hover:bg-cyan-600 text-white z-40 transition-all duration-300 ease-in-out flex items-center justify-center rounded-r-lg border-y border-r border-slate-700"
+                            style={{ left: isPanelOpen ? '24rem' : '0' }}
+                        >
+                            <ChevronLeftIcon className={`w-5 h-5 transition-transform duration-300 ${isPanelOpen ? 'transform rotate-0' : 'transform rotate-180'}`} />
+                        </button>
+                    </>
+                )}
+
+                <div className="flex-1 relative" style={isEditMode ? {} : mainContentStyle}>
+                    <div className="absolute inset-0 overflow-auto flex flex-col">
+                        <FixedContainerRenderer position="top" />
+                        <div className="flex flex-row flex-grow min-h-0">
+                            <FixedContainerRenderer position="left" />
+                            <main className="flex-grow p-4 space-y-4 flex flex-col">
+                                <div className="p-2 flex-grow min-h-[200px]"><h3 className={`text-center text-xs font-semibold uppercase text-slate-500 mb-2 ${isEditMode ? '' : 'hidden'}`}>Página Principal</h3><GridCanvas blocks={mainBlocks} context="main" /></div>
+                                <div className={`p-2 ${isEditMode ? 'border-t-2 border-dashed border-slate-700/50' : ''} ${footerBlocks.length === 0 && !isEditMode ? 'hidden' : ''}`}><h3 className={`text-center text-xs font-semibold uppercase text-slate-500 mb-2 ${isEditMode ? '' : 'hidden'}`}>Rodapé</h3><GridCanvas blocks={footerBlocks} context="footer"/></div>
+                            </main>
+                            <FixedContainerRenderer position="right" />
+                        </div>
+                        <FixedContainerRenderer position="bottom" />
+                    </div>
+                </div>
+                 {interactionState?.type === 'new' && ( <div className="fixed top-0 left-0 pointer-events-none z-[9999] opacity-80" style={{ transform: `translate(${interactionState.initialMouse.x + 10}px, ${interactionState.initialMouse.y + 10}px)`}}> <div className="flex items-center gap-3 p-3 bg-slate-700 rounded-md text-left shadow-lg"> <PointerIcon className="w-5 h-5 text-cyan-400"/> Novo Bloco: {interactionState.block.type} </div> </div> )}
             </div>
         </div>
     );
-  }
-  if (status === 'error' || !page?.content) {
-     return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-900 text-red-400 text-center">
-            Ocorreu um erro ao carregar o conteúdo.
-        </div>
-     );
-  }
-
-  return (
-    <div className="min-h-screen text-slate-100 font-sans" style={pageStyle}>
-        <header>
-            <GridCanvas blocks={page.content.headerBlocks} gridSettings={page.content.gridSettings.desktop} />
-        </header>
-        <main>
-            <GridCanvas blocks={page.content.contentBlocks} gridSettings={page.content.gridSettings.desktop} />
-        </main>
-        <footer>
-            <GridCanvas blocks={page.content.footerBlocks} gridSettings={page.content.gridSettings.desktop} />
-        </footer>
-    </div>
-  );
 };
 
 export default PublicSite;
