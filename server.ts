@@ -1,8 +1,7 @@
 // server.ts - O Orquestrador Principal
 /// <reference types="node" />
 
-// FIX: Aliased Request and Response to avoid conflicts with global types.
-import express, { Request as ExpressRequest, Response as ExpressResponse } from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -14,15 +13,15 @@ import { initializeDatabase, pool } from './core/db';
 // Carrega as variáveis de ambiente antes de qualquer outra coisa
 dotenv.config();
 
-const app = express();
+// FIX: Explicitly type the express app to resolve middleware type conflicts.
+const app: express.Express = express();
 const PORT = process.env.PORT || 8069;
 
 app.use(cors());
 app.use(express.json());
 
 // --- Rota de Verificação de Saúde ---
-// FIX: Use aliased express types to avoid conflicts.
-app.get('/api/health', async (req: ExpressRequest, res: ExpressResponse) => {
+app.get('/api/health', async (req: Request, res: Response) => {
     try {
         const client = await pool.connect();
         await client.query('SELECT 1');
@@ -80,8 +79,7 @@ const serveFrontend = () => {
     app.use('/dist/client', express.static(clientDistPath));
     app.use(express.static(staticRootPath));
 
-    // FIX: Use aliased express types to avoid conflicts.
-    app.get('*', (req: ExpressRequest, res: ExpressResponse) => {
+    app.get('*', (req: Request, res: Response) => {
         if (req.path.startsWith('/api/')) {
             return res.status(404).json({ message: 'Endpoint da API não encontrado.' });
         }

@@ -1,18 +1,18 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Page, SiteData, PageBlock, SiteSettings, HeroBlockContent, TextBlockContent, ImageBlockContent, ButtonBlockContent, MenuBlockContent, VideoBlockContent, MenuItem, GridSettings, BlockLayout, BlockStyles } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
-// FIX: Added GridIcon to imports
-import { PlusCircleIcon, SettingsIcon, Trash2Icon, MotorcycleIcon, TypeIcon, ImageIcon, CodeIcon, ChevronLeftIcon, ChevronRightIcon, SaveIcon, ArrowLeftIcon, FilePlusIcon, EditIcon, LayoutIcon, MenuIcon, PointerIcon, AlignStartVerticalIcon, AlignCenterVerticalIcon, AlignEndVerticalIcon, AlignStartHorizontalIcon, AlignCenterHorizontalIcon, AlignEndHorizontalIcon, GridIcon, VideoIcon, DividerIcon, SparklesIcon } from '../../components/icons/Icons';
+// FIX: Added GridIcon and new layer icons to imports
+import { PlusCircleIcon, SettingsIcon, Trash2Icon, MotorcycleIcon, TypeIcon, ImageIcon, CodeIcon, ChevronLeftIcon, ChevronRightIcon, SaveIcon, ArrowLeftIcon, FilePlusIcon, EditIcon, LayoutIcon, MenuIcon, PointerIcon, AlignStartVerticalIcon, AlignCenterVerticalIcon, AlignEndVerticalIcon, AlignStartHorizontalIcon, AlignCenterHorizontalIcon, AlignEndHorizontalIcon, GridIcon, VideoIcon, DividerIcon, SparklesIcon, BringToFrontIcon, SendToBackIcon, BoldIcon, ItalicIcon, AlignLeftIcon, AlignCenterIcon, AlignRightIcon, AlignJustifyIcon } from '../../components/icons/Icons';
 
 // --- UTILITIES & HELPERS ---
 const generateId = (prefix = 'id') => `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
 const defaultGridSettings: GridSettings = { columns: 48, rowHeight: 10, gap: 8 };
 const defaultLayout: BlockLayout = { colStart: 1, colEnd: 13, rowStart: 1, rowEnd: 13, alignSelf: 'stretch', justifySelf: 'stretch' };
-const defaultStyles: BlockStyles = { backgroundColor: '#1e293b', opacity: 1, textColor: '#cbd5e1'};
+const defaultStyles: BlockStyles = { backgroundColor: '#1e293b', opacity: 1, textColor: '#cbd5e1', zIndex: 0, textAlign: 'left', fontWeight: 'normal', fontStyle: 'normal', fontFamily: 'sans-serif'};
 
 const defaultPageContent: SiteData = {
-  settings: { brandName: 'Nova Marca', loginButtonText: 'Login', backgroundColor: '#0f172a' },
+  settings: { brandName: 'Nova Marca', backgroundColor: '#0f172a' },
   gridSettings: { desktop: defaultGridSettings },
   headerBlocks: [],
   contentBlocks: [],
@@ -28,11 +28,10 @@ const createNewBlock = (type: PageBlock['type']): PageBlock => {
       case 'image': return { ...baseBlock, type, content: { imageUrl: 'https://via.placeholder.com/600x400.png/1e293b/94a3b8?text=Imagem', altText: 'Imagem de Exemplo' } };
       case 'button': return { ...baseBlock, type, content: { text: 'Clique Aqui', link: '#' } };
       case 'menu': return { ...baseBlock, type, content: { items: [{ id: generateId('menuitem'), label: 'Home', link: '#/'}, { id: generateId('menuitem'), label: 'Sobre', link: '#/sobre'}] } };
-      case 'video': return { ...baseBlock, type, content: { videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' } };
+      case 'video': return { ...baseBlock, type, content: { videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', autoplay: false, controls: true } };
       case 'divider': return { ...baseBlock, type, content: {} };
       case 'spacer': return { ...baseBlock, type, content: {} };
       default: {
-        // Fallback for any unhandled type
         const _: never = type;
         return { ...baseBlock, type: 'text', content: { heading: 'Bloco Desconhecido', body: '' } };
       }
@@ -55,7 +54,29 @@ const InputField: React.FC<{ label: string; value: string | number; onChange: (v
 const TextareaField: React.FC<{ label: string; value: string; onChange: (value: string) => void }> = ({ label, value, onChange }) => ( <div> <label className="block text-sm font-medium text-slate-400 mb-1">{label}</label> <textarea value={value} onChange={e => onChange(e.target.value)} rows={5} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-sm" /> </div> );
 const ColorField: React.FC<{ label: string; value: string; onChange: (value: string) => void }> = ({ label, value, onChange }) => ( <div> <label className="block text-sm font-medium text-slate-400 mb-1">{label}</label> <div className="flex items-center gap-2"> <input type="color" value={value} onChange={e => onChange(e.target.value)} className="w-8 h-8 p-0 border-none rounded bg-slate-900" /> <input value={value} onChange={e => onChange(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-md p-2 text-sm" /> </div> </div> );
 const ToggleField: React.FC<{ label: string; checked: boolean; onChange: (checked: boolean) => void; }> = ({ label, checked, onChange }) => ( <div className="flex items-center justify-between"> <label className="text-sm font-medium text-slate-400">{label}</label> <button onClick={() => onChange(!checked)} className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${checked ? 'bg-cyan-600' : 'bg-slate-700'}`}> <span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'}`} /> </button> </div>);
-const ButtonGroupField: React.FC<{ label: string; value: string; options: { value: string; icon: React.FC<{className?: string}> }[]; onChange: (value: string) => void }> = ({ label, value, options, onChange }) => (<div><label className="block text-sm font-medium text-slate-400 mb-1">{label}</label><div className="flex rounded-md bg-slate-900 border border-slate-700 p-1">{options.map(opt => <button key={opt.value} onClick={() => onChange(opt.value)} className={`flex-1 p-1 rounded ${value === opt.value ? 'bg-cyan-600' : 'hover:bg-slate-700'}`}><opt.icon className="w-4 h-4 mx-auto"/></button>)}</div></div>);
+const ButtonGroupField: React.FC<{ label: string; value: any; options: { value: any; icon: React.FC<{className?: string}>; title: string }[]; onChange: (value: any) => void; isToggle?: boolean }> = ({ label, value, options, onChange, isToggle=false }) => (<div><label className="block text-sm font-medium text-slate-400 mb-1">{label}</label><div className="flex rounded-md bg-slate-900 border border-slate-700 p-1">{options.map(opt => <button key={opt.value} title={opt.title} onClick={() => onChange(isToggle ? (value === opt.value ? 'normal' : opt.value) : opt.value)} className={`flex-1 p-1 rounded ${value === opt.value ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:bg-slate-700'}`}><opt.icon className="w-4 h-4 mx-auto"/></button>)}</div></div>);
+
+const RichTextToolbar: React.FC<{ styles: BlockStyles, onStyleChange: (field: keyof BlockStyles, value: any) => void }> = ({ styles, onStyleChange }) => (
+    <div className="p-2 bg-slate-900 rounded-md border border-slate-700 space-y-2">
+        <select value={styles.fontFamily || 'sans-serif'} onChange={e => onStyleChange('fontFamily', e.target.value)} className="w-full bg-slate-800 border border-slate-600 rounded p-1 text-xs">
+            <option value="sans-serif">Sans-serif</option>
+            <option value="serif">Serif</option>
+            <option value="monospace">Monospace</option>
+            <option value="cursive">Cursive</option>
+        </select>
+        <div className="grid grid-cols-2 gap-2">
+            <ButtonGroupField label="Estilo" value={styles.fontWeight} options={[{ value: 'bold', icon: BoldIcon, title: 'Negrito'}]} onChange={v => onStyleChange('fontWeight', v)} isToggle />
+            <ButtonGroupField label="" value={styles.fontStyle} options={[{ value: 'italic', icon: ItalicIcon, title: 'Itálico'}]} onChange={v => onStyleChange('fontStyle', v)} isToggle />
+        </div>
+         <ButtonGroupField label="Alinhamento" value={styles.textAlign} options={[
+            { value: 'left', icon: AlignLeftIcon, title: 'Esquerda' },
+            { value: 'center', icon: AlignCenterIcon, title: 'Centro' },
+            { value: 'right', icon: AlignRightIcon, title: 'Direita' },
+            { value: 'justify', icon: AlignJustifyIcon, title: 'Justificado' },
+         ]} onChange={v => onStyleChange('textAlign', v)} />
+    </div>
+);
+
 
 const InspectorPanel: React.FC<{
     selectedBlock: PageBlock | null;
@@ -63,56 +84,49 @@ const InspectorPanel: React.FC<{
     onUpdateBlock: (updatedBlock: PageBlock) => void;
     onUpdatePageSettings: (field: keyof SiteSettings, value: string) => void;
     onUpdateGridSettings: (field: keyof GridSettings, value: number) => void;
-}> = ({ selectedBlock: block, pageData, onUpdateBlock, onUpdatePageSettings, onUpdateGridSettings }) => {
+    onZIndexChange: (direction: 'front' | 'back') => void;
+}> = ({ selectedBlock, pageData, onUpdateBlock, onUpdatePageSettings, onUpdateGridSettings, onZIndexChange }) => {
     
-    // FIX: Use a derived state for inputs to avoid re-renders resetting typed values
-    const [inspectorData, setInspectorData] = useState<PageBlock | null>(null);
-
-    useEffect(() => {
-        setInspectorData(block);
-    }, [block]);
-
-    if (!inspectorData && !pageData) {
+    if (!selectedBlock && !pageData) {
         return null;
     }
 
     const handleUpdate = (updatedBlock: PageBlock) => {
-        setInspectorData(updatedBlock);
         onUpdateBlock(updatedBlock);
     };
 
     const handleLayoutChange = (field: keyof BlockLayout, value: string | number) => {
-        if (!inspectorData) return;
-        const newLayout = { ...inspectorData.layout.desktop, [field]: value };
-        handleUpdate({ ...inspectorData, layout: { ...inspectorData.layout, desktop: newLayout } });
+        if (!selectedBlock) return;
+        const newLayout = { ...selectedBlock.layout.desktop, [field]: value };
+        handleUpdate({ ...selectedBlock, layout: { ...selectedBlock.layout, desktop: newLayout } });
     };
 
     const handleStyleChange = (field: keyof BlockStyles, value: string | number) => {
-        if (!inspectorData) return;
-        const newStyles = { ...defaultStyles, ...inspectorData.styles, [field]: value };
-        handleUpdate({ ...inspectorData, styles: newStyles });
+        if (!selectedBlock) return;
+        const newStyles = { ...defaultStyles, ...selectedBlock.styles, [field]: value };
+        handleUpdate({ ...selectedBlock, styles: newStyles });
     };
 
     const renderBlockInspector = () => {
-        if (!inspectorData) return null;
+        if (!selectedBlock) return null;
         
-        const layout = inspectorData.layout.desktop;
-        const styles = { ...defaultStyles, ...inspectorData.styles };
+        const layout = selectedBlock.layout.desktop;
+        const styles = { ...defaultStyles, ...selectedBlock.styles };
         
         let contentInspector;
-        switch (inspectorData.type) {
-            case 'hero': { const handleContentChange = (field: keyof HeroBlockContent, value: string | boolean) => { handleUpdate({ ...inspectorData, content: { ...inspectorData.content, [field]: value } }); }; contentInspector = <> <InputField label="Título" value={inspectorData.content.title} onChange={v => handleContentChange('title', v)} /> <InputField label="Subtítulo" value={inspectorData.content.subtitle} onChange={v => handleContentChange('subtitle', v)} /> <ToggleField label="Botão Ativo" checked={inspectorData.content.ctaEnabled} onChange={v => handleContentChange('ctaEnabled', v)} /> {inspectorData.content.ctaEnabled && <> <InputField label="Texto do Botão" value={inspectorData.content.ctaText} onChange={v => handleContentChange('ctaText', v)} /> <InputField label="Link do Botão" value={inspectorData.content.ctaLink} onChange={v => handleContentChange('ctaLink', v)} /> </>} </>; break; }
-            case 'text': { const handleContentChange = (field: keyof TextBlockContent, value: string) => { handleUpdate({ ...inspectorData, content: { ...inspectorData.content, [field]: value } }); }; contentInspector = <> <InputField label="Cabeçalho" value={inspectorData.content.heading} onChange={v => handleContentChange('heading', v)} /> <TextareaField label="Corpo do Texto" value={inspectorData.content.body} onChange={v => handleContentChange('body', v)} /> </>; break; }
-            case 'image': { const handleContentChange = (field: keyof ImageBlockContent, value: string) => { handleUpdate({ ...inspectorData, content: { ...inspectorData.content, [field]: value } }); }; contentInspector = <> <InputField label="URL da Imagem" value={inspectorData.content.imageUrl} onChange={v => handleContentChange('imageUrl', v)} /> <InputField label="Texto Alternativo" value={inspectorData.content.altText} onChange={v => handleContentChange('altText', v)} /> </>; break; }
-            case 'button': { const handleContentChange = (field: keyof ButtonBlockContent, value: string) => { handleUpdate({ ...inspectorData, content: { ...inspectorData.content, [field]: value } }); }; contentInspector = <> <InputField label="Texto do Botão" value={inspectorData.content.text} onChange={v => handleContentChange('text', v)} /> <InputField label="Link" value={inspectorData.content.link} onChange={v => handleContentChange('link', v)} /> </>; break; }
-            case 'menu': { const menuContent = inspectorData.content; const handleItemChange = (itemId: string, field: 'label' | 'link', value: string) => { const newItems = menuContent.items.map(item => item.id === itemId ? { ...item, [field]: value } : item); handleUpdate({ ...inspectorData, content: { ...menuContent, items: newItems }}); }; contentInspector = <> <h4 className="text-md font-semibold text-slate-300 mb-2">Itens do Menu</h4> {menuContent.items.map(item => ( <div key={item.id} className="p-2 border border-slate-700 rounded mb-2 space-y-2"> <InputField label="Rótulo" value={item.label} onChange={v => handleItemChange(item.id, 'label', v)} /> <InputField label="Link" value={item.link} onChange={v => handleItemChange(item.id, 'link', v)} /> </div> ))} </>; break; }
-            case 'video': { const handleContentChange = (field: keyof VideoBlockContent, value: string) => { handleUpdate({ ...inspectorData, content: { ...inspectorData.content, [field]: value } }); }; contentInspector = <InputField label="URL do Vídeo (YouTube)" value={inspectorData.content.videoUrl} onChange={v => handleContentChange('videoUrl', v)} />; break; }
+        const hasRichText = ['hero', 'text', 'button', 'menu'].includes(selectedBlock.type);
+
+        switch (selectedBlock.type) {
+            case 'hero': { const handleContentChange = (field: keyof HeroBlockContent, value: string | boolean) => { handleUpdate({ ...selectedBlock, content: { ...selectedBlock.content, [field]: value } }); }; contentInspector = <> <InputField label="Título" value={selectedBlock.content.title} onChange={v => handleContentChange('title', v)} /> <TextareaField label="Subtítulo" value={selectedBlock.content.subtitle} onChange={v => handleContentChange('subtitle', v)} /> <ToggleField label="Botão Ativo" checked={selectedBlock.content.ctaEnabled} onChange={v => handleContentChange('ctaEnabled', v)} /> {selectedBlock.content.ctaEnabled && <> <InputField label="Texto do Botão" value={selectedBlock.content.ctaText} onChange={v => handleContentChange('ctaText', v)} /> <InputField label="Link do Botão" value={selectedBlock.content.ctaLink} onChange={v => handleContentChange('ctaLink', v)} /> </>} </>; break; }
+            case 'text': { const handleContentChange = (field: keyof TextBlockContent, value: string) => { handleUpdate({ ...selectedBlock, content: { ...selectedBlock.content, [field]: value } }); }; contentInspector = <> <InputField label="Cabeçalho" value={selectedBlock.content.heading} onChange={v => handleContentChange('heading', v)} /> <TextareaField label="Corpo do Texto" value={selectedBlock.content.body} onChange={v => handleContentChange('body', v)} /> </>; break; }
+            case 'image': { const handleContentChange = (field: keyof ImageBlockContent, value: string) => { handleUpdate({ ...selectedBlock, content: { ...selectedBlock.content, [field]: value } }); }; contentInspector = <> <InputField label="URL da Imagem" value={selectedBlock.content.imageUrl} onChange={v => handleContentChange('imageUrl', v)} /> <InputField label="Texto Alternativo" value={selectedBlock.content.altText} onChange={v => handleContentChange('altText', v)} /> </>; break; }
+            case 'button': { const handleContentChange = (field: keyof ButtonBlockContent, value: string) => { handleUpdate({ ...selectedBlock, content: { ...selectedBlock.content, [field]: value } }); }; contentInspector = <> <InputField label="Texto do Botão" value={selectedBlock.content.text} onChange={v => handleContentChange('text', v)} /> <InputField label="Link" value={selectedBlock.content.link} onChange={v => handleContentChange('link', v)} /> </>; break; }
+            case 'menu': { const menuContent = selectedBlock.content; const handleItemChange = (itemId: string, field: 'label' | 'link', value: string) => { const newItems = menuContent.items.map(item => item.id === itemId ? { ...item, [field]: value } : item); handleUpdate({ ...selectedBlock, content: { ...menuContent, items: newItems }}); }; contentInspector = <> <h4 className="text-md font-semibold text-slate-300 mb-2">Itens do Menu</h4> {menuContent.items.map(item => ( <div key={item.id} className="p-2 border border-slate-700 rounded mb-2 space-y-2"> <InputField label="Rótulo" value={item.label} onChange={v => handleItemChange(item.id, 'label', v)} /> <InputField label="Link" value={item.link} onChange={v => handleItemChange(item.id, 'link', v)} /> </div> ))} </>; break; }
+            case 'video': { const handleContentChange = (field: keyof VideoBlockContent, value: string | boolean) => { handleUpdate({ ...selectedBlock, content: { ...(selectedBlock.content as VideoBlockContent), [field]: value } }); }; const videoContent = selectedBlock.content; contentInspector = <> <InputField label="URL do Vídeo (YouTube)" value={videoContent.videoUrl} onChange={v => handleContentChange('videoUrl', v)} /> <ToggleField label="Autoplay (com mudo)" checked={videoContent.autoplay || false} onChange={v => handleContentChange('autoplay', v)} /> <ToggleField label="Mostrar Controles" checked={videoContent.controls !== false} onChange={v => handleContentChange('controls', v)} /> </>; break; }
             case 'divider':
             case 'spacer': contentInspector = <p className="text-sm text-slate-500">Este bloco é usado para layout e não possui conteúdo editável.</p>; break;
             default: contentInspector = <p>Inspetor não disponível para este bloco.</p>;
         }
-
-        const showTextColor = inspectorData.type === 'hero' || inspectorData.type === 'text' || inspectorData.type === 'button' || inspectorData.type === 'menu';
 
         return (
             <>
@@ -120,10 +134,18 @@ const InspectorPanel: React.FC<{
                 {contentInspector}
                 
                 <h4 className="text-md font-semibold text-slate-300 mb-2 mt-4 border-t border-slate-700 pt-4">Estilos</h4>
-                 <div className="space-y-2">
+                 <div className="space-y-4">
+                    {hasRichText && <RichTextToolbar styles={styles} onStyleChange={handleStyleChange} />}
                     <ColorField label="Cor de Fundo" value={styles.backgroundColor || '#1e293b'} onChange={v => handleStyleChange('backgroundColor', v)} />
-                    {showTextColor && <ColorField label="Cor do Texto" value={styles.textColor || '#cbd5e1'} onChange={v => handleStyleChange('textColor', v)} />}
+                    <ColorField label="Cor do Texto" value={styles.textColor || '#cbd5e1'} onChange={v => handleStyleChange('textColor', v)} />
                     <InputField label="Opacidade" type="range" value={styles.opacity || 1} onChange={v => handleStyleChange('opacity', parseFloat(v))} min={0} max={1} step={0.05} />
+                    <div>
+                        <label className="block text-sm font-medium text-slate-400 mb-1">Camadas</label>
+                        <div className="flex gap-2">
+                            <button onClick={() => onZIndexChange('back')} className="flex-1 p-2 bg-slate-700 hover:bg-slate-600 rounded-md flex items-center justify-center gap-2"><SendToBackIcon className="w-4 h-4"/> Para Trás</button>
+                            <button onClick={() => onZIndexChange('front')} className="flex-1 p-2 bg-slate-700 hover:bg-slate-600 rounded-md flex items-center justify-center gap-2"><BringToFrontIcon className="w-4 h-4"/> Para Frente</button>
+                        </div>
+                    </div>
                  </div>
 
                 <h4 className="text-md font-semibold text-slate-300 mb-2 mt-4 border-t border-slate-700 pt-4">Layout</h4>
@@ -134,8 +156,8 @@ const InspectorPanel: React.FC<{
                     <InputField label="Linha Fim" type="number" value={layout.rowEnd} onChange={v => handleLayoutChange('rowEnd', parseInt(v))} />
                 </div>
                 <div className="grid grid-cols-2 gap-2 mt-2">
-                    <ButtonGroupField label="Alinhar Vertical" value={layout.alignSelf} options={[{value: 'start', icon: AlignStartVerticalIcon}, {value: 'center', icon: AlignCenterVerticalIcon}, {value: 'end', icon: AlignEndVerticalIcon}, {value: 'stretch', icon: GridIcon}]} onChange={v => handleLayoutChange('alignSelf', v)} />
-                    <ButtonGroupField label="Alinhar Horizontal" value={layout.justifySelf} options={[{value: 'start', icon: AlignStartHorizontalIcon}, {value: 'center', icon: AlignCenterHorizontalIcon}, {value: 'end', icon: AlignEndHorizontalIcon}, {value: 'stretch', icon: GridIcon}]} onChange={v => handleLayoutChange('justifySelf', v)} />
+                    <ButtonGroupField label="Alinhar Vertical" value={layout.alignSelf} options={[{value: 'start', icon: AlignStartVerticalIcon, title: 'Início'}, {value: 'center', icon: AlignCenterVerticalIcon, title: 'Centro'}, {value: 'end', icon: AlignEndVerticalIcon, title: 'Fim'}, {value: 'stretch', icon: GridIcon, title: 'Esticar'}]} onChange={v => handleLayoutChange('alignSelf', v)} />
+                    <ButtonGroupField label="Alinhar Horizontal" value={layout.justifySelf} options={[{value: 'start', icon: AlignStartHorizontalIcon, title: 'Início'}, {value: 'center', icon: AlignCenterHorizontalIcon, title: 'Centro'}, {value: 'end', icon: AlignEndHorizontalIcon, title: 'Fim'}, {value: 'stretch', icon: GridIcon, title: 'Esticar'}]} onChange={v => handleLayoutChange('justifySelf', v)} />
                 </div>
             </>
         )
@@ -148,8 +170,7 @@ const InspectorPanel: React.FC<{
         return (
             <> 
                 <h4 className="text-md font-semibold text-slate-300 mb-2">Configurações Gerais</h4>
-                <InputField label="Nome da Marca" value={settings.brandName} onChange={v => onUpdatePageSettings('brandName', v)} /> 
-                <InputField label="Texto do Botão de Login" value={settings.loginButtonText} onChange={v => onUpdatePageSettings('loginButtonText', v)} /> 
+                <InputField label="Nome da Marca (Título da Página)" value={settings.brandName} onChange={v => onUpdatePageSettings('brandName', v)} /> 
                 <ColorField label="Cor de Fundo da Página" value={settings.backgroundColor} onChange={v => onUpdatePageSettings('backgroundColor', v)} />
                 
                 <h4 className="text-md font-semibold text-slate-300 mb-2 mt-4 border-t border-slate-700 pt-4">Configurações da Grade</h4>
@@ -161,18 +182,18 @@ const InspectorPanel: React.FC<{
     };
 
     const getTitle = () => {
-        if (!inspectorData) return "Configurações da Página";
-        return `Editando Bloco: ${inspectorData.type}`;
+        if (!selectedBlock) return "Configurações da Página";
+        return `Editando Bloco: ${selectedBlock.type}`;
     };
 
     return ( 
         <div className="p-4 space-y-4"> 
             <h3 className="text-lg font-bold text-cyan-400 capitalize flex items-center gap-2">
-                {inspectorData ? <EditIcon className="w-5 h-5"/> : <SettingsIcon className="w-5 h-5"/>} {getTitle()}
+                {selectedBlock ? <EditIcon className="w-5 h-5"/> : <SettingsIcon className="w-5 h-5"/>} {getTitle()}
             </h3> 
             <div className="space-y-4"> 
-                {!inspectorData && renderPageInspector()} 
-                {inspectorData && renderBlockInspector()}
+                {!selectedBlock && renderPageInspector()} 
+                {selectedBlock && renderBlockInspector()}
             </div> 
         </div> 
     );
@@ -182,48 +203,75 @@ const InspectorPanel: React.FC<{
 const EditorBlockRenderer: React.FC<{ block: PageBlock }> = ({ block }) => {
     const commonClasses = "w-full h-full flex flex-col p-2";
     const scaleText = "text-xs md:text-sm";
-    const styles = block.styles || {};
+    const styles = { ...defaultStyles, ...block.styles };
     const inlineStyle = {
         backgroundColor: styles.backgroundColor,
         opacity: styles.opacity,
+        zIndex: styles.zIndex,
+    };
+    
+    const textStyles: React.CSSProperties = {
         color: styles.textColor,
+        textAlign: styles.textAlign,
+        fontWeight: styles.fontWeight,
+        fontStyle: styles.fontStyle,
+        fontFamily: styles.fontFamily,
     };
 
-    const getYouTubeEmbedUrl = (url: string) => {
-        let videoId;
-        if (url.includes('youtube.com/watch?v=')) {
-            videoId = new URL(url).searchParams.get('v');
-        } else if (url.includes('youtu.be/')) {
-            videoId = new URL(url).pathname.split('/').pop();
+    const getYouTubeEmbedUrl = (url: string, autoplay?: boolean, controls?: boolean) => {
+        try {
+            let videoId;
+            if (url.includes('youtube.com/watch')) {
+                videoId = new URL(url).searchParams.get('v');
+            } else if (url.includes('youtu.be/')) {
+                videoId = new URL(url).pathname.split('/').pop();
+            }
+            if (!videoId) return null;
+            
+            const embedUrl = new URL(`https://www.youtube.com/embed/${videoId}`);
+             if (autoplay) {
+                embedUrl.searchParams.set('autoplay', '1');
+                embedUrl.searchParams.set('mute', '1');
+            }
+            if (controls === false) {
+                embedUrl.searchParams.set('controls', '0');
+            }
+            return embedUrl.toString();
+        } catch {
+            return null;
         }
-        return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
     };
 
     switch (block.type) {
         case 'hero':
             return (
                 <div style={inlineStyle} className={`${commonClasses} text-center items-center justify-center rounded-lg`}>
-                    <h1 className="text-lg md:text-xl font-extrabold mb-1" style={{color: styles.textColor}}>{block.content.title}</h1>
-                    <p className={`max-w-2xl mx-auto mb-2 ${scaleText}`} style={{color: styles.textColor}}>{block.content.subtitle}</p>
-                    {block.content.ctaEnabled && <div className="bg-cyan-600 text-white font-bold py-1 px-3 rounded-full text-xs">{block.content.ctaText}</div>}
+                    <h1 className="text-lg md:text-xl font-extrabold mb-1" style={textStyles}>{block.content.title}</h1>
+                    <p className={`max-w-2xl mx-auto mb-2 ${scaleText}`} style={textStyles}>{block.content.subtitle}</p>
+                    {block.content.ctaEnabled && <div className="bg-cyan-600 text-white font-bold py-1 px-3 rounded-full text-xs" style={{...textStyles, backgroundColor: styles.backgroundColor}}>{block.content.ctaText}</div>}
                 </div>
             );
         case 'text':
             return (
                  <div style={inlineStyle} className={`${commonClasses} text-left overflow-hidden`}>
-                    <h2 className="text-md font-bold mb-1 truncate" style={{color: styles.textColor}}>{block.content.heading}</h2>
-                    <p className={`whitespace-pre-wrap leading-relaxed ${scaleText}`} style={{color: styles.textColor}}>{block.content.body}</p>
+                    <h2 className="text-md font-bold mb-1 truncate" style={textStyles}>{block.content.heading}</h2>
+                    <p className={`whitespace-pre-wrap leading-relaxed ${scaleText}`} style={textStyles}>{block.content.body}</p>
                 </div>
             );
         case 'image':
             return <img src={block.content.imageUrl} alt={block.content.altText} className="w-full h-full object-cover rounded-lg" style={{opacity: styles.opacity}}/>;
         case 'button':
-            return <div className={`${commonClasses} items-center justify-center`}><div className="text-white font-bold py-2 px-4 rounded-lg inline-block text-sm" style={inlineStyle}>{block.content.text}</div></div>;
+            return <div className={`${commonClasses} items-center justify-center`}><div className="text-white font-bold py-2 px-4 rounded-lg inline-block text-sm" style={{...inlineStyle, ...textStyles}}>{block.content.text}</div></div>;
         case 'menu':
-            return <nav className={`${commonClasses} flex-row items-center justify-center gap-2`}><p className='text-xs'>Menu</p>{block.content.items.map(item => (<div key={item.id} className={`font-medium ${scaleText}`} style={{color: styles.textColor}}>{item.label}</div>))}</nav>;
+            return <nav style={inlineStyle} className={`${commonClasses} flex-row items-center justify-center gap-2`}><p className='text-xs'>Menu</p>{block.content.items.map(item => (<div key={item.id} className={`font-medium ${scaleText}`} style={textStyles}>{item.label}</div>))}</nav>;
         case 'video':
-            const embedUrl = getYouTubeEmbedUrl(block.content.videoUrl);
-            return <div className="w-full h-full bg-slate-900 rounded-lg flex items-center justify-center text-slate-500"><VideoIcon className="w-1/3 h-1/3"/></div>;
+            const embedUrl = getYouTubeEmbedUrl(block.content.videoUrl, block.content.autoplay, block.content.controls);
+            return (
+                <div className="w-full h-full bg-slate-900 rounded-lg flex items-center justify-center text-slate-500 relative pointer-events-none">
+                    <VideoIcon className="w-1/3 h-1/3"/>
+                    {embedUrl && <iframe src={embedUrl} className="absolute inset-0 w-full h-full" title="preview"></iframe>}
+                </div>
+            );
         case 'divider':
             return <div className="flex items-center justify-center w-full h-full"><hr className="w-full border-slate-700" style={{borderColor: styles.backgroundColor}}/></div>;
         case 'spacer':
@@ -248,6 +296,7 @@ const Block: React.FC<{
         gridRow: `${layout.rowStart} / ${layout.rowEnd}`,
         alignSelf: layout.alignSelf,
         justifySelf: layout.justifySelf,
+        zIndex: block.styles?.zIndex || 'auto',
     };
     const resizeHandles = ['ne', 'se', 'sw', 'nw', 'n', 'e', 's', 'w'];
     return (
@@ -263,7 +312,7 @@ const Block: React.FC<{
             {isSelected && resizeHandles.map(dir => (
                 <div 
                     key={dir}
-                    className={`absolute w-3 h-3 bg-cyan-500 border-2 border-slate-900 rounded-full resize-handle-${dir} cursor-${dir}-resize z-10`}
+                    className={`absolute w-3 h-3 bg-cyan-500 border-2 border-slate-900 rounded-full resize-handle-${dir} cursor-${dir}-resize z-50`}
                     onMouseDown={(e) => { e.stopPropagation(); onResizeStart(e, block, dir); }}
                 ></div>
             ))}
@@ -313,6 +362,13 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
    }, [token]);
 
   useEffect(() => { if (view === 'list') fetchPages(); }, [view, fetchPages]);
+  
+  useEffect(() => {
+    if (view === 'editor' && editingPage?.content?.settings.brandName) {
+      document.title = `Editando: ${editingPage.title} | ${editingPage.content.settings.brandName}`;
+    }
+    return () => { document.title = 'Painel de Administração Modular'; };
+  }, [view, editingPage]);
 
   // --- API Functions ---
   const handleEditPage = async (page: Page) => {
@@ -407,13 +463,43 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
               const index = draft.content[key].findIndex(b => b.id === updatedBlock.id);
               if (index !== -1) {
                   draft.content[key][index] = updatedBlock;
-                  // Ensure selectedBlock state is also updated to reflect this change
                   setSelectedBlock(updatedBlock); 
                   break;
               }
           }
       });
   };
+
+  const handleZIndexChange = (direction: 'front' | 'back') => {
+      if (!selectedBlock) return;
+
+      updateEditingPage(draft => {
+          if (!draft.content) return;
+          const allBlocks = [ ...draft.content.headerBlocks, ...draft.content.contentBlocks, ...draft.content.footerBlocks ];
+          
+          const zIndexes = allBlocks.map(b => b.styles?.zIndex || 0);
+          const maxZ = Math.max(0, ...zIndexes);
+          const minZ = Math.min(0, ...zIndexes);
+          
+          const currentZ = selectedBlock.styles?.zIndex || 0;
+          const newZ = direction === 'front' ? maxZ + 1 : minZ - 1;
+          
+          const blockArrayKeys = ['headerBlocks', 'contentBlocks', 'footerBlocks'] as const;
+          for (const key of blockArrayKeys) {
+              const blockIndex = draft.content[key].findIndex(b => b.id === selectedBlock.id);
+              if (blockIndex !== -1) {
+                  const blockToUpdate = draft.content[key][blockIndex];
+                  if (!blockToUpdate.styles) blockToUpdate.styles = {};
+                  blockToUpdate.styles.zIndex = newZ;
+                  
+                  const updatedSelectedBlock = { ...selectedBlock, styles: { ...(selectedBlock.styles || {}), zIndex: newZ } };
+                  setSelectedBlock(updatedSelectedBlock);
+                  break; 
+              }
+          }
+      });
+  };
+
 
   // --- Drag and Drop / Resize Logic ---
    const getCanvasForContext = (context: 'header' | 'content' | 'footer') => {
@@ -434,13 +520,17 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
   };
 
   const handleBlockMouseDown = (e: React.MouseEvent, block: PageBlock) => {
-    // Prevent starting a move if a resize handle was clicked
-    if (e.target instanceof HTMLElement && e.target.classList.contains('resize-handle-se')) {
-      return;
-    }
+    e.preventDefault();
     e.stopPropagation();
-    setSelectedBlock(block);
-    setActiveTab('inspector');
+    
+    // Update selected block state only if it's different
+    if (selectedBlock?.id !== block.id) {
+        const currentBlockInState = editingPage?.content?.contentBlocks.find(b => b.id === block.id) ||
+                                  editingPage?.content?.headerBlocks.find(b => b.id === block.id) ||
+                                  editingPage?.content?.footerBlocks.find(b => b.id === block.id);
+        setSelectedBlock(currentBlockInState || block);
+        setActiveTab('inspector');
+    }
 
     let context: 'header' | 'content' | 'footer' = 'content';
     if (editingPage?.content?.headerBlocks.some(b => b.id === block.id)) context = 'header';
@@ -456,6 +546,8 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
   };
 
   const handleResizeStart = (e: React.MouseEvent, block: PageBlock, direction: string) => {
+     e.preventDefault();
+     e.stopPropagation();
      let context: 'header' | 'content' | 'footer' = 'content';
      if (editingPage?.content?.headerBlocks.some(b => b.id === block.id)) context = 'header';
      if (editingPage?.content?.footerBlocks.some(b => b.id === block.id)) context = 'footer';
@@ -523,7 +615,7 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
     };
 
     const handleMouseUp = (e: MouseEvent) => {
-        document.body.style.userSelect = ''; // Re-enable text selection
+        document.body.style.userSelect = '';
         if (interactionState?.type === 'new') {
             const finalContext = interactionState.targetContext;
             updateEditingPage(draft => {
@@ -538,12 +630,12 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
     };
 
     if (interactionState) {
-        document.body.style.userSelect = 'none'; // Disable text selection during drag
+        document.body.style.userSelect = 'none';
         window.addEventListener('mousemove', handleMouseMove);
         window.addEventListener('mouseup', handleMouseUp, { once: true });
     }
     return () => {
-        document.body.style.userSelect = ''; // Ensure cleanup
+        document.body.style.userSelect = '';
         window.removeEventListener('mousemove', handleMouseMove);
         window.removeEventListener('mouseup', handleMouseUp);
     };
@@ -612,9 +704,11 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
               ref={canvasRef} 
               style={gridStyle} 
               className="relative bg-slate-900/50 rounded-lg border border-dashed border-slate-700 min-h-[200px] p-2"
-              onMouseDown={() => { 
-                setSelectedBlock(null);
-                setActiveTab('inspector');
+              onMouseDown={(e) => { 
+                if (e.target === e.currentTarget) {
+                    setSelectedBlock(null);
+                    setActiveTab('components');
+                }
               }}
             >
                 {blocks.map(block => (
@@ -639,7 +733,7 @@ const SiteEditor: React.FC<{ onBack: () => void }> = ({ onBack: onBackToDashboar
                 {(['components', 'inspector'] as const).map(tab => ( <button key={tab} onClick={() => setActiveTab(tab)} className={`flex-1 p-3 text-sm font-semibold capitalize ${activeTab === tab ? 'bg-slate-900 text-cyan-400' : 'text-slate-400 hover:bg-slate-700'}`}>{tab}</button>))}
               </div>
               <div className="flex-grow overflow-y-auto">
-                 {activeTab === 'inspector' && <InspectorPanel selectedBlock={selectedBlock} pageData={editingPage.content} onUpdateBlock={updateBlock} onUpdatePageSettings={(f, v) => updateEditingPage(d => d.content && (d.content.settings[f] = v))} onUpdateGridSettings={(f,v) => updateEditingPage(d => d.content && (d.content.gridSettings.desktop[f] = v))}/>}
+                 {activeTab === 'inspector' && <InspectorPanel selectedBlock={selectedBlock} pageData={editingPage.content} onUpdateBlock={updateBlock} onUpdatePageSettings={(f, v) => updateEditingPage(d => d.content && (d.content.settings[f] = v))} onUpdateGridSettings={(f,v) => updateEditingPage(d => d.content && (d.content.gridSettings.desktop[f] = v))} onZIndexChange={handleZIndexChange} />}
                  {activeTab === 'components' && (
                     <div className="p-4 grid grid-cols-2 gap-2">
                         <h3 className="text-lg font-bold text-cyan-400 mb-2 col-span-2">Componentes</h3>

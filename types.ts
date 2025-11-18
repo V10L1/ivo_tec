@@ -53,6 +53,8 @@ export interface MenuBlockContent {
 
 export interface VideoBlockContent {
   videoUrl: string; // YouTube or Vimeo URL
+  autoplay?: boolean;
+  controls?: boolean;
 }
 
 export interface DividerBlockContent {
@@ -67,6 +69,12 @@ export interface BlockStyles {
   backgroundColor?: string;
   opacity?: number; // 0 to 1
   textColor?: string;
+  zIndex?: number;
+  // Rich text styles
+  textAlign?: 'left' | 'center' | 'right' | 'justify';
+  fontWeight?: 'normal' | 'bold';
+  fontStyle?: 'normal' | 'italic';
+  fontFamily?: string;
 }
 
 
@@ -110,7 +118,6 @@ export interface GridSettings {
 
 export interface SiteSettings {
   brandName: string;
-  loginButtonText: string;
   backgroundColor: string;
 }
 

@@ -1,6 +1,5 @@
 // api/usuario/usuario.routes.ts
-// FIX: Aliased Request and Response to avoid conflicts with global types.
-import express, { Request as ExpressRequest, Response as ExpressResponse } from 'express';
+import express, { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { pool } from '../../core/db';
@@ -12,8 +11,8 @@ const JWT_SECRET = process.env.JWT_SECRET!;
 
 // --- Rotas de Setup e Saúde (parte do núcleo de usuário) ---
 
-// FIX: Use aliased express types to avoid conflicts.
-router.get('/setup/status', async (req: ExpressRequest, res: ExpressResponse) => {
+// FIX: Use direct Request and Response types from express.
+router.get('/setup/status', async (req: Request, res: Response) => {
     try {
         const result = await pool.query('SELECT COUNT(*) FROM users');
         const userCount = parseInt(result.rows[0].count, 10);
@@ -24,8 +23,8 @@ router.get('/setup/status', async (req: ExpressRequest, res: ExpressResponse) =>
     }
 });
 
-// FIX: Use aliased express types to avoid conflicts.
-router.post('/setup/initialize', async (req: ExpressRequest, res: ExpressResponse) => {
+// FIX: Use direct Request and Response types from express.
+router.post('/setup/initialize', async (req: Request, res: Response) => {
     try {
         const userCheck = await pool.query('SELECT COUNT(*) FROM users');
         if (parseInt(userCheck.rows[0].count, 10) > 0) {
@@ -54,8 +53,8 @@ router.post('/setup/initialize', async (req: ExpressRequest, res: ExpressRespons
 });
 
 // --- Rotas de Autenticação ---
-// FIX: Use aliased express types to avoid conflicts.
-router.post('/auth/login', async (req: ExpressRequest, res: ExpressResponse) => {
+// FIX: Use direct Request and Response types from express.
+router.post('/auth/login', async (req: Request, res: Response) => {
     const { email, password } = req.body;
     if (!email || !password) {
         return res.status(400).json({ message: 'E-mail e senha são obrigatórios' });
@@ -106,8 +105,8 @@ router.post('/auth/login', async (req: ExpressRequest, res: ExpressResponse) => 
 });
 
 // Rota para verificar um token e obter dados do usuário atual
-// FIX: Use aliased express types to avoid conflicts.
-router.get('/auth/me', verifyToken, async (req: ExpressRequest, res: ExpressResponse) => {
+// FIX: Use direct Request and Response types from express.
+router.get('/auth/me', verifyToken, async (req: Request, res: Response) => {
     if (!req.user) {
         return res.status(401).json({ message: 'Não autenticado' });
     }
@@ -133,8 +132,8 @@ router.get('/auth/me', verifyToken, async (req: ExpressRequest, res: ExpressResp
 });
 
 
-// FIX: Use aliased express types to avoid conflicts.
-router.post('/auth/register', async (req: ExpressRequest, res: ExpressResponse) => {
+// FIX: Use direct Request and Response types from express.
+router.post('/auth/register', async (req: Request, res: Response) => {
     const { name, email, password } = req.body;
     if (!name || !email || !password) {
         return res.status(400).json({ message: 'Nome, e-mail e senha são obrigatórios.' });
@@ -160,8 +159,8 @@ router.post('/auth/register', async (req: ExpressRequest, res: ExpressResponse) 
     }
 });
 
-// FIX: Use aliased express types to avoid conflicts.
-router.post('/auth/reset-password', async (req: ExpressRequest, res: ExpressResponse) => {
+// FIX: Use direct Request and Response types from express.
+router.post('/auth/reset-password', async (req: Request, res: Response) => {
     const { email, password } = req.body;
     if (!email || !password) {
         return res.status(400).json({ message: 'E-mail e nova senha são obrigatórios.' });
@@ -190,8 +189,8 @@ router.post('/auth/reset-password', async (req: ExpressRequest, res: ExpressResp
 
 // --- Rotas de Gerenciamento de Usuários (Protegidas) ---
 
-// FIX: Use aliased express types to avoid conflicts.
-router.get('/users', verifyToken, checkModulePermission('USERS'), async (req: ExpressRequest, res: ExpressResponse) => {
+// FIX: Use direct Request and Response types from express.
+router.get('/users', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
     try {
         const result = await pool.query('SELECT id, name, email, role FROM users ORDER BY name');
         res.json(result.rows);
@@ -201,8 +200,8 @@ router.get('/users', verifyToken, checkModulePermission('USERS'), async (req: Ex
     }
 });
 
-// FIX: Use aliased express types to avoid conflicts.
-router.post('/users', verifyToken, checkModulePermission('USERS'), async (req: ExpressRequest, res: ExpressResponse) => {
+// FIX: Use direct Request and Response types from express.
+router.post('/users', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
     const { name, email, password, role } = req.body;
     if (!name || !email || !password || !role) {
         return res.status(400).json({ message: 'Todos os campos são obrigatórios' });
@@ -227,8 +226,8 @@ router.post('/users', verifyToken, checkModulePermission('USERS'), async (req: E
     }
 });
 
-// FIX: Use aliased express types to avoid conflicts.
-router.put('/users/:id', verifyToken, checkModulePermission('USERS'), async (req: ExpressRequest, res: ExpressResponse) => {
+// FIX: Use direct Request and Response types from express.
+router.put('/users/:id', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
     const { id } = req.params;
     const { role } = req.body;
 
@@ -255,8 +254,8 @@ router.put('/users/:id', verifyToken, checkModulePermission('USERS'), async (req
     }
 });
 
-// FIX: Use aliased express types to avoid conflicts.
-router.delete('/users/:id', verifyToken, checkModulePermission('USERS'), async (req: ExpressRequest, res: ExpressResponse) => {
+// FIX: Use direct Request and Response types from express.
+router.delete('/users/:id', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
     const { id } = req.params;
 
     if (req.user?.id === id) {
@@ -277,8 +276,8 @@ router.delete('/users/:id', verifyToken, checkModulePermission('USERS'), async (
 
 // --- Rotas de Gerenciamento de Permissões (Protegidas) ---
 
-// FIX: Use aliased express types to avoid conflicts.
-router.get('/permissions', verifyToken, checkModulePermission('USERS'), async (req: ExpressRequest, res: ExpressResponse) => {
+// FIX: Use direct Request and Response types from express.
+router.get('/permissions', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
     try {
         const result = await pool.query('SELECT role, permissions FROM role_permissions');
         const permissionsByRole = result.rows.reduce((acc, row) => {
@@ -292,8 +291,8 @@ router.get('/permissions', verifyToken, checkModulePermission('USERS'), async (r
     }
 });
 
-// FIX: Use aliased express types to avoid conflicts.
-router.post('/permissions', verifyToken, checkModulePermission('USERS'), async (req: ExpressRequest, res: ExpressResponse) => {
+// FIX: Use direct Request and Response types from express.
+router.post('/permissions', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
     const { role, permissions = [] } = req.body;
 
     if (!role || typeof role !== 'string' || role.trim() === '') {
@@ -319,8 +318,8 @@ router.post('/permissions', verifyToken, checkModulePermission('USERS'), async (
 });
 
 
-// FIX: Use aliased express types to avoid conflicts.
-router.put('/permissions/:role', verifyToken, checkModulePermission('USERS'), async (req: ExpressRequest, res: ExpressResponse) => {
+// FIX: Use direct Request and Response types from express.
+router.put('/permissions/:role', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
     const { role } = req.params;
     const { permissions } = req.body;
 
@@ -340,8 +339,8 @@ router.put('/permissions/:role', verifyToken, checkModulePermission('USERS'), as
     }
 });
 
-// FIX: Use aliased express types to avoid conflicts.
-router.delete('/permissions/:role', verifyToken, checkModulePermission('USERS'), async (req: ExpressRequest, res: ExpressResponse) => {
+// FIX: Use direct Request and Response types from express.
+router.delete('/permissions/:role', verifyToken, checkModulePermission('USERS'), async (req: Request, res: Response) => {
     const { role } = req.params;
 
     // Prevenir a exclusão de grupos de sistema essenciais
