@@ -1,7 +1,6 @@
 
 // api/site/site.routes.ts
 import express, { Request, Response } from 'express';
-import { GoogleGenAI, Type } from "@google/genai";
 import { pool } from '../../core/db';
 import { verifyToken, checkModulePermission } from '../../core/auth.middleware';
 import { SiteData, FixedContainer } from '../../types';
@@ -34,14 +33,16 @@ router.post('/pages/ai-generate', verifyToken, checkModulePermission('SITE'), as
         return res.status(400).json({ message: 'Prompt e Nome da Marca são obrigatórios.' });
     }
 
-    // Initialize Gemini
-    // NOTE: Assuming API_KEY is in process.env.API_KEY
     if (!process.env.API_KEY) {
          console.error("API_KEY is missing for Gemini.");
          return res.status(500).json({ message: 'Serviço de IA não configurado no servidor.' });
     }
 
     try {
+        // DYNAMIC IMPORT: Load the library only when needed to prevent startup crashes
+        // caused by ESM/CommonJS compatibility issues.
+        const { GoogleGenAI, Type } = await import("@google/genai");
+        
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         
         const schema = {

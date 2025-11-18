@@ -30,10 +30,25 @@ const PageManager: React.FC = () => {
         setStatus('loading');
         try {
             const response = await fetch('/api/site/pages', { headers: { 'Authorization': `Bearer ${token}` } });
-            if (!response.ok) throw new Error('Falha ao buscar páginas.');
-            const data = await response.json();
-            setPages(data);
-            setStatus('idle');
+            
+            const contentType = response.headers.get("content-type");
+            if (!response.ok) {
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                     const err = await response.json();
+                     throw new Error(err.message || 'Falha ao buscar páginas.');
+                } else {
+                    throw new Error(`Erro do servidor: ${response.status} ${response.statusText}`);
+                }
+            }
+
+            if (contentType && contentType.indexOf("application/json") !== -1) {
+                const data = await response.json();
+                setPages(data);
+                setStatus('idle');
+            } else {
+                throw new Error("Resposta inválida do servidor (não é JSON).");
+            }
+
         } catch (error) {
             console.error(error);
             setStatus('error');
@@ -58,9 +73,15 @@ const PageManager: React.FC = () => {
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify(newPage)
             });
-             const data = await response.json();
+            
+            const contentType = response.headers.get("content-type");
+            let data;
+            if (contentType && contentType.includes("application/json")) {
+                 data = await response.json();
+            }
+
             if (!response.ok) {
-                throw new Error(data.message || 'Falha ao criar a página.');
+                throw new Error(data?.message || 'Falha ao criar a página.');
             }
             handleFeedback('success', 'Página criada com sucesso!');
             await fetchPages();
@@ -82,9 +103,15 @@ const PageManager: React.FC = () => {
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ prompt: aiPrompt, brandName: aiBrandName })
             });
-            const data = await response.json();
+            
+            const contentType = response.headers.get("content-type");
+            let data;
+            if (contentType && contentType.includes("application/json")) {
+                 data = await response.json();
+            }
+
             if (!response.ok) {
-                throw new Error(data.message || 'Falha na geração de IA.');
+                throw new Error(data?.message || 'Falha na geração de IA.');
             }
             
             handleFeedback('success', 'Site gerado com sucesso pela IA! Redirecionando...');
@@ -115,9 +142,15 @@ const PageManager: React.FC = () => {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
+            
             if (!response.ok) {
-                const data = await response.json();
-                throw new Error(data.message || 'Falha ao excluir a página.');
+                let errorMessage = 'Falha ao excluir a página.';
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.includes("application/json")) {
+                     const data = await response.json();
+                     errorMessage = data.message || errorMessage;
+                }
+                throw new Error(errorMessage);
             }
             handleFeedback('success', 'Página excluída com sucesso!');
             await fetchPages();
@@ -135,9 +168,15 @@ const PageManager: React.FC = () => {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-             const data = await response.json();
+            
+            const contentType = response.headers.get("content-type");
+            let data;
+            if (contentType && contentType.includes("application/json")) {
+                 data = await response.json();
+            }
+
             if (!response.ok) {
-                throw new Error(data.message || 'Falha ao duplicar a página.');
+                throw new Error(data?.message || 'Falha ao duplicar a página.');
             }
             handleFeedback('success', 'Página duplicada com sucesso!');
             await fetchPages();
@@ -196,7 +235,7 @@ const PageManager: React.FC = () => {
             </div>
 
             {status === 'loading' && <p>Carregando páginas...</p>}
-            {status === 'error' && <p className="text-red-400">Não foi possível carregar as páginas.</p>}
+            {status === 'error' && <p className="text-red-400">Não foi possível carregar as páginas. Verifique se o servidor está rodando corretamente.</p>}
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {pages.map(page => (

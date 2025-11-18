@@ -1,3 +1,4 @@
+
 // HACK: Declare Node.js globals to resolve TypeScript errors when @types/node is not available.
 declare const process: {
     env: {
@@ -46,7 +47,8 @@ app.get('/api/health', async (req: Request, res: Response) => {
 const loadApiModules = async () => {
     const sourceApiDir = path.join(process.cwd(), 'api');
     // Em dev (ts-node), __dirname aponta para a pasta source. Em prod, para dist/server.
-    const compiledApiDir = path.join(__dirname, 'api'); 
+    // Ensure path normalization
+    const compiledApiDir = path.normalize(path.join(__dirname, 'api')); 
     const isDev = path.extname(__filename) === '.ts';
 
     try {
@@ -68,13 +70,14 @@ const loadApiModules = async () => {
                     const routesPath = path.join(compiledApiDir, folder.name, routeFileName);
                     
                     try {
+                        // console.log(`[Module Loader] Tentando carregar: ${routesPath}`);
                         const { default: router } = await import(routesPath);
                         if (router) {
                             app.use(manifest.prefix, router);
                             console.log(`[Module Loader] Módulo '${folder.name}' carregado com sucesso no prefixo '${manifest.prefix}'.`);
                         }
                     } catch (importError) {
-                        console.error(`[Module Loader] Erro ao importar rotas de '${routesPath}':`, importError);
+                        console.error(`[Module Loader] ERRO CRÍTICO ao importar rotas de '${routesPath}':`, importError);
                     }
                     
                 } catch (e) {
