@@ -1,3 +1,4 @@
+
 // api/site/site.routes.ts
 import express, { Request, Response } from 'express';
 import { pool } from '../../core/db';
@@ -59,6 +60,39 @@ router.get('/pages/public/slug/:slug', async (req: Request, res: Response) => {
 
 // --- Rotas de Administração (requerem autenticação e permissão) ---
 
+// --- Rotas para Admin visualizar QUALQUER página (publicada ou não) ---
+// Obter página HOME para admin
+router.get('/pages/admin/home', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
+    try {
+        res.setHeader('Cache-Control', 'no-store');
+        const result = await pool.query('SELECT * FROM pages WHERE is_homepage = TRUE LIMIT 1');
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Nenhuma página inicial foi encontrada.' });
+        }
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Erro ao buscar página inicial para admin:', error);
+        res.status(500).json({ message: 'Falha ao buscar o conteúdo do site' });
+    }
+});
+
+// Obter página por slug para admin
+router.get('/pages/admin/slug/:slug', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
+    try {
+        res.setHeader('Cache-Control', 'no-store');
+        const { slug } = req.params;
+        const result = await pool.query('SELECT * FROM pages WHERE slug = $1', [slug]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Página não encontrada.' });
+        }
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Erro ao buscar página por slug para admin:', error);
+        res.status(500).json({ message: 'Falha ao buscar o conteúdo do site' });
+    }
+});
+
+
 // Listar todas as páginas
 router.get('/pages', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
     try {
@@ -90,6 +124,43 @@ router.post('/pages', verifyToken, checkModulePermission('SITE'), async (req: Re
         res.status(500).json({ message: 'Falha ao criar página' });
     }
 });
+
+// Duplicar uma página
+router.post('/pages/duplicate/:id', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
+    const { id } = req.params;
+    try {
+        const originalPageResult = await pool.query('SELECT * FROM pages WHERE id = $1', [id]);
+        if (originalPageResult.rows.length === 0) {
+            return res.status(404).json({ message: 'Página original não encontrada.' });
+        }
+        const originalPage = originalPageResult.rows[0];
+
+        let newSlug = `${originalPage.slug}-copia`;
+        let slugExists = true;
+        let counter = 1;
+        while (slugExists) {
+            const slugCheck = await pool.query('SELECT 1 FROM pages WHERE slug = $1', [newSlug]);
+            if (slugCheck.rows.length === 0) {
+                slugExists = false;
+            } else {
+                newSlug = `${originalPage.slug}-copia-${counter++}`;
+            }
+        }
+        
+        const newTitle = `Cópia de ${originalPage.title}`;
+
+        const result = await pool.query(
+            'INSERT INTO pages (title, slug, is_homepage, is_published, content) VALUES ($1, $2, FALSE, FALSE, $3) RETURNING *',
+            [newTitle, newSlug, originalPage.content]
+        );
+
+        res.status(201).json(result.rows[0]);
+    } catch (error) {
+        console.error('Erro ao duplicar página:', error);
+        res.status(500).json({ message: 'Falha ao duplicar página' });
+    }
+});
+
 
 // Obter dados de uma página específica para edição
 router.get('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
@@ -150,6 +221,70 @@ router.delete('/pages/:id', verifyToken, checkModulePermission('SITE'), async (r
     } catch (error) {
         console.error('Erro ao excluir página:', error);
         res.status(500).json({ message: 'Falha ao excluir a página' });
+    }
+});
+
+// Alternar status de publicação da página
+router.patch('/pages/:id/status', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { is_published } = req.body;
+
+    if (typeof is_published !== 'boolean') {
+        return res.status(400).json({ message: 'O status de publicação é obrigatório e deve ser um booleano.' });
+    }
+
+    try {
+        // Impedir que a página inicial seja despublicada
+        if (is_published === false) {
+             const pageCheck = await pool.query('SELECT is_homepage FROM pages WHERE id = $1', [id]);
+             if (pageCheck.rows.length > 0 && pageCheck.rows[0].is_homepage) {
+                 return res.status(403).json({ message: 'Não é possível despublicar a página inicial.' });
+             }
+        }
+
+        const result = await pool.query(
+            'UPDATE pages SET is_published = $1 WHERE id = $2 RETURNING id, is_published',
+            [is_published, id]
+        );
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ message: 'Página não encontrada.' });
+        }
+        res.status(200).json(result.rows[0]);
+    } catch (error) {
+        console.error('Erro ao alterar status da página:', error);
+        res.status(500).json({ message: 'Falha ao alterar o status da página' });
+    }
+});
+
+// Definir uma página como a página inicial
+router.patch('/pages/:id/set-homepage', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+
+        // Desmarcar a página inicial atual
+        await client.query('UPDATE pages SET is_homepage = FALSE WHERE is_homepage = TRUE');
+
+        // Marcar a nova página inicial e garantir que ela esteja publicada
+        const result = await client.query(
+            'UPDATE pages SET is_homepage = TRUE, is_published = TRUE WHERE id = $1 RETURNING id, is_homepage, is_published',
+            [id]
+        );
+
+        if (result.rowCount === 0) {
+            throw new Error('Página não encontrada.');
+        }
+
+        await client.query('COMMIT');
+        res.status(200).json(result.rows[0]);
+    } catch (error) {
+        await client.query('ROLLBACK');
+        console.error('Erro ao definir a página inicial:', error);
+        res.status(500).json({ message: 'Falha ao definir a página inicial' });
+    } finally {
+        client.release();
     }
 });
 

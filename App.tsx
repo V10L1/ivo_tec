@@ -6,8 +6,7 @@ import { Header } from './components/Header';
 import { ModuleWrapper } from './components/ModuleWrapper';
 import { APP_MODULES } from './constants';
 import { AppKey } from './types';
-// SiteEditor is no longer a separate module
-// import SiteEditor from './modules/site/SiteEditor'; 
+import PageManager from './modules/site/PageManager'; // Import the new PageManager
 import StoreManager from './modules/loja/StoreManager';
 import StockControl from './modules/estoque/StockControl';
 import MessagesChat from './modules/mensagens/MessagesChat';
@@ -36,9 +35,7 @@ export const useRouter = () => {
 
 // --- Module Views ---
 const ModuleViews: Record<AppKey, React.ComponentType> = {
-  // FIX: Added a placeholder for SITE to satisfy the Record type. Navigation is handled specially.
-  SITE: () => null,
-  // SITE is removed, as it's now an inline editor on the public site
+  SITE: PageManager, // SITE now points to the PageManager
   STORE: StoreManager,
   STOCK: StockControl,
   MESSAGES: MessagesChat,
@@ -49,15 +46,9 @@ const ModuleViews: Record<AppKey, React.ComponentType> = {
 
 const AdminPanel = () => {
   const [activeModule, setActiveModule] = useState<AppKey | null>(null);
-  const { navigate } = useRouter();
 
   const handleSelectModule = (key: AppKey) => {
-    if (key === 'SITE') {
-        // Navigate to the homepage to use the inline editor
-        navigate('/');
-    } else {
-        setActiveModule(key);
-    }
+    setActiveModule(key);
   };
 
   const handleGoToDashboard = () => {

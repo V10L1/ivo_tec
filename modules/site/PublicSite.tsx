@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Page, SiteData, PageBlock, SiteSettings, HeroBlockContent, TextBlockContent, ImageBlockContent, ButtonBlockContent, MenuBlockContent, VideoBlockContent, MenuItem, GridSettings, BlockLayout, ContainerStyles, TextStyles, StyledText, FixedContainer, FixedContainerPosition } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
@@ -6,7 +7,8 @@ import { PlusCircleIcon, SettingsIcon, Trash2Icon, MotorcycleIcon, TypeIcon, Ima
 
 // --- UTILITIES, HELPERS, AND DEFAULTS ---
 
-const generateId = (prefix = 'id') => `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+// FIX: Replaced deprecated `substr` method with `slice` for modern compatibility and to resolve potential tooling errors. The slice end index is start+length.
+const generateId = (prefix = 'id') => `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 const hexToRgba = (hex: string, alpha: number = 1): string => { if (!hex || !/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)) { return `rgba(30, 41, 59, ${alpha})`; } let c = hex.substring(1).split(''); if (c.length === 3) { c = [c[0], c[0], c[1], c[1], c[2], c[2]]; } const i = parseInt(c.join(''), 16); return `rgba(${(i >> 16) & 255}, ${(i >> 8) & 255}, ${i & 255}, ${alpha})`; };
 const getBorderRadiusClass = (radius: ContainerStyles['borderRadius']) => { switch (radius) { case 'full': return 'rounded-full'; case 'none': return 'rounded-none'; case 'medium': default: return 'rounded-lg'; } }
 const createTextStyle = (textStyles?: TextStyles, textOpacity: number = 1): React.CSSProperties => { if (!textStyles) return {}; return { color: textStyles.textColor, textAlign: textStyles.textAlign, fontWeight: textStyles.fontWeight, fontStyle: textStyles.fontStyle, fontFamily: textStyles.fontFamily, fontSize: textStyles.fontSize ? `${textStyles.fontSize}px` : undefined, opacity: textOpacity, }; };
@@ -78,7 +80,7 @@ const InteractiveBlock: React.FC<{ block: PageBlock; isSelected: boolean; onMous
 
 // --- COMPONENTE PRINCIPAL: PublicSite COM EDITOR INTEGRADO ---
 const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
-    const { isAuthenticated, permissions, token } = useAuth();
+    const { isAuthenticated, permissions, token, isLoading } = useAuth();
     const { navigate } = useRouter();
     const [pageData, setPageData] = useState<Page | null>(null);
     const [savedPageData, setSavedPageData] = useState<Page | null>(null);
@@ -101,9 +103,64 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
 
     // --- Data Fetching and Management ---
     useEffect(() => {
-        const fetchContent = async () => { setStatus('loading'); try { const endpoint = slug === 'home' ? '/api/site/pages/public/home' : `/api/site/pages/public/slug/${slug}`; const response = await fetch(endpoint); if (response.status === 404) { setStatus('not_found'); return; } if (!response.ok) throw new Error('A resposta da rede não foi ok'); const data: Page = await response.json(); const content = (data.content || {}) as any; const validatedContent: SiteData = { settings: content?.settings || defaultPageContent.settings, gridSettings: content?.gridSettings || defaultPageContent.gridSettings, fixedContainers: content?.fixedContainers || defaultPageContent.fixedContainers, mainBlocks: content?.mainBlocks || [], footerBlocks: content?.footerBlocks || [], }; data.content = validatedContent; setPageData(data); setSavedPageData(JSON.parse(JSON.stringify(data))); if (data.content?.fixedContainers) { setCollapsedStates({ top: data.content.fixedContainers.top.isCollapsed, left: data.content.fixedContainers.left.isCollapsed, right: data.content.fixedContainers.right.isCollapsed, bottom: data.content.fixedContainers.bottom.isCollapsed }); } setStatus('success'); } catch (error) { console.error("Falha ao buscar o conteúdo da página:", error); setStatus('error'); } };
-        fetchContent();
-    }, [slug]);
+        const fetchContent = async () => {
+            setStatus('loading');
+            try {
+                let endpoint: string;
+                const fetchOptions: RequestInit = {};
+
+                if (canEdit) {
+                    // Admin can view published or draft pages
+                    endpoint = slug === 'home' 
+                        ? '/api/site/pages/admin/home' 
+                        : `/api/site/pages/admin/slug/${slug}`;
+                    fetchOptions.headers = { 'Authorization': `Bearer ${token}` };
+                } else {
+                    // Public can only view published pages
+                    endpoint = slug === 'home' 
+                        ? '/api/site/pages/public/home' 
+                        : `/api/site/pages/public/slug/${slug}`;
+                }
+                
+                const response = await fetch(endpoint, fetchOptions);
+
+                if (response.status === 404) {
+                    setStatus('not_found');
+                    return;
+                }
+                if (!response.ok) throw new Error('A resposta da rede não foi ok');
+                const data: Page = await response.json();
+                const content = (data.content || {}) as any;
+                const validatedContent: SiteData = {
+                    settings: content?.settings || defaultPageContent.settings,
+                    gridSettings: content?.gridSettings || defaultPageContent.gridSettings,
+                    fixedContainers: content?.fixedContainers || defaultPageContent.fixedContainers,
+                    mainBlocks: content?.mainBlocks || [],
+                    footerBlocks: content?.footerBlocks || [],
+                };
+                data.content = validatedContent;
+                setPageData(data);
+                setSavedPageData(JSON.parse(JSON.stringify(data)));
+                if (data.content?.fixedContainers) {
+                    setCollapsedStates({
+                        top: data.content.fixedContainers.top.isCollapsed,
+                        left: data.content.fixedContainers.left.isCollapsed,
+                        right: data.content.fixedContainers.right.isCollapsed,
+                        bottom: data.content.fixedContainers.bottom.isCollapsed
+                    });
+                }
+                setStatus('success');
+            } catch (error) {
+                console.error("Falha ao buscar o conteúdo da página:", error);
+                setStatus('error');
+            }
+        };
+
+        // Don't fetch until auth state is confirmed to prevent race conditions on draft pages
+        if (!isLoading) {
+            fetchContent();
+        }
+    }, [slug, canEdit, token, isLoading]);
     
     useEffect(() => { if (pageData?.content?.settings.brandName) { document.title = pageData.content.settings.brandName; } return () => { document.title = 'Painel de Administração Modular'; }; }, [pageData]);
     
@@ -121,126 +178,263 @@ const PublicSite: React.FC<{ slug: string }> = ({ slug }) => {
     const handleNewBlockDragStart = (e: React.MouseEvent, type: PageBlock['type']) => { const newBlock = createNewBlock(type); setInteractionState({ type: 'new', block: newBlock, initialMouse: { x: e.clientX, y: e.clientY }, initialLayout: newBlock.layout.desktop, targetContext: 'main' }); };
     const handleBlockMouseDown = (e: React.MouseEvent, block: PageBlock, context: EditorContext) => { e.preventDefault(); e.stopPropagation(); if (selectedBlock?.id !== block.id) { setSelectedBlock(block); setSelectedContainerId(null); setActiveTab('inspector'); } setInteractionState({ type: 'move', block, initialMouse: { x: e.clientX, y: e.clientY }, initialLayout: block.layout.desktop, targetContext: context }); };
     const handleResizeStart = (e: React.MouseEvent, block: PageBlock, direction: string, context: EditorContext) => { e.preventDefault(); e.stopPropagation(); setInteractionState({ type: 'resize', block, resizeDirection: direction, initialMouse: { x: e.clientX, y: e.clientY }, initialLayout: block.layout.desktop, targetContext: context }); };
+    
     useEffect(() => {
-        const handleMouseMove = (e: MouseEvent) => { if (!interactionState || !pageData?.content) return; let currentContext: EditorContext = 'main'; for (const key in canvasRefs) { const ref = canvasRefs[key as keyof typeof canvasRefs]; if (ref.current) { const rect = ref.current.getBoundingClientRect(); if (e.clientX > rect.left && e.clientX < rect.right && e.clientY > rect.top && e.clientY < rect.bottom) { currentContext = key as EditorContext; break; } } } const canvasEl = canvasRefs[currentContext]?.current; if (!canvasEl) return; const grid = pageData.content.gridSettings.desktop; const cellWidth = (canvasEl.getBoundingClientRect().width - (grid.columns - 1) * grid.gap) / grid.columns; const cellHeight = grid.rowHeight; const dx = e.clientX - interactionState.initialMouse.x; const dy = e.clientY - interactionState.initialMouse.y; const dCol = Math.round(dx / (cellWidth + grid.gap)); const dRow = Math.round(dy / (cellHeight + grid.gap)); const { initialLayout } = interactionState; let newLayout = { ...initialLayout }; if (interactionState.type === 'move' || interactionState.type === 'new') { newLayout.colStart = Math.max(1, initialLayout.colStart + dCol); newLayout.rowStart = Math.max(1, initialLayout.rowStart + dRow); newLayout.colEnd = newLayout.colStart + (initialLayout.colEnd - initialLayout.colStart); newLayout.rowEnd = newLayout.rowStart + (initialLayout.rowEnd - initialLayout.rowStart); } else if (interactionState.type === 'resize') { const dir = interactionState.resizeDirection || ''; if (dir.includes('e')) newLayout.colEnd = Math.max(newLayout.colStart + 1, initialLayout.colEnd + dCol); if (dir.includes('w')) newLayout.colStart = Math.min(newLayout.colEnd - 1, initialLayout.colStart + dCol); if (dir.includes('s')) newLayout.rowEnd = Math.max(newLayout.rowStart + 1, initialLayout.rowEnd + dRow); if (dir.includes('n')) newLayout.rowStart = Math.min(newLayout.rowEnd - 1, initialLayout.rowStart + dRow); } const updatedBlock = { ...interactionState.block, layout: { ...interactionState.block.layout, desktop: newLayout } }; if (interactionState.type === 'new') { setInteractionState({...interactionState, block: updatedBlock, targetContext: currentContext }); } else { updateBlock(updatedBlock); } };
-        const handleMouseUp = () => { document.body.style.userSelect = ''; if (interactionState?.type === 'new') { const finalContext = interactionState.targetContext; updatePageData(draft => { if(!draft.content) return; const blockArrays = getBlockArraysForUpdate(draft.content); blockArrays[finalContext].push(interactionState.block); }); setSelectedBlock(interactionState.block); setSelectedContainerId(null); setActiveTab('inspector'); } setInteractionState(null); };
-        if (interactionState) { document.body.style.userSelect = 'none'; window.addEventListener('mousemove', handleMouseMove); window.addEventListener('mouseup', handleMouseUp, { once: true }); }
-        return () => { document.body.style.userSelect = ''; window.removeEventListener('mousemove', handleMouseMove); window.removeEventListener('mouseup', handleMouseUp); };
-    }, [interactionState, pageData?.content?.gridSettings]);
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!interactionState || !pageData?.content) return;
 
-    // Inject styles for resize handles safely
+            let currentContext: EditorContext = interactionState.targetContext;
+            let targetCanvasRef = canvasRefs[currentContext];
+            
+            for (const key in canvasRefs) {
+                const ref = canvasRefs[key as keyof typeof canvasRefs];
+                if (ref.current) {
+                    const rect = ref.current.getBoundingClientRect();
+                    if (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom) {
+                        currentContext = key as EditorContext;
+                        targetCanvasRef = ref;
+                        break;
+                    }
+                }
+            }
+
+            const canvasEl = targetCanvasRef?.current;
+            if (!canvasEl) return;
+            
+            const grid = pageData.content.gridSettings.desktop;
+            const canvasRect = canvasEl.getBoundingClientRect();
+            
+            const cellWidth = (canvasRect.width - (grid.columns - 1) * grid.gap) / grid.columns;
+            const cellHeight = grid.rowHeight;
+            
+            const dx = e.clientX - interactionState.initialMouse.x;
+            const dy = e.clientY - interactionState.initialMouse.y;
+            
+            const dCol = Math.round(dx / (cellWidth + grid.gap));
+            const dRow = Math.round(dy / (cellHeight + grid.gap));
+
+            const { initialLayout } = interactionState;
+            let newLayout = { ...initialLayout };
+
+            if (interactionState.type === 'move' || interactionState.type === 'new') {
+                newLayout.colStart = Math.max(1, initialLayout.colStart + dCol);
+                newLayout.rowStart = Math.max(1, initialLayout.rowStart + dRow);
+                newLayout.colEnd = newLayout.colStart + (initialLayout.colEnd - initialLayout.colStart);
+                newLayout.rowEnd = newLayout.rowStart + (initialLayout.rowEnd - initialLayout.rowStart);
+            } else if (interactionState.type === 'resize') {
+                const dir = interactionState.resizeDirection || '';
+                if (dir.includes('e')) newLayout.colEnd = Math.max(newLayout.colStart + 1, initialLayout.colEnd + dCol);
+                if (dir.includes('w')) newLayout.colStart = Math.min(newLayout.colEnd - 1, initialLayout.colStart + dCol);
+                if (dir.includes('s')) newLayout.rowEnd = Math.max(newLayout.rowStart + 1, initialLayout.rowEnd + dRow);
+                if (dir.includes('n')) newLayout.rowStart = Math.min(newLayout.rowEnd - 1, initialLayout.rowStart + dRow);
+            }
+
+            const updatedBlock = { ...interactionState.block, layout: { ...interactionState.block.layout, desktop: newLayout } };
+            
+            if (interactionState.type === 'new') {
+                setInteractionState({ ...interactionState, block: updatedBlock, targetContext: currentContext });
+            } else {
+                updateBlock(updatedBlock);
+            }
+        };
+
+        const handleMouseUp = () => {
+            if (!interactionState) return;
+            if (interactionState.type === 'new') {
+                const { block: newBlock, targetContext } = interactionState;
+                updatePageData(draft => {
+                    if (!draft.content) return;
+                    const blockArrays = getBlockArraysForUpdate(draft.content);
+                    if(blockArrays[targetContext]) {
+                        blockArrays[targetContext].push(newBlock);
+                        setSelectedBlock(newBlock);
+                        setActiveTab('inspector');
+                    }
+                });
+            }
+            setInteractionState(null);
+        };
+
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [interactionState, pageData]); // Dependencies will be memoized by React
+
     useEffect(() => {
         const styleId = 'resize-handle-styles';
-        if (!document.getElementById(styleId)) {
-            const style = document.createElement('style');
-            style.id = styleId;
-            style.innerHTML = `.resize-handle-ne { top: -6px; right: -6px; } .resize-handle-se { bottom: -6px; right: -6px; } .resize-handle-sw { bottom: -6px; left: -6px; } .resize-handle-nw { top: -6px; left: -6px; } .resize-handle-n { top: -6px; left: 50%; transform: translateX(-50%); cursor: n-resize; } .resize-handle-e { top: 50%; right: -6px; transform: translateY(-50%); cursor: e-resize; } .resize-handle-s { bottom: -6px; left: 50%; transform: translateX(-50%); cursor: s-resize; } .resize-handle-w { top: 50%; left: -6px; transform: translateY(-50%); cursor: w-resize; }`;
-            document.head.appendChild(style);
-        }
+        if (document.getElementById(styleId)) return;
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.innerHTML = `
+            .resize-handle-ne { top: -6px; right: -6px; } .resize-handle-se { bottom: -6px; right: -6px; }
+            .resize-handle-sw { bottom: -6px; left: -6px; } .resize-handle-nw { top: -6px; left: -6px; }
+            .resize-handle-n { top: -6px; left: 50%; transform: translateX(-50%); } .resize-handle-s { bottom: -6px; left: 50%; transform: translateX(-50%); }
+            .resize-handle-e { top: 50%; right: -6px; transform: translateY(-50%); } .resize-handle-w { top: 50%; left: -6px; transform: translateY(-50%); }
+        `;
+        document.head.appendChild(style);
     }, []);
 
-    // --- RENDERERS ---
-    if (status === 'loading') return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Carregando...</div>;
-    if (status === 'not_found') return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white text-center"><div><h1 className="text-4xl font-bold">404 - Página Não Encontrada</h1><p className="text-slate-400 mt-2">A página que você está procurando não existe.</p></div></div>;
-    if (status === 'error' || !pageData?.content) return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-red-400 text-center">Ocorreu um erro ao carregar o conteúdo.</div>;
-    
+    // --- RENDER LOGIC ---
+    if (status === 'loading' || isLoading) return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Carregando conteúdo...</div>;
+    if (status === 'not_found') return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white"><h1>404 - Página Não Encontrada</h1></div>;
+    if (status === 'error' || !pageData || !pageData.content) return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-red-400"><h1>Erro ao carregar o conteúdo da página.</h1></div>;
+
     const { settings, gridSettings, fixedContainers, mainBlocks, footerBlocks } = pageData.content;
-    const pageStyle = { backgroundColor: settings?.backgroundColor || '#0f172a' };
-    const mainContentStyle: React.CSSProperties = { paddingTop: (fixedContainers?.top?.enabled && !collapsedStates.top) ? `${fixedContainers.top.size}px` : 0, paddingBottom: (fixedContainers?.bottom?.enabled && !collapsedStates.bottom) ? `${fixedContainers.bottom.size}px` : 0, paddingLeft: (fixedContainers?.left?.enabled && !collapsedStates.left) ? `${fixedContainers.left.size}px` : 0, paddingRight: (fixedContainers?.right?.enabled && !collapsedStates.right) ? `${fixedContainers.right.size}px` : 0, transition: 'padding 0.3s ease-in-out', };
+    const grid = gridSettings.desktop;
 
-    const GridCanvas = ({ blocks, context, className = "" }: { blocks: PageBlock[]; context: EditorContext; className?: string; }) => {
-        const grid = gridSettings.desktop;
-        const gridStyle = { display: 'grid', gridTemplateColumns: `repeat(${grid.columns}, 1fr)`, gridAutoRows: `${grid.rowHeight}px`, gap: `${grid.gap}px`,};
-        const editorClasses = isEditMode ? '' : '';
-        return ( <div ref={canvasRefs[context]} style={gridStyle} className={`relative w-full h-full ${editorClasses} ${className}`} onMouseDown={(e) => { if (isEditMode && e.target === e.currentTarget) { setSelectedBlock(null); setSelectedContainerId(null); setActiveTab('components'); } }} > {blocks.map(block => isEditMode ? <InteractiveBlock key={block.id} block={block} isSelected={selectedBlock?.id === block.id} onMouseDown={(e) => handleBlockMouseDown(e, block, context)} onResizeStart={(e, dir) => handleResizeStart(e, block, dir, context)} /> : <div key={block.id} style={{ gridColumn: `${block.layout.desktop.colStart} / ${block.layout.desktop.colEnd}`, gridRow: `${block.layout.desktop.rowStart} / ${block.layout.desktop.rowEnd}`, alignSelf: block.layout.desktop.alignSelf, justifySelf: block.layout.desktop.justifySelf, zIndex: block.styles?.zIndex || 'auto', position: 'relative' }}><BlockRenderer block={block} onToggleContainer={handleToggleContainer} /></div>)} </div> );
-    };
+    const FixedContainerRenderer: React.FC<{ position: FixedContainerPosition }> = ({ position }) => {
+        const container = fixedContainers[position];
+        if (!container.enabled) return null;
 
-    const FixedContainerRenderer: React.FC<{position: FixedContainerPosition}> = ({ position }) => {
-        const config = fixedContainers[position];
-        if (!config.enabled && !isEditMode) return null;
         const isHorizontal = position === 'top' || position === 'bottom';
         const isCollapsed = collapsedStates[position];
-
-        const containerStyle: React.CSSProperties = { position: 'fixed', zIndex: 1000, backgroundColor: '#1e293b', transition: 'all 0.3s ease-in-out', ...(isHorizontal ? { left: 0, right: 0, height: `${config.size}px`, transform: isCollapsed && !isEditMode ? `translateY(${position === 'top' ? '-100%' : '100%'})` : 'translateY(0)' } : { top: 0, bottom: 0, width: `${config.size}px`, transform: isCollapsed && !isEditMode ? `translateX(${position === 'left' ? '-100%' : '100%'})` : 'translateX(0)' }), ...(position === 'top' && { top: 0 }), ...(position === 'bottom' && { bottom: 0 }), ...(position === 'left' && { left: 0 }), ...(position === 'right' && { right: 0 }), };
-        if (isEditMode) { containerStyle.position = 'relative'; if(isHorizontal) containerStyle.height = `${config.size}px`; else containerStyle.width = `${config.size}px`; }
-
-        const editorOverlay = isEditMode && <div className={`absolute inset-0 border-2 cursor-pointer ${selectedContainerId === position ? 'border-cyan-500' : 'border-transparent hover:border-cyan-500/50'}`} onClick={() => { setSelectedContainerId(position); setSelectedBlock(null); setActiveTab('inspector'); }}></div>;
         
-        const toggleButtonPositionClass = {
-            left: 'justify-start',
-            center: 'justify-center',
-            right: 'justify-end',
-            none: 'hidden'
-        }[config.toggleButtonPosition || 'center'];
+        const sizeStyle: React.CSSProperties = isHorizontal ? { height: `${container.size}px` } : { width: `${container.size}px` };
+        const positionClass = { top: 'top-0 left-0 right-0', bottom: 'bottom-0 left-0 right-0', left: 'top-0 left-0 bottom-0', right: 'top-0 right-0 bottom-0' }[position];
+        const collapseClass = {
+            top: isCollapsed ? `-translate-y-full` : 'translate-y-0',
+            bottom: isCollapsed ? `translate-y-full` : 'translate-y-0',
+            left: isCollapsed ? `-translate-x-full` : 'translate-x-0',
+            right: isCollapsed ? `translate-x-full` : 'translate-x-0',
+        }[position];
+        const buttonPositionClass = {
+            top: { left: 'left-4', center: 'left-1/2 -translate-x-1/2', right: 'right-4', none: 'hidden' }[container.toggleButtonPosition] + ' bottom-0 translate-y-1/2',
+            bottom: { left: 'left-4', center: 'left-1/2 -translate-x-1/2', right: 'right-4', none: 'hidden' }[container.toggleButtonPosition] + ' top-0 -translate-y-1/2',
+            left: { left: 'left-auto', center: 'top-1/2 -translate-y-1/2', right: 'right-0 translate-x-1/2', none: 'hidden' }[container.toggleButtonPosition],
+            right: { left: 'left-0 -translate-x-1/2', center: 'top-1/2 -translate-y-1/2', right: 'right-auto', none: 'hidden' }[container.toggleButtonPosition],
+        }[position];
 
-        return ( <div style={containerStyle} className={`flex-shrink-0 shadow-lg border-slate-700 ${isEditMode ? `p-2 bg-slate-800/50 ${isHorizontal ? 'border-y' : 'border-x'}` : 'border'}`}> {editorOverlay} <GridCanvas blocks={config.blocks} context={position} /> {config.collapsible && !isEditMode && ( <div className={`absolute w-full flex px-2 pointer-events-none ${toggleButtonPositionClass} ${ isHorizontal ? (position === 'top' ? 'bottom-[-16px]' : 'top-[-16px]') : 'top-1/2 -translate-y-1/2' } ${ !isHorizontal ? (position === 'left' ? 'right-[-16px]' : 'left-[-16px]') : '' } `}> <button onClick={() => setCollapsedStates(prev => ({ ...prev, [position]: !prev[position] }))} className={`pointer-events-auto z-10 w-8 h-8 rounded-full flex items-center justify-center text-white bg-slate-700 hover:bg-cyan-600`}> {isCollapsed ? <PanelOpenIcon className="w-4 h-4" /> : <PanelCloseIcon className="w-4 h-4" />} </button> </div>)} </div> );
+        return (
+            <div className={`fixed ${positionClass} bg-slate-800 border-slate-700 transition-transform duration-300 ease-in-out z-40 ${collapseClass} ${isHorizontal ? 'border-t border-b' : 'border-l border-r'}`} style={sizeStyle} >
+                <div 
+                    ref={canvasRefs[position]}
+                    className={`relative w-full h-full ${isEditMode ? 'p-2 border border-dashed border-slate-700' : ''}`}
+                    style={isEditMode ? { display: 'grid', gridTemplateColumns: `repeat(${grid.columns}, 1fr)`, gridAutoRows: `${grid.rowHeight}px`, gap: `${grid.gap}px` } : {}}
+                    onClick={isEditMode ? () => {setSelectedContainerId(position); setSelectedBlock(null); setActiveTab('inspector')} : undefined}
+                >
+                    {isEditMode 
+                        ? container.blocks.map(block => <InteractiveBlock key={block.id} block={block} isSelected={selectedBlock?.id === block.id} onMouseDown={(e) => handleBlockMouseDown(e, block, position)} onResizeStart={(e, dir) => handleResizeStart(e, block, dir, position)} />)
+                        : container.blocks.map(block => <div key={block.id} style={{ gridColumn: `${block.layout.desktop.colStart} / ${block.layout.desktop.colEnd}`, gridRow: `${block.layout.desktop.rowStart} / ${block.layout.desktop.rowEnd}`}}><BlockRenderer block={block} onToggleContainer={handleToggleContainer}/></div>)}
+                </div>
+                {container.collapsible && (
+                    <button onClick={() => handleToggleContainer(position)} className={`absolute ${buttonPositionClass} bg-slate-700 hover:bg-cyan-600 text-white w-8 h-8 rounded-full flex items-center justify-center z-50 transition-colors`}>
+                        <ChevronLeftIcon className={`w-4 h-4 transition-transform duration-300 
+                            ${isCollapsed ? {top: 'rotate-90', bottom: '-rotate-90', left: 'rotate-180', right: 'rotate-0'}[position] : {top: '-rotate-90', bottom: 'rotate-90', left: 'rotate-0', right: 'rotate-180'}[position]}`} />
+                    </button>
+                )}
+            </div>
+        );
     };
+    
+    // --- DYNAMIC PADDING CALCULATION FOR WYSIWYG ---
+    const finalPadding = useMemo(() => {
+        const basePadding = {
+            paddingTop: fixedContainers.top.enabled && !collapsedStates.top ? `${fixedContainers.top.size}px` : '0px',
+            paddingBottom: fixedContainers.bottom.enabled && !collapsedStates.bottom ? `${fixedContainers.bottom.size}px` : '0px',
+            paddingLeft: fixedContainers.left.enabled && !collapsedStates.left ? `${fixedContainers.left.size}px` : '0px',
+            paddingRight: fixedContainers.right.enabled && !collapsedStates.right ? `${fixedContainers.right.size}px` : '0px',
+        };
+
+        if (isEditMode) {
+            if (!isToolbarCollapsed) {
+                basePadding.paddingTop = `calc(${basePadding.paddingTop} + 48px)`; // 48px is editor toolbar height
+            }
+            if (isPanelOpen) {
+                basePadding.paddingLeft = `calc(${basePadding.paddingLeft} + 20rem)`; // 20rem (w-80) is editor panel width
+            }
+        }
+        return basePadding;
+    }, [fixedContainers, collapsedStates, isEditMode, isPanelOpen, isToolbarCollapsed]);
+
 
     return (
-        <div className={`min-h-screen font-sans w-full h-full flex flex-col`} style={pageStyle}>
-            {canEdit && (
-                 <div className={`sticky top-0 z-[9998] transition-transform duration-300 ease-in-out ${isToolbarCollapsed ? '-translate-y-full' : 'translate-y-0'}`}>
-                    <header className="bg-slate-900/80 backdrop-blur-sm border-b border-slate-800 flex items-center justify-between h-16 px-6 flex-shrink-0">
-                        <div className="flex items-center gap-4">
-                            <button onClick={() => navigate('/administrator')} className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold py-2 px-4 rounded-lg inline-flex items-center"><ArrowLeftIcon className="w-5 h-5 mr-2" /><span>Painel</span></button>
-                            <h2 className="text-xl font-bold text-slate-100 hidden sm:block">Editor de Site</h2>
-                        </div>
-                        {feedback && <div className={`absolute left-1/2 -translate-x-1/2 text-sm font-semibold ${feedback.type === 'error' ? 'text-red-400' : 'text-green-400'}`}>{feedback.message}</div>}
-                        <div className="flex items-center gap-4">
-                            <div className="h-8 text-sm font-semibold flex items-center">{hasUnsavedChanges ? <span className="text-yellow-400">Alterações não salvas</span> : <span className="text-green-400/80">Sincronizado</span>}</div>
-                            <button onClick={handleSaveChanges} disabled={!hasUnsavedChanges || status === 'saving'} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-3 rounded-lg disabled:bg-slate-600 disabled:cursor-not-allowed flex items-center justify-center gap-2"><SaveIcon className="w-5 h-5"/> <span className="hidden md:inline">{status === 'saving' ? 'Salvando...' : 'Salvar'}</span></button>
-                            <button onClick={() => setIsEditMode(!isEditMode)} className="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-bold py-2 px-3 rounded-lg flex items-center gap-2">{isEditMode ? <><EyeOffIcon className="w-5 h-5"/> <span className="hidden md:inline">Visualizar</span></> : <><EyeIcon className="w-5 h-5"/> <span className="hidden md:inline">Editar</span></>}</button>
-                        </div>
-                    </header>
-                    <button onClick={() => setIsToolbarCollapsed(true)} className="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 p-1 rounded-b-lg text-slate-400 hover:text-white"><ChevronsUpIcon className="w-4 h-4" /></button>
-                 </div>
-            )}
-            {canEdit && isToolbarCollapsed && (
-                <button onClick={() => setIsToolbarCollapsed(false)} className="fixed top-2 left-1/2 -translate-x-1/2 z-50 bg-slate-800/80 backdrop-blur-sm p-2 rounded-b-lg text-slate-400 hover:text-white animate-fade-in">
-                    <ChevronsDownIcon className="w-5 h-5" />
-                </button>
-            )}
+        <div className="min-h-screen transition-all duration-300" style={{ backgroundColor: settings.backgroundColor, ...finalPadding }}>
             
-            <div className={`flex flex-1 w-full relative overflow-hidden ${isEditMode ? 'flex-row' : 'flex-col'}`}>
-                {isEditMode && (
-                    <>
-                        <aside className={`flex-shrink-0 bg-slate-800/80 backdrop-blur-sm border-r border-slate-700 transition-all duration-300 ease-in-out overflow-y-auto ${isPanelOpen ? 'w-full max-w-sm' : 'w-0'}`}>
-                            <div className="h-full flex flex-col">
-                                <div className="flex-shrink-0 border-b border-slate-700 flex"> <button onClick={() => setActiveTab('components')} className={`flex-1 p-3 text-sm font-semibold capitalize ${activeTab === 'components' ? 'bg-slate-900 text-cyan-400' : 'text-slate-400 hover:bg-slate-700'}`}>Componentes</button> <button onClick={() => setActiveTab('inspector')} className={`flex-1 p-3 text-sm font-semibold capitalize ${activeTab === 'inspector' ? 'bg-slate-900 text-cyan-400' : 'text-slate-400 hover:bg-slate-700'}`}>Inspector</button> </div>
-                                <div className="flex-grow overflow-y-auto">
-                                   {activeTab === 'inspector' && <InspectorPanel selectedBlock={selectedBlock} selectedContainerId={selectedContainerId} pageData={pageData.content} onUpdateBlock={updateBlock} onUpdatePageSettings={(f, v) => updatePageData(d => { if(d.content) (d.content.settings as any)[f] = v; })} onUpdateGridSettings={(f,v) => updatePageData(d => { if(d.content) (d.content.gridSettings.desktop as any)[f] = v; })} onUpdateContainer={(id, f, v) => updatePageData(d => { if (d.content) (d.content.fixedContainers[id] as any)[f] = v; })} onZIndexChange={handleZIndexChange} />}
-                                   {activeTab === 'components' && ( <div className="p-4 grid grid-cols-2 gap-2"> <h3 className="text-lg font-bold text-cyan-400 mb-2 col-span-2">Componentes</h3> <p className="text-xs text-slate-500 mb-2 col-span-2">Arraste para a página.</p> {componentList.map(({ type, label, Icon }) => ( <div key={type} onMouseDown={(e) => handleNewBlockDragStart(e, type)} className="w-full flex flex-col items-center justify-center gap-2 p-3 bg-slate-700 rounded-md text-center cursor-grab aspect-square"> <Icon className="w-6 h-6 text-cyan-400"/> <span className="text-xs">{label}</span> </div> ))} </div> )}
-                                </div>
-                                {selectedBlock && <div className="flex-shrink-0 p-4 border-t border-slate-700 bg-slate-800"><button onClick={handleDeleteBlock} className="w-full bg-red-800 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2"><Trash2Icon className="w-5 h-5"/> Excluir Bloco</button></div>}
+            {canEdit && (
+                <>
+                    {/* --- EDITOR TOOLBAR (TOP) --- */}
+                    <div className={`fixed top-0 left-0 right-0 bg-slate-900/80 backdrop-blur-sm border-b border-slate-700 transition-transform duration-300 ease-in-out z-[9998] ${isToolbarCollapsed ? '-translate-y-full' : 'translate-y-0'}`}>
+                        <div className="p-2 flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <h2 className="text-lg font-bold text-white">Editor de Site</h2>
+                                {pageData && !pageData.is_published && (
+                                    <span className="bg-yellow-500/20 text-yellow-400 text-xs font-bold px-2 py-1 rounded-full">
+                                        RASCUNHO
+                                    </span>
+                                )}
                             </div>
-                        </aside>
-                         <button 
-                            onClick={() => setIsPanelOpen(!isPanelOpen)}
-                            title={isPanelOpen ? "Recolher Painel" : "Expandir Painel"}
-                            className="absolute top-1/2 -translate-y-1/2 w-6 h-20 bg-slate-800 hover:bg-cyan-600 text-white z-40 transition-all duration-300 ease-in-out flex items-center justify-center rounded-r-lg border-y border-r border-slate-700"
-                            style={{ left: isPanelOpen ? '24rem' : '0' }}
-                        >
-                            <ChevronLeftIcon className={`w-5 h-5 transition-transform duration-300 ${isPanelOpen ? 'transform rotate-0' : 'transform rotate-180'}`} />
-                        </button>
-                    </>
-                )}
-
-                <div className="flex-1 relative" style={isEditMode ? {} : mainContentStyle}>
-                    <div className="absolute inset-0 overflow-auto flex flex-col">
-                        <FixedContainerRenderer position="top" />
-                        <div className="flex flex-row flex-grow min-h-0">
-                            <FixedContainerRenderer position="left" />
-                            <main className="flex-grow p-4 space-y-4 flex flex-col">
-                                <div className="p-2 flex-grow min-h-[200px]"><h3 className={`text-center text-xs font-semibold uppercase text-slate-500 mb-2 ${isEditMode ? '' : 'hidden'}`}>Página Principal</h3><GridCanvas blocks={mainBlocks} context="main" /></div>
-                                <div className={`p-2 ${isEditMode ? 'border-t-2 border-dashed border-slate-700/50' : ''} ${footerBlocks.length === 0 && !isEditMode ? 'hidden' : ''}`}><h3 className={`text-center text-xs font-semibold uppercase text-slate-500 mb-2 ${isEditMode ? '' : 'hidden'}`}>Rodapé</h3><GridCanvas blocks={footerBlocks} context="footer"/></div>
-                            </main>
-                            <FixedContainerRenderer position="right" />
+                            <div className="flex items-center gap-2">
+                                <button onClick={() => navigate('/administrator')} className="text-sm bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 px-4 rounded-md flex items-center gap-2"><ArrowLeftIcon className="w-4 h-4" /> Painel</button>
+                                <button onClick={() => setIsEditMode(!isEditMode)} className={`text-sm font-semibold py-2 px-4 rounded-md flex items-center gap-2 ${isEditMode ? 'bg-cyan-600 text-white' : 'bg-slate-700 text-slate-200'}`}>
+                                    {isEditMode ? <EyeOffIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
+                                    {isEditMode ? 'Visualizar' : 'Editar'}
+                                </button>
+                                <button onClick={handleSaveChanges} disabled={!hasUnsavedChanges || status === 'saving'} className="text-sm bg-green-600 hover:bg-green-500 text-white font-semibold py-2 px-4 rounded-md flex items-center gap-2 disabled:bg-slate-600 disabled:cursor-not-allowed">
+                                    <SaveIcon className="w-4 h-4" /> {status === 'saving' ? 'Salvando...' : (hasUnsavedChanges ? 'Salvar' : 'Salvo')}
+                                </button>
+                            </div>
                         </div>
-                        <FixedContainerRenderer position="bottom" />
+                    </div>
+                    <button onClick={() => setIsToolbarCollapsed(!isToolbarCollapsed)} className="fixed top-0 left-1/2 -translate-x-1/2 bg-slate-800 text-white rounded-b-full w-24 h-8 flex items-end justify-center z-[9997] transition-transform duration-300 ease-in-out" style={{transform: `translate(-50%, ${isToolbarCollapsed ? '0px' : '48px'})`}}>
+                         {isToolbarCollapsed ? <ChevronsDownIcon className="w-4 h-4" /> : <ChevronsUpIcon className="w-4 h-4" />}
+                    </button>
+                    
+                     {/* --- EDITOR SIDE PANEL --- */}
+                    <div className={`fixed top-0 bottom-0 left-0 bg-slate-900 border-r border-slate-700 w-80 transition-transform duration-300 ease-in-out z-[9001] ${isPanelOpen ? 'translate-x-0' : '-translate-x-full'}`} style={{top: (fixedContainers.top.enabled && !collapsedStates.top ? `${fixedContainers.top.size}px` : '0px'), bottom: (fixedContainers.bottom.enabled && !collapsedStates.bottom ? `${fixedContainers.bottom.size}px` : '0px')}}>
+                        <div className="flex flex-col h-full">
+                            <div className="flex-shrink-0 border-b border-slate-700 flex">
+                                <button onClick={() => setActiveTab('components')} className={`flex-1 p-3 font-semibold text-sm ${activeTab === 'components' ? 'text-cyan-400 bg-slate-800' : 'text-slate-400'}`}>Componentes</button>
+                                <button onClick={() => setActiveTab('inspector')} className={`flex-1 p-3 font-semibold text-sm ${activeTab === 'inspector' ? 'text-cyan-400 bg-slate-800' : 'text-slate-400'}`}>Inspector</button>
+                            </div>
+                            <div className="flex-grow overflow-y-auto">
+                                {activeTab === 'components' ? (
+                                    <div className="p-4 grid grid-cols-2 gap-4">
+                                        {componentList.map(comp => <div key={comp.type} onMouseDown={(e) => handleNewBlockDragStart(e, comp.type)} className="p-4 text-center bg-slate-800 rounded-lg cursor-grab hover:bg-slate-700 hover:text-cyan-400 transition-colors"><comp.Icon className="w-8 h-8 mx-auto mb-2" /><span className="text-xs font-semibold">{comp.label}</span></div>)}
+                                    </div>
+                                ) : (
+                                    <InspectorPanel selectedBlock={selectedBlock} selectedContainerId={selectedContainerId} pageData={pageData.content} onUpdateBlock={updateBlock} onUpdatePageSettings={(f,v) => updatePageData(d => {if(d.content) d.content.settings[f] = v;})} onUpdateGridSettings={(f,v) => updatePageData(d => {if(d.content) d.content.gridSettings.desktop[f] = v;})} onUpdateContainer={(id, f, v) => updatePageData(d => {if(d.content) (d.content.fixedContainers[id] as any)[f] = v;})} onZIndexChange={handleZIndexChange} />
+                                )}
+                            </div>
+                            {selectedBlock && activeTab === 'inspector' && <div className="p-4 border-t border-slate-700"><button onClick={handleDeleteBlock} className="w-full text-red-500 hover:bg-red-500/10 font-semibold py-2 px-4 rounded-md flex items-center justify-center gap-2"><Trash2Icon className="w-4 h-4" /> Deletar Bloco</button></div>}
+                        </div>
+                    </div>
+                     <button onClick={() => setIsPanelOpen(!isPanelOpen)} className="fixed top-1/2 -translate-y-1/2 bg-slate-800 text-white rounded-r-full w-8 h-16 flex items-center justify-center z-[9002] transition-transform duration-300 ease-in-out" style={{transform: `translateX(${isPanelOpen ? '20rem' : '0rem'}) translateY(-50%)`}}>
+                        <ChevronLeftIcon className={`w-5 h-5 transition-transform duration-300 ${isPanelOpen ? '' : 'rotate-180'}`} />
+                    </button>
+                </>
+            )}
+
+            {/* --- FIXED CONTAINERS RENDERER --- */}
+            {(['top', 'left', 'right', 'bottom'] as FixedContainerPosition[]).map(pos => <FixedContainerRenderer key={pos} position={pos} />)}
+            
+            {/* --- MAIN CONTENT AREA --- */}
+            <main ref={canvasRefs.main} className={`relative mx-auto max-w-screen-2xl transition-all duration-300 ${isEditMode ? 'p-2' : ''}`} style={isEditMode ? { display: 'grid', gridTemplateColumns: `repeat(${grid.columns}, 1fr)`, gridAutoRows: `${grid.rowHeight}px`, gap: `${grid.gap}px` } : {}} onClick={isEditMode ? () => {setSelectedBlock(null); setSelectedContainerId(null)}: undefined}>
+                {isEditMode 
+                    ? mainBlocks.map(block => <InteractiveBlock key={block.id} block={block} isSelected={selectedBlock?.id === block.id} onMouseDown={(e) => handleBlockMouseDown(e, block, 'main')} onResizeStart={(e, dir) => handleResizeStart(e, block, dir, 'main')} />)
+                    : mainBlocks.map(block => <div key={block.id} style={{ gridColumn: `${block.layout.desktop.colStart} / ${block.layout.desktop.colEnd}`, gridRow: `${block.layout.desktop.rowStart} / ${block.layout.desktop.rowEnd}`}}><BlockRenderer block={block} onToggleContainer={handleToggleContainer}/></div>)}
+            </main>
+            
+            {/* --- FOOTER CONTENT AREA --- */}
+            <footer ref={canvasRefs.footer} className={`relative mx-auto max-w-screen-2xl transition-all duration-300 ${isEditMode ? 'mt-8 p-2 border-t-2 border-dashed border-slate-700' : ''}`} style={isEditMode ? { display: 'grid', gridTemplateColumns: `repeat(${grid.columns}, 1fr)`, gridAutoRows: `${grid.rowHeight}px`, gap: `${grid.gap}px` } : {}}>
+                 {isEditMode 
+                    ? footerBlocks.map(block => <InteractiveBlock key={block.id} block={block} isSelected={selectedBlock?.id === block.id} onMouseDown={(e) => handleBlockMouseDown(e, block, 'footer')} onResizeStart={(e, dir) => handleResizeStart(e, block, dir, 'footer')} />)
+                    : footerBlocks.map(block => <div key={block.id} style={{ gridColumn: `${block.layout.desktop.colStart} / ${block.layout.desktop.colEnd}`, gridRow: `${block.layout.desktop.rowStart} / ${block.layout.desktop.rowEnd}`}}><BlockRenderer block={block} onToggleContainer={handleToggleContainer}/></div>)}
+            </footer>
+             
+            {/* Feedback Message */}
+            {feedback && <div className={`fixed bottom-4 right-4 p-4 rounded-lg shadow-lg text-white z-[10000] ${feedback.type === 'error' ? 'bg-red-600' : 'bg-green-600'}`}>{feedback.message}</div>}
+
+            {/* Drag Preview */}
+            {interactionState && interactionState.type === 'new' && (
+                <div className="fixed pointer-events-none z-[10001]" style={{ left: interactionState.initialMouse.x, top: interactionState.initialMouse.y }}>
+                    <div className="p-2 text-center bg-cyan-500/50 rounded-lg text-white backdrop-blur-sm -translate-x-1/2 -translate-y-1/2">
+                        <span className="text-sm font-semibold">{interactionState.block.type}</span>
                     </div>
                 </div>
-                 {interactionState?.type === 'new' && ( <div className="fixed top-0 left-0 pointer-events-none z-[9999] opacity-80" style={{ transform: `translate(${interactionState.initialMouse.x + 10}px, ${interactionState.initialMouse.y + 10}px)`}}> <div className="flex items-center gap-3 p-3 bg-slate-700 rounded-md text-left shadow-lg"> <PointerIcon className="w-5 h-5 text-cyan-400"/> Novo Bloco: {interactionState.block.type} </div> </div> )}
-            </div>
+            )}
         </div>
     );
 };
