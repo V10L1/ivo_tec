@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { ArrowLeftIcon } from './icons/Icons';
 
 interface ModuleWrapperProps {
@@ -8,25 +8,6 @@ interface ModuleWrapperProps {
 }
 
 export const ModuleWrapper: React.FC<ModuleWrapperProps> = ({ title, onBack, children }) => {
-  
-  useEffect(() => {
-    const styleId = 'module-wrapper-animation-styles';
-    if (!document.getElementById(styleId)) {
-      const style = document.createElement('style');
-      style.id = styleId;
-      style.innerHTML = `
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(-10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in {
-          animation: fadeIn 0.5s ease-out forwards;
-        }
-      `;
-      document.head.appendChild(style);
-    }
-  }, []); // O array vazio garante que isso rode apenas uma vez
-
   return (
     <div className="animate-fade-in">
       <div className="mb-6 flex items-center gap-4">
@@ -47,3 +28,17 @@ export const ModuleWrapper: React.FC<ModuleWrapperProps> = ({ title, onBack, chi
     </div>
   );
 };
+
+// Adiciona a animação de fade-in ao tailwind config ou estilo global se necessário.
+// Por simplicidade, usando estilo inline aqui.
+const style = document.createElement('style');
+style.innerHTML = `
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+  }
+`;
+document.head.appendChild(style);

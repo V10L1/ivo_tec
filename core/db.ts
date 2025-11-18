@@ -1,17 +1,11 @@
-// HACK: Declare Node.js globals to resolve TypeScript errors when @types/node is not available.
-declare const process: {
-    env: {
-        [key: string]: string | undefined;
-    };
-    exit(code?: number): never;
-};
-
 // core/db.ts - Gerenciador de Conexão com o Banco de Dados
+// FIX: Add Node.js type reference to resolve globals like 'process'.
+/// <reference types="node" />
 
 import { Pool } from 'pg';
 import dotenv from 'dotenv';
 import { ROLE_PERMISSIONS, APP_MODULES } from '../constants';
-import { UserRole, TextStyles, FixedContainer, BlockLayout, AnimationSettings, ThemeSettings, ColorStyleValue } from '../types';
+import { UserRole } from '../types';
 
 dotenv.config();
 
@@ -71,7 +65,7 @@ export const initializeDatabase = async () => {
             console.log("Permissões padrão inseridas com sucesso.");
         }
 
-        // Tabela de Páginas (Nova estrutura CMS com SEO)
+        // Tabela de Páginas (Nova estrutura CMS)
         await client.query(`
             CREATE TABLE IF NOT EXISTS pages (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -80,9 +74,6 @@ export const initializeDatabase = async () => {
                 is_homepage BOOLEAN DEFAULT FALSE,
                 is_published BOOLEAN DEFAULT TRUE,
                 content JSONB,
-                meta_title VARCHAR(255),
-                meta_description TEXT,
-                social_image_url VARCHAR(2048),
                 created_at TIMESTAMptz DEFAULT NOW(),
                 updated_at TIMESTAMPTZ DEFAULT NOW()
             );
@@ -109,63 +100,80 @@ export const initializeDatabase = async () => {
         // Inserir página inicial padrão se não houver nenhuma
         const pagesCheck = await client.query('SELECT COUNT(*) FROM pages');
         if (parseInt(pagesCheck.rows[0].count, 10) === 0) {
-            const defaultGlobalTextColor: ColorStyleValue = { type: 'global', value: 'text' };
-            const defaultTextStyles: Omit<TextStyles, 'textColor'> = { textAlign: 'left', fontWeight: 'normal', fontStyle: 'normal', fontFamily: 'sans-serif', fontSize: 16};
-            const defaultFixedContainer: Omit<FixedContainer, 'blocks'> = { enabled: false, size: 60, isCollapsed: false, collapsible: true, toggleButtonPosition: 'center' };
-            const defaultAnimation: AnimationSettings = { type: 'none', delay: 0, duration: 1000 };
-            const defaultTheme: ThemeSettings = {
-                primaryColor: '#38bdf8', // light-blue-400
-                secondaryColor: '#818cf8', // indigo-400
-                backgroundColor: '#0f172a', // slate-900
-                surfaceColor: '#1e293b', // slate-800
-                textColor: '#e2e8f0', // slate-200
-                textSecondaryColor: '#94a3b8', // slate-400
-                headingFont: 'sans-serif',
-                bodyFont: 'sans-serif'
-            };
-
              const initialContent = {
                 settings: {
                     brandName: "Mundo Moto",
                     backgroundColor: "#0f172a"
                 },
-                theme: defaultTheme,
-                fixedContainers: {
-                    top: { ...defaultFixedContainer, size: 80, blocks: [] },
-                    left: { ...defaultFixedContainer, size: 240, blocks: [] },
-                    right: { ...defaultFixedContainer, size: 240, blocks: [] },
-                    bottom: { ...defaultFixedContainer, size: 60, blocks: [] },
+                gridSettings: {
+                    desktop: { columns: 48, rowHeight: 10, gap: 8 }
                 },
-                sections: [
+                headerBlocks: [
                     {
-                        id: 'section_1',
-                        styles: { backgroundColor: { type: 'global', value: 'background' }, backgroundOpacity: 1 },
-                        gridSettings: { columns: 12, rowHeight: 20, gap: 16 },
-                        blocks: [
-                            {
-                                id: "block_1",
-                                type: "hero",
-                                layout: { 
-                                    desktop: { colStart: 2, colEnd: 12, rowStart: 2, rowEnd: 10, alignSelf: 'stretch', justifySelf: 'stretch' },
-                                    tablet: { colStart: 1, colEnd: 9, rowStart: 2, rowEnd: 12, alignSelf: 'stretch', justifySelf: 'stretch' },
-                                    mobile: { colStart: 1, colEnd: 5, rowStart: 2, rowEnd: 15, alignSelf: 'stretch', justifySelf: 'stretch' },
-                                },
-                                animation: { ...defaultAnimation, type: 'fadeInUp' },
-                                styles: { backgroundColor: { type: 'global', value: 'surface' }, backgroundOpacity: 1, textOpacity: 1, borderRadius: 'medium', zIndex: 1 },
-                                content: {
-                                    title: { text: "Bem-vindo ao Mundo Moto", styles: { ...defaultTextStyles, textColor: { type: 'global', value: 'text' }, textAlign: 'center', fontWeight: 'bold', fontSize: 48 } },
-                                    subtitle: { text: "Sua parada única para as melhores motos do planeta. Comece sua aventura hoje.", styles: { ...defaultTextStyles, textColor: { type: 'global', value: 'textSecondary' }, textAlign: 'center', fontSize: 18 } },
-                                    ctaText: "Explorar Coleção", ctaLink: "#", ctaEnabled: true
-                                }
-                            }
-                        ]
+                        id: "header_brand",
+                        type: "text",
+                        layout: { desktop: { colStart: 2, colEnd: 12, rowStart: 2, rowEnd: 6, alignSelf: 'center', justifySelf: 'start' } },
+                        styles: { backgroundColor: "transparent", textColor: "#f1f5f9", zIndex: 1 },
+                        content: {
+                            heading: "Mundo Moto",
+                            body: ""
+                        }
+                    },
+                    {
+                        id: "header_menu_1",
+                        type: "menu",
+                        layout: { desktop: { colStart: 20, colEnd: 48, rowStart: 2, rowEnd: 6, alignSelf: 'center', justifySelf: 'end' } },
+                        styles: { backgroundColor: "transparent", textColor: "#cbd5e1", zIndex: 1 },
+                        content: {
+                            items: [
+                                { id: "item1", label: "Home", link: "#/home" },
+                                { id: "item2", label: "Sobre", link: "#/sobre" },
+                                { id: "item3", label: "Contato", link: "#/contato" }
+                            ]
+                        }
                     }
                 ],
-                footerSections: []
+                contentBlocks: [
+                    {
+                        id: "block_1",
+                        type: "hero",
+                        layout: { desktop: { colStart: 5, colEnd: 45, rowStart: 5, rowEnd: 28, alignSelf: 'stretch', justifySelf: 'stretch' } },
+                        styles: { backgroundColor: "#1e293b", opacity: 1, textColor: '#ffffff', zIndex: 1 },
+                        content: {
+                            title: "Bem-vindo ao Mundo Moto",
+                            subtitle: "Sua parada única para as melhores motos do planeta. Comece sua aventura hoje.",
+                            ctaText: "Explorar Coleção",
+                            ctaLink: "#",
+                            ctaEnabled: true
+                        }
+                    },
+                    {
+                        id: "block_2",
+                        type: "text",
+                        layout: { desktop: { colStart: 8, colEnd: 42, rowStart: 32, rowEnd: 52, alignSelf: 'start', justifySelf: 'stretch' } },
+                        styles: { backgroundColor: "transparent", opacity: 1, textColor: '#cbd5e1', zIndex: 1 },
+                        content: {
+                            heading: "Sobre Nossa Paixão",
+                            body: "Nós vivemos e respiramos motocicletas. Nossa missão é fornecer aos entusiastas máquinas de alta qualidade e serviço incomparável. Cada moto em nossa coleção é escolhida a dedo e inspecionada para garantir que atenda aos nossos altos padrões de desempenho e confiabilidade."
+                        }
+                    }
+                ],
+                footerBlocks: [
+                    {
+                        id: "footer_block_1",
+                        type: "text",
+                        layout: { desktop: { colStart: 1, colEnd: 49, rowStart: 2, rowEnd: 6, alignSelf: 'center', justifySelf: 'center' } },
+                        styles: { backgroundColor: "transparent", opacity: 1, textColor: '#64748b', zIndex: 1 },
+                        content: {
+                            heading: "",
+                            body: "© 2024 Mundo Moto. Todos os direitos reservados."
+                        }
+                    }
+                ]
              };
              await client.query(
-                'INSERT INTO pages (title, slug, is_homepage, content, meta_title, meta_description) VALUES ($1, $2, $3, $4, $5, $6)',
-                ['Página Inicial', 'home', true, JSON.stringify(initialContent), 'Mundo Moto - Página Inicial', 'As melhores motos do planeta estão aqui.']
+                'INSERT INTO pages (title, slug, is_homepage, content) VALUES ($1, $2, $3, $4)',
+                ['Página Inicial', 'home', true, JSON.stringify(initialContent)]
              );
              console.log("Página inicial padrão criada.");
         }

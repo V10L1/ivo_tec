@@ -1,33 +1,20 @@
-// HACK: Declare Node.js globals to resolve TypeScript errors when @types/node is not available.
-declare const process: {
-    env: {
-        [key: string]: string | undefined;
-    };
-    cwd(): string;
-    exit(code?: number): never;
-};
-declare const __filename: string;
-declare const __dirname: string;
-
 // server.ts - O Orquestrador Principal
-// FIX: Explicitly import Request, Response, and NextFunction to prevent type conflicts.
-import express, { Request, Response, NextFunction } from 'express';
+/// <reference types="node" />
+
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs/promises';
 
 // Importa a função de inicialização do núcleo do banco de dados
 import { initializeDatabase, pool } from './core/db';
 
-// --- Importação Estática das Rotas dos Módulos ---
-import aiRoutes from './api/ai/ai.routes';
-import siteRoutes from './api/site/site.routes';
-import iamRoutes from './api/usuario/usuario.routes';
-
 // Carrega as variáveis de ambiente antes de qualquer outra coisa
 dotenv.config();
 
-const app = express();
+// FIX: Explicitly type the express app to resolve middleware type conflicts.
+const app: express.Express = express();
 const PORT = process.env.PORT || 8069;
 
 app.use(cors());
@@ -46,15 +33,40 @@ app.get('/api/health', async (req: Request, res: Response) => {
 });
 
 
-// --- Carregamento Estático das Rotas da API ---
-const loadApiModules = () => {
-    console.log("[Module Loader] Carregando rotas da API estaticamente...");
-    app.use('/api/ai', aiRoutes);
-    console.log("[Module Loader] Módulo 'ai' carregado com sucesso no prefixo '/api/ai'.");
-    app.use('/api/site', siteRoutes);
-    console.log("[Module Loader] Módulo 'site' carregado com sucesso no prefixo '/api/site'.");
-    app.use('/api/iam', iamRoutes);
-    console.log("[Module Loader] Módulo 'usuario' (iam) carregado com sucesso no prefixo '/api/iam'.");
+// --- Carregador de Módulos Dinâmico ---
+const loadApiModules = async () => {
+    // O diretório 'api' de origem onde os arquivos manifest.json residem.
+    const sourceApiDir = path.join(process.cwd(), 'api');
+    // O diretório 'api' compilado onde os arquivos de rota .js residem.
+    const compiledApiDir = path.join(__dirname, 'api');
+    try {
+        // Lemos o diretório de origem para encontrar as pastas dos módulos.
+        const moduleFolders = await fs.readdir(sourceApiDir, { withFileTypes: true });
+
+        for (const folder of moduleFolders) {
+            if (folder.isDirectory()) {
+                // Lemos o manifest do diretório de origem.
+                const manifestPath = path.join(sourceApiDir, folder.name, 'manifest.json');
+                try {
+                    const manifestContent = await fs.readFile(manifestPath, 'utf-8');
+                    const manifest = JSON.parse(manifestContent);
+                    
+                    // Importamos as rotas do diretório COMPILADO.
+                    const routesPath = path.join(compiledApiDir, folder.name, manifest.routesFile);
+                    const { default: router } = await import(routesPath);
+                    
+                    if (router) {
+                        app.use(manifest.prefix, router);
+                        console.log(`[Module Loader] Módulo '${folder.name}' carregado com sucesso no prefixo '${manifest.prefix}'.`);
+                    }
+                } catch (e) {
+                    console.error(`[Module Loader] Falha ao carregar o módulo '${folder.name}'. Verifique o manifest.json e o arquivo de rotas.`, e);
+                }
+            }
+        }
+    } catch (error) {
+        console.error("[Module Loader] Erro crítico ao ler o diretório da API. A pasta 'api/' existe?", error);
+    }
 };
 
 
@@ -67,13 +79,10 @@ const serveFrontend = () => {
     app.use('/dist/client', express.static(clientDistPath));
     app.use(express.static(staticRootPath));
 
-    // Rota "catch-all" melhorada para lidar com APIs não encontradas
-    app.use((req: Request, res: Response, next: NextFunction) => {
+    app.get('*', (req: Request, res: Response) => {
         if (req.path.startsWith('/api/')) {
-            // Se chegou até aqui, é uma rota de API que não foi encontrada.
-            return res.status(404).json({ message: `Endpoint da API não encontrado: ${req.method} ${req.path}` });
+            return res.status(404).json({ message: 'Endpoint da API não encontrado.' });
         }
-        // Se não for uma rota de API, serve o frontend.
         res.sendFile(path.join(staticRootPath, 'index.html'));
     });
 };
@@ -81,11 +90,17 @@ const serveFrontend = () => {
 
 // --- Início do Servidor ---
 const startServer = async () => {
+    // 1. Garante que o banco de dados e as tabelas estão prontos
     const dbInitialized = await initializeDatabase();
     
     if (dbInitialized) {
-        loadApiModules(); // Carrega as rotas de forma síncrona
+        // 2. Carrega todos os módulos da API dinamicamente
+        await loadApiModules();
+
+        // 3. Configura o serviço de arquivos do frontend
         serveFrontend();
+
+        // 4. Inicia o servidor
         app.listen(PORT, () => {
             console.log(`Servidor unificado e modular está rodando em http://localhost:${PORT}`);
         });

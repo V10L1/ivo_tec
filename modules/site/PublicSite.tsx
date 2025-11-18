@@ -1,189 +1,232 @@
 import React, { useState, useEffect } from 'react';
-import { Page, PageBlock, Section, Viewport, FixedContainerPosition, SiteData, ThemeSettings, ColorStyleValue, ThemeColorKey } from '../../types';
-import BlockRenderer from './components/BlockRenderer';
-import { defaultPageContent } from '../../core/site/defaults';
+import { Page, PageBlock, SiteData } from '../../types';
 
-// Função utilitária para resolver a cor com base no tema
-export const resolveColor = (color: ColorStyleValue | undefined, theme: ThemeSettings): string => {
-    if (!color) return 'transparent';
-    if (color.type === 'global') {
-        const themeKey = color.value as ThemeColorKey;
-        return theme[themeKey] || 'transparent';
-    }
-    return color.value;
-};
-
-interface PublicSiteProps {
-    slug?: string;
-    pageData?: Page | null;
-    isEditing?: boolean;
-    // Esta prop será usada pelo editor para injetar os controles de arrastar e soltar
-    renderSectionWithEditorGrid?: (section: Section, context: 'main' | 'footer') => React.ReactNode;
-}
-
-const PublicSite: React.FC<PublicSiteProps> = ({ slug, pageData: initialPageData, isEditing = false, renderSectionWithEditorGrid }) => {
-    const [pageData, setPageData] = useState<Page | null>(initialPageData || null);
-    const [status, setStatus] = useState<'loading' | 'success' | 'not_found' | 'error'>(initialPageData ? 'success' : 'loading');
-
-    // Sincroniza o estado interno se a prop pageData mudar (importante para o editor)
-    useEffect(() => {
-        if (initialPageData) {
-            setPageData(initialPageData);
-            setStatus('success');
+const getYouTubeEmbedUrl = (url: string, autoplay?: boolean, controls?: boolean) => {
+    let videoId;
+    try {
+        if (url.includes('youtube.com/watch')) {
+            videoId = new URL(url).searchParams.get('v');
+        } else if (url.includes('youtu.be/')) {
+            videoId = new URL(url).pathname.split('/').pop();
         }
-    }, [initialPageData]);
-    
-    // Busca os dados da página se estiver em modo público e não tiver dados iniciais
-    useEffect(() => {
-        if (slug && !initialPageData && !isEditing) {
-            const fetchPageData = async () => {
-                setStatus('loading');
-                try {
-                    const endpoint = slug === 'home' ? '/api/site/pages/public/home' : `/api/site/pages/public/slug/${slug}`;
-                    const response = await fetch(endpoint);
-                    if (response.status === 404) {
-                        setStatus('not_found');
-                        return;
-                    }
-                    if (!response.ok) throw new Error('Failed to fetch page data');
-                    const data = await response.json();
-                    setPageData(data);
-                    setStatus('success');
-                } catch (e) {
-                    console.error("Failed to fetch page data for public site", e);
-                    setStatus('error');
-                }
-            };
-            fetchPageData();
+        if (!videoId) return null;
+
+        const embedUrl = new URL(`https://www.youtube.com/embed/${videoId}`);
+        if (autoplay) {
+            embedUrl.searchParams.set('autoplay', '1');
+            embedUrl.searchParams.set('mute', '1'); // Autoplay requires mute
         }
-    }, [slug, initialPageData, isEditing]);
-
-
-    const [collapsedStates, setCollapsedStates] = useState({ top: false, left: false, right: false, bottom: false });
-
-    useEffect(() => {
-        if (pageData?.content?.fixedContainers) {
-            const { top, left, right, bottom } = pageData.content.fixedContainers;
-            setCollapsedStates({
-                top: top.isCollapsed,
-                left: left.isCollapsed,
-                right: right.isCollapsed,
-                bottom: bottom.isCollapsed
-            });
+        if (controls === false) {
+            embedUrl.searchParams.set('controls', '0');
         }
-    }, [pageData]);
-
-    useEffect(() => {
-        if (isEditing || !pageData) return;
-        document.title = pageData.metaTitle || 'Site';
-        return () => { document.title = 'Painel de Administração Modular'; };
-    }, [pageData, isEditing]);
-
-    useEffect(() => {
-        if (isEditing) return;
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const target = entry.target as HTMLElement;
-                    const animationType = target.dataset.animation;
-                    if (animationType && animationType !== 'none') {
-                        target.style.animationDelay = target.dataset.animationDelay + 'ms';
-                        target.style.animationDuration = target.dataset.animationDuration + 'ms';
-                        target.classList.add(`animate-${animationType}`);
-                        target.classList.remove('opacity-0');
-                        observer.unobserve(target);
-                    }
-                }
-            });
-        }, { threshold: 0.1 });
-
-        const targets = document.querySelectorAll('[data-animation]');
-        targets.forEach(t => observer.observe(t));
-        return () => observer.disconnect();
-    }, [isEditing, pageData]);
-
-    const handleToggleContainer = (target: FixedContainerPosition) => {
-        setCollapsedStates(prev => ({ ...prev, [target]: !prev[target] }));
-    };
-    
-    if (status === 'loading' && !isEditing) {
-        return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Carregando...</div>;
-    }
-    
-    if ((status === 'not_found' || status === 'error' || !pageData) && !isEditing) {
-        return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Página não encontrada.</div>;
-    }
-    
-    if (!pageData) {
+        return embedUrl.toString();
+    } catch (error) {
+        console.error("Invalid video URL:", url, error);
         return null;
     }
+};
 
-    // FIX: Garante que o conteúdo e o tema tenham valores padrão para evitar travamentos.
-    const { 
-        settings = defaultPageContent.settings, 
-        fixedContainers = defaultPageContent.fixedContainers, 
-        sections = [], 
-        footerSections = [], 
-        theme = defaultPageContent.theme 
-    } = pageData.content || {};
-
-
-    const renderSectionForPublic = (section: Section) => {
-        return (
-            <div
-                key={section.id}
-                style={{ backgroundColor: resolveColor(section.styles.backgroundColor, theme), position: 'relative' }}
-            >
-                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${section.gridSettings.columns}, 1fr)`, gridAutoRows: `${section.gridSettings.rowHeight}px`, gap: `${section.gridSettings.gap}px`, position: 'relative' }}>
-                    {section.blocks.map(block => (
-                        <div
-                            key={block.id}
-                            data-animation={!isEditing ? block.animation.type : 'none'}
-                            data-animation-delay={block.animation.delay}
-                            data-animation-duration={block.animation.duration}
-                            style={{ gridColumn: `${block.layout.desktop.colStart} / ${block.layout.desktop.colEnd}`, gridRow: `${block.layout.desktop.rowStart} / ${block.layout.desktop.rowEnd}`, zIndex: block.styles?.zIndex || 'auto', position: 'relative' }}
-                            className={`${!isEditing && block.animation.type !== 'none' ? 'opacity-0' : ''}`}
-                        >
-                            <BlockRenderer
-                                block={block}
-                                theme={theme}
-                                viewport={'desktop'}
-                                isEditing={isEditing}
-                                onToggleContainer={handleToggleContainer}
-                            />
-                        </div>
-                    ))}
-                </div>
-            </div>
-        );
+// --- Renderizadores de Bloco Dinâmicos ---
+const BlockRenderer: React.FC<{ block: PageBlock }> = ({ block }) => {
+    const commonClasses = "w-full h-full flex flex-col p-4";
+    const styles = block.styles || {};
+    const inlineStyle = {
+        backgroundColor: styles.backgroundColor,
+        opacity: styles.opacity,
+    };
+    
+    const textStyles: React.CSSProperties = {
+        color: styles.textColor,
+        textAlign: styles.textAlign,
+        fontWeight: styles.fontWeight,
+        fontStyle: styles.fontStyle,
+        fontFamily: styles.fontFamily,
     };
 
-    const mainPadding: React.CSSProperties = {
-        paddingTop: fixedContainers.top.enabled && !collapsedStates.top ? `${fixedContainers.top.size}px` : '0px',
-        paddingBottom: fixedContainers.bottom.enabled && !collapsedStates.bottom ? `${fixedContainers.bottom.size}px` : '0px',
-        paddingLeft: fixedContainers.left.enabled && !collapsedStates.left ? `${fixedContainers.left.size}px` : '0px',
-        paddingRight: fixedContainers.right.enabled && !collapsedStates.right ? `${fixedContainers.right.size}px` : '0px',
-        transition: 'padding 0.3s ease-in-out',
-        width: '100%',
+    switch (block.type) {
+        case 'hero':
+            return (
+                <div style={inlineStyle} className={`${commonClasses} text-center items-center justify-center rounded-lg`}>
+                    <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-4" style={textStyles}>{block.content.title}</h1>
+                    <p className="text-md md:text-lg text-slate-300 max-w-2xl mx-auto mb-6" style={textStyles}>{block.content.subtitle}</p>
+                    {block.content.ctaEnabled && (
+                         <a href={block.content.ctaLink} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-8 rounded-full text-lg transition-transform transform hover:scale-105" style={{...textStyles, backgroundColor: styles.backgroundColor}}>
+                            {block.content.ctaText}
+                        </a>
+                    )}
+                </div>
+            );
+        case 'text':
+            return (
+                 <div style={inlineStyle} className={`${commonClasses} text-left`}>
+                    <h2 className="text-3xl font-bold mb-4" style={textStyles}>{block.content.heading}</h2>
+                    <p className="text-slate-400 whitespace-pre-wrap leading-relaxed" style={textStyles}>{block.content.body}</p>
+                </div>
+            );
+        case 'image':
+            return (
+                <img src={block.content.imageUrl} alt={block.content.altText} className="w-full h-full object-cover rounded-lg shadow-lg" style={{opacity: styles.opacity}}/>
+            );
+        case 'button':
+            return (
+                 <div className={`${commonClasses} items-center justify-center`}>
+                    <a href={block.content.link} className="text-white font-bold py-3 px-8 rounded-lg inline-block transition-colors" style={{...inlineStyle, ...textStyles}}>
+                        {block.content.text}
+                    </a>
+                </div>
+            );
+        case 'menu':
+            return (
+                 <nav style={inlineStyle} className={`${commonClasses} flex-row items-center justify-center gap-6`}>
+                    {block.content.items.map(item => (
+                        <a key={item.id} href={item.link} className="text-slate-300 hover:text-cyan-400 font-medium transition-colors" style={textStyles}>
+                            {item.label}
+                        </a>
+                    ))}
+                </nav>
+            );
+        case 'video':
+            const embedUrl = getYouTubeEmbedUrl(block.content.videoUrl, block.content.autoplay, block.content.controls);
+            return embedUrl ? (
+                <div className="w-full h-full rounded-lg overflow-hidden">
+                    <iframe
+                        width="100%"
+                        height="100%"
+                        src={embedUrl}
+                        title="YouTube video player"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                    ></iframe>
+                </div>
+            ) : <div className="p-4 text-red-400">URL de vídeo inválida. Use um link do YouTube.</div>;
+        case 'divider':
+            return <div className="flex items-center justify-center w-full h-full"><hr className="w-full border-slate-700" style={{borderColor: styles.backgroundColor}}/></div>;
+        case 'spacer':
+            return <div style={inlineStyle}></div>; // Spacer is just for layout
+        default:
+            return <div className="p-4 bg-red-900 rounded-lg">Bloco desconhecido</div>;
+    }
+};
+
+interface GridCanvasProps {
+    blocks: PageBlock[] | undefined;
+    gridSettings: SiteData['gridSettings']['desktop'] | undefined;
+}
+
+const GridCanvas: React.FC<GridCanvasProps> = ({ blocks = [], gridSettings }) => {
+    if (!gridSettings) return null;
+
+    const gridStyle = {
+        display: 'grid',
+        gridTemplateColumns: `repeat(${gridSettings.columns}, 1fr)`,
+        gridAutoRows: `${gridSettings.rowHeight}px`,
+        gap: `${gridSettings.gap}px`,
     };
 
     return (
-        <div style={{ backgroundColor: settings.backgroundColor }}>
-             <style>{`:root { --primary-color: ${theme.primaryColor}; --secondary-color: ${theme.secondaryColor}; --heading-font: ${theme.headingFont}; --body-font: ${theme.bodyFont}; --background-color: ${theme.backgroundColor}; --surface-color: ${theme.surfaceColor}; --text-color: ${theme.textColor}; --text-secondary-color: ${theme.textSecondaryColor}; }`}</style>
-             <div style={isEditing ? {} : mainPadding}>
-                <main className="relative mx-auto">
-                    {sections.map(section =>
-                        renderSectionWithEditorGrid ? renderSectionWithEditorGrid(section, 'main') : renderSectionForPublic(section)
-                    )}
-                </main>
-                <footer className="relative mx-auto max-w-screen-2xl mt-8 pt-8 border-t border-slate-800">
-                    {footerSections.map(section =>
-                        renderSectionWithEditorGrid ? renderSectionWithEditorGrid(section, 'footer') : renderSectionForPublic(section)
-                    )}
-                </footer>
-             </div>
+        <div className="container mx-auto px-4 py-8" style={gridStyle}>
+            {blocks.map(block => {
+                const { desktop: layout } = block.layout;
+                const blockStyle = {
+                    gridColumn: `${layout.colStart} / ${layout.colEnd}`,
+                    gridRow: `${layout.rowStart} / ${layout.rowEnd}`,
+                    alignSelf: layout.alignSelf,
+                    justifySelf: layout.justifySelf,
+                    zIndex: block.styles?.zIndex || 'auto',
+                    position: 'relative' as const,
+                };
+                return (
+                    <div key={block.id} style={blockStyle}>
+                        <BlockRenderer block={block} />
+                    </div>
+                );
+            })}
         </div>
     );
+};
+
+
+interface PublicSiteProps {
+  slug: string;
+}
+
+const PublicSite: React.FC<PublicSiteProps> = ({ slug }) => {
+  const [page, setPage] = useState<Page | null>(null);
+  const [status, setStatus] = useState<'loading' | 'success' | 'not_found' | 'error'>('loading');
+
+  useEffect(() => {
+    const fetchContent = async () => {
+        setStatus('loading');
+        try {
+            const endpoint = slug === 'home' ? '/api/site/pages/public/home' : `/api/site/pages/public/slug/${slug}`;
+            const response = await fetch(endpoint);
+            if (response.status === 404) {
+                setStatus('not_found');
+                return;
+            }
+            if (!response.ok) throw new Error('A resposta da rede não foi ok');
+            const data: Page = await response.json();
+            setPage(data);
+            setStatus('success');
+        } catch (error) {
+            console.error("Falha ao buscar o conteúdo da página:", error);
+            setStatus('error');
+        }
+    };
+    fetchContent();
+  }, [slug]);
+
+  useEffect(() => {
+    if (page?.content?.settings.brandName) {
+      document.title = page.content.settings.brandName;
+    }
+    // Cleanup function to reset title when component unmounts
+    return () => {
+      document.title = 'Painel de Administração Modular';
+    };
+  }, [page]);
+
+
+  const siteSettings = page?.content?.settings;
+  const pageStyle = {
+    backgroundColor: siteSettings?.backgroundColor || '#0f172a' // slate-900
+  };
+
+  if (status === 'loading') {
+    return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Carregando...</div>;
+  }
+  if (status === 'not_found') {
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white text-center">
+            <div>
+                <h1 className="text-4xl font-bold">404 - Página Não Encontrada</h1>
+                <p className="text-slate-400 mt-2">A página que você está procurando não existe.</p>
+            </div>
+        </div>
+    );
+  }
+  if (status === 'error' || !page?.content) {
+     return (
+        <div className="min-h-screen flex items-center justify-center bg-slate-900 text-red-400 text-center">
+            Ocorreu um erro ao carregar o conteúdo.
+        </div>
+     );
+  }
+
+  return (
+    <div className="min-h-screen text-slate-100 font-sans" style={pageStyle}>
+        <header>
+            <GridCanvas blocks={page.content.headerBlocks} gridSettings={page.content.gridSettings.desktop} />
+        </header>
+        <main>
+            <GridCanvas blocks={page.content.contentBlocks} gridSettings={page.content.gridSettings.desktop} />
+        </main>
+        <footer>
+            <GridCanvas blocks={page.content.footerBlocks} gridSettings={page.content.gridSettings.desktop} />
+        </footer>
+    </div>
+  );
 };
 
 export default PublicSite;

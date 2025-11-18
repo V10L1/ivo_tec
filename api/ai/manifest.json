@@ -1,5 +1,0 @@
-{
-  "name": "Módulo de Inteligência Artificial",
-  "prefix": "/api/ai",
-  "routesFile": "./ai.routes.js"
-}

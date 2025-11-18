@@ -1,18 +1,19 @@
-// HACK: Declare Node.js globals to resolve TypeScript errors when @types/node is not available.
-declare const process: {
-    env: {
-        [key: string]: string | undefined;
-    };
-    exit(code?: number): never;
-};
+// core/auth.middleware.ts - Middlewares de Autênticação e Autorização
+/// <reference types="node" />
 
-// core/auth.middleware.ts - Middlewares de Autenticação e Autorização
-// FIX: Explicitly import Request, Response, and NextFunction to prevent type conflicts.
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { UserRole, AppKey } from '../types';
 import { pool } from './db';
 
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+    console.error("ERRO FATAL: JWT_SECRET não está definido. A autenticação não funcionará.");
+    process.exit(1);
+}
+
+// Augment Express's Request type to include the user property for authenticated routes.
 declare global {
     namespace Express {
         interface Request {
@@ -26,18 +27,13 @@ declare global {
     }
 }
 
+// FIX: Add explicit types for req, res, and next.
 export const verifyToken = (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
     if (!token) {
         return res.status(401).json({ message: 'Nenhum token fornecido' });
-    }
-    
-    const JWT_SECRET = process.env.JWT_SECRET;
-    if (!JWT_SECRET) {
-        console.error("ERRO FATAL: JWT_SECRET não está definido no momento da verificação.");
-        return res.status(500).json({ message: 'Erro de configuração do servidor.' });
     }
 
     jwt.verify(token, JWT_SECRET, (err: any, decoded: any) => {
@@ -49,6 +45,7 @@ export const verifyToken = (req: Request, res: Response, next: NextFunction) => 
     });
 };
 
+// FIX: Add explicit types for req, res, and next.
 export const isDeveloper = (req: Request, res: Response, next: NextFunction) => {
     if (req.user?.role !== UserRole.DEVELOPER) {
         return res.status(403).json({ message: 'Acesso negado. Apenas desenvolvedores.' });
@@ -57,6 +54,7 @@ export const isDeveloper = (req: Request, res: Response, next: NextFunction) => 
 };
 
 export const checkModulePermission = (requiredPermission: AppKey) => {
+    // FIX: Add explicit types for req, res, and next.
     return async (req: Request, res: Response, next: NextFunction) => {
         if (!req.user) {
             return res.status(401).json({ message: 'Não autenticado' });

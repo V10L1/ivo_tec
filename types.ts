@@ -16,45 +16,19 @@ export interface AppModule {
   Icon: React.ComponentType<{ className?: string }>;
 }
 
-// --- Novos Tipos de Estilo em Cascata ---
-export type ThemeColorKey = 'primary' | 'secondary' | 'background' | 'surface' | 'text' | 'textSecondary';
-
-export interface ColorStyleValue {
-    type: 'global' | 'custom';
-    ref?: ThemeColorKey; // Apenas se o tipo for 'global'
-    value: string; // ref para global (ex: 'primary') ou valor hex para custom
-}
-
-// Rich text styles for individual text elements
-export interface TextStyles {
-  textColor?: ColorStyleValue;
-  textAlign?: 'left' | 'center' | 'right' | 'justify';
-  fontWeight?: 'normal' | 'bold';
-  fontStyle?: 'normal' | 'italic';
-  fontFamily?: string;
-  fontSize?: number;
-}
-
-// Represents a piece of text with its own styling
-export interface StyledText {
-  text: string;
-  styles: TextStyles;
-}
-
-
 // --- Tipos de Conteúdo do Construtor de Páginas ---
 
 export interface HeroBlockContent {
-  title: StyledText;
-  subtitle: StyledText;
+  title: string;
+  subtitle: string;
   ctaText: string;
   ctaLink: string;
   ctaEnabled: boolean;
 }
 
 export interface TextBlockContent {
-  heading: StyledText;
-  body: StyledText;
+  heading: string;
+  body: string;
 }
 
 export interface ImageBlockContent {
@@ -63,10 +37,8 @@ export interface ImageBlockContent {
 }
 
 export interface ButtonBlockContent {
-  text: StyledText;
-  actionType: 'link' | 'toggleContainer';
-  linkUrl: string;
-  actionTarget: FixedContainerPosition | null;
+  text: string;
+  link: string;
 }
 
 export interface MenuItem {
@@ -93,13 +65,16 @@ export interface SpacerBlockContent {
   // No content needed, layout controls height
 }
 
-// Styles for the block container
-export interface ContainerStyles {
-  backgroundColor?: ColorStyleValue;
-  backgroundOpacity?: number; // 0 to 1
-  textOpacity?: number; // 0 to 1
-  borderRadius?: 'none' | 'medium' | 'full';
+export interface BlockStyles {
+  backgroundColor?: string;
+  opacity?: number; // 0 to 1
+  textColor?: string;
   zIndex?: number;
+  // Rich text styles
+  textAlign?: 'left' | 'center' | 'right' | 'justify';
+  fontWeight?: 'normal' | 'bold';
+  fontStyle?: 'normal' | 'italic';
+  fontFamily?: string;
 }
 
 
@@ -114,26 +89,13 @@ export interface BlockLayout {
   justifySelf: 'start' | 'center' | 'end' | 'stretch';
 }
 
-export type AnimationType = 'none' | 'fadeIn' | 'fadeInUp' | 'fadeInLeft' | 'fadeInRight' | 'zoomIn';
-
-export interface AnimationSettings {
-    type: AnimationType;
-    delay: number; // in ms
-    duration: number; // in ms
-}
-
-// FIX: Export Viewport and Selection types for use in site editor components.
-export type Viewport = 'desktop' | 'tablet' | 'mobile';
-
 export type PageBlock = {
   id: string;
   layout: {
     desktop: BlockLayout;
-    tablet: BlockLayout;
-    mobile: BlockLayout;
+    // Futuramente: tablet: BlockLayout; mobile: BlockLayout;
   };
-  animation: AnimationSettings;
-  styles?: ContainerStyles;
+  styles?: BlockStyles;
 } & (
   | { type: 'hero'; content: HeroBlockContent }
   | { type: 'text'; content: TextBlockContent }
@@ -144,19 +106,6 @@ export type PageBlock = {
   | { type: 'divider'; content: DividerBlockContent }
   | { type: 'spacer'; content: SpacerBlockContent }
 );
-
-// FIX: Export Viewport and Selection types for use in site editor components.
-export type Selection = {
-    type: 'block';
-    id: string; // block id
-    blockType: PageBlock['type'];
-    sectionId: string;
-    context: 'main' | 'footer';
-} | {
-    type: 'section';
-    id: string; // sectionId
-    context: 'main' | 'footer';
-} | null;
 
 
 // --- Tipos de Dados do Site ---
@@ -172,49 +121,16 @@ export interface SiteSettings {
   backgroundColor: string;
 }
 
-export interface ThemeSettings {
-    primaryColor: string;
-    secondaryColor: string;
-    backgroundColor: string;
-    surfaceColor: string;
-    textColor: string;
-    textSecondaryColor: string;
-    headingFont: string;
-    bodyFont: string;
-}
-
-export interface FixedContainer {
-  enabled: boolean;
-  size: number; // height for top/bottom, width for left/right in pixels
-  isCollapsed: boolean; // default state for public view
-  collapsible: boolean; // can the user collapse this container?
-  toggleButtonPosition: 'left' | 'center' | 'right' | 'none';
-  blocks: PageBlock[];
-}
-
-export type FixedContainerPosition = 'top' | 'left' | 'right' | 'bottom';
-
-export interface FixedContainers {
-  top: FixedContainer;
-  left: FixedContainer;
-  right: FixedContainer;
-  bottom: FixedContainer;
-}
-
-export interface Section {
-  id: string;
-  styles: ContainerStyles; // For background, padding, etc.
-  gridSettings: GridSettings; // Each section has its own grid
-  blocks: PageBlock[];
-}
-
 // Representa o objeto de conteúdo JSONB dentro de cada página
 export interface SiteData {
   settings: SiteSettings;
-  theme: ThemeSettings;
-  fixedContainers: FixedContainers;
-  sections: Section[];
-  footerSections: Section[];
+  gridSettings: {
+    desktop: GridSettings;
+    // Futuramente: tablet: GridSettings; mobile: GridSettings;
+  };
+  headerBlocks: PageBlock[];
+  contentBlocks: PageBlock[];
+  footerBlocks: PageBlock[];
 }
 
 // Representa uma página individual no banco de dados
@@ -227,8 +143,4 @@ export interface Page {
   content: SiteData | null;
   created_at: string;
   updated_at: string;
-  // SEO Fields
-  metaTitle: string | null;
-  metaDescription: string | null;
-  socialImageUrl: string | null;
 }

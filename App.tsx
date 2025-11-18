@@ -1,27 +1,40 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, createContext, useContext } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Dashboard } from './components/Dashboard';
 import { Header } from './components/Header';
 import { ModuleWrapper } from './components/ModuleWrapper';
 import { APP_MODULES } from './constants';
 import { AppKey } from './types';
-import PageManager from './modules/site/PageManager';
+import SiteEditor from './modules/site/SiteEditor';
 import StoreManager from './modules/loja/StoreManager';
 import StockControl from './modules/estoque/StockControl';
 import MessagesChat from './modules/mensagens/MessagesChat';
 import SupportTickets from './modules/suporte/SupportTickets';
 import UserManagement from './modules/usuario/UserManagement';
+import PublicSite from './modules/site/PublicSite';
 import Login from './modules/usuario/Login';
 import InitialSetup from './modules/usuario/InitialSetup';
 import ForgotPassword from './modules/usuario/ForgotPassword';
 import Register from './modules/usuario/Register';
 import AppsManager from './modules/apps/AppsManager';
-import { RouterProvider } from './contexts/RouterContext';
+
+// --- Router Context ---
+interface RouterContextType {
+  navigate: (path: string) => void;
+}
+const RouterContext = createContext<RouterContextType | undefined>(undefined);
+
+export const useRouter = () => {
+  const context = useContext(RouterContext);
+  if (!context) {
+    throw new Error('useRouter must be used within the main App component');
+  }
+  return context;
+};
 
 // --- Module Views ---
 const ModuleViews: Record<AppKey, React.ComponentType> = {
-  SITE: PageManager,
+  SITE: SiteEditor,
   STORE: StoreManager,
   STOCK: StockControl,
   MESSAGES: MessagesChat,
@@ -40,6 +53,11 @@ const AdminPanel = () => {
   const handleGoToDashboard = () => {
     setActiveModule(null);
   };
+
+  // Tratamento especial para o SiteEditor em tela cheia
+  if (activeModule === 'SITE') {
+    return <SiteEditor onBack={handleGoToDashboard} />;
+  }
 
   const ActiveModuleComponent = activeModule ? ModuleViews[activeModule] : null;
   const moduleInfo = activeModule ? APP_MODULES.find(m => m.key === activeModule) : null;
@@ -63,19 +81,14 @@ const AdminPanel = () => {
 const AppContent: React.FC = () => {
   const { isAuthenticated } = useAuth();
   
-  const getPathFromHash = () => {
-    const hash = window.location.hash.substring(1);
-    const pathOnly = hash.split('?')[0];
-    return pathOnly || '/';
-  };
-
+  const getPathFromHash = () => window.location.hash.substring(1) || '/';
   const [path, setPath] = useState(getPathFromHash());
   const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
   const [setupError, setSetupError] = useState<string | null>(null);
 
   const navigate = (newPath: string) => {
     window.location.hash = newPath;
-    setPath(newPath.split('?')[0] || '/');
+    setPath(newPath);
   };
 
   useEffect(() => {
@@ -100,11 +113,13 @@ const AppContent: React.FC = () => {
         setNeedsSetup(null);
       }
     };
-    checkSetupStatus();
+    if (path.startsWith('/administrator') || path.startsWith('/register')) {
+        checkSetupStatus();
+    }
   }, [path]);
 
 
-  if (needsSetup === null) {
+  if (needsSetup === null && (path.startsWith('/administrator') || path.startsWith('/register'))) {
       if (setupError) {
           return (
               <div className="min-h-screen flex items-center justify-center bg-slate-900 text-red-400 text-center p-4">
@@ -130,14 +145,15 @@ const AppContent: React.FC = () => {
       content = isAuthenticated ? <AdminPanel /> : <Login />;
     }
   } else {
-    // Redireciona para o login se a rota for desconhecida dentro do escopo do admin
-    content = needsSetup ? <InitialSetup /> : <Login />;
+    // Roteamento dinâmico para páginas públicas
+    const slug = path === '/' ? 'home' : path.substring(1);
+    content = <PublicSite slug={slug} />;
   }
 
   return (
-    <RouterProvider value={{ navigate }}>
+    <RouterContext.Provider value={{ navigate }}>
       {content}
-    </RouterProvider>
+    </RouterContext.Provider>
   );
 };
 

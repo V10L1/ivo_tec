@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { CodeIcon } from '../../components/icons/Icons';
-import { useRouter } from '../../contexts/RouterContext';
+import { useRouter } from '../../App';
 
 const Register: React.FC = () => {
   const { navigate } = useRouter();
