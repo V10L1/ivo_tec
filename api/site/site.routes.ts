@@ -1,9 +1,11 @@
 
 // api/site/site.routes.ts
 import express, { Request, Response } from 'express';
+import { GoogleGenAI, Type } from "@google/genai";
 import { pool } from '../../core/db';
 import { verifyToken, checkModulePermission } from '../../core/auth.middleware';
 import { SiteData, FixedContainer } from '../../types';
+import { getTemplate, AIPageContent } from './templates';
 
 const router = express.Router();
 
@@ -23,6 +25,105 @@ const defaultNewPageContent: SiteData = {
   mainBlocks: [],
   footerBlocks: [],
 };
+
+// --- AI Generation Route ---
+router.post('/pages/ai-generate', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
+    const { prompt, brandName } = req.body;
+
+    if (!prompt || !brandName) {
+        return res.status(400).json({ message: 'Prompt e Nome da Marca são obrigatórios.' });
+    }
+
+    // Initialize Gemini
+    // NOTE: Assuming API_KEY is in process.env.API_KEY
+    if (!process.env.API_KEY) {
+         console.error("API_KEY is missing for Gemini.");
+         return res.status(500).json({ message: 'Serviço de IA não configurado no servidor.' });
+    }
+
+    try {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        
+        const schema = {
+            type: Type.OBJECT,
+            properties: {
+                templateId: { type: Type.STRING, enum: ["modern", "visual", "clean"], description: "Choose 'modern' for layers/video, 'visual' for image heavy/portfolios, 'clean' for corporate/text." },
+                colors: {
+                    type: Type.OBJECT,
+                    properties: {
+                        background: { type: Type.STRING, description: "Hex color for page background" },
+                        cardBackground: { type: Type.STRING, description: "Hex color for containers/cards" },
+                        textMain: { type: Type.STRING, description: "Hex color for titles" },
+                        textSecondary: { type: Type.STRING, description: "Hex color for body text" },
+                        accent: { type: Type.STRING, description: "Hex color for buttons/highlights" }
+                    }
+                },
+                texts: {
+                    type: Type.OBJECT,
+                    properties: {
+                        heroTitle: { type: Type.STRING },
+                        heroSubtitle: { type: Type.STRING },
+                        heroCta: { type: Type.STRING },
+                        section1Heading: { type: Type.STRING },
+                        section1Body: { type: Type.STRING },
+                        section2Heading: { type: Type.STRING },
+                        section2Body: { type: Type.STRING },
+                        footerText: { type: Type.STRING },
+                    }
+                },
+                imageKeywords: {
+                    type: Type.OBJECT,
+                    properties: {
+                        heroBackground: { type: Type.STRING, description: "Single english keyword for the hero image (e.g. 'coffee', 'mechanic')" },
+                        feature1: { type: Type.STRING, description: "Single english keyword for feature image 1" },
+                        feature2: { type: Type.STRING, description: "Single english keyword for feature image 2" },
+                    }
+                }
+            },
+            required: ["templateId", "colors", "texts", "imageKeywords"]
+        };
+
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: `Create a website content structure for a brand named "${brandName}". 
+                       The user's request is: "${prompt}".
+                       Choose the best template based on the request.
+                       For imageKeywords, provide simple, high-quality English search terms (e.g., "motorcycle", "pizza", "lawyer").`,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: schema
+            }
+        });
+
+        if (!response.text) {
+            throw new Error("No response from AI");
+        }
+
+        const aiData = JSON.parse(response.text) as AIPageContent;
+        
+        // Force the brand name to be consistent
+        aiData.brandName = brandName;
+
+        // Generate the full SiteData using our template engine
+        const generatedContent = getTemplate(aiData);
+
+        // Create slug from brand name
+        const slug = brandName.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(Math.random() * 1000);
+
+        // Save to DB
+        const result = await pool.query(
+            'INSERT INTO pages (title, slug, content) VALUES ($1, $2, $3) RETURNING *',
+            [brandName, slug, generatedContent]
+        );
+
+        res.status(201).json(result.rows[0]);
+
+    } catch (error: any) {
+        console.error('Erro na geração por IA:', error);
+        res.status(500).json({ message: 'Falha ao gerar o site com IA. Tente novamente.', error: error.message });
+    }
+});
+
 
 // --- Rotas Públicas (sem autenticação) ---
 
