@@ -7,6 +7,7 @@ declare const process: {
     exit(code?: number): never;
 };
 declare const __dirname: string;
+declare const __filename: string;
 
 // server.ts - O Orquestrador Principal
 
@@ -44,7 +45,10 @@ app.get('/api/health', async (req: Request, res: Response) => {
 // --- Carregador de Módulos Dinâmico ---
 const loadApiModules = async () => {
     const sourceApiDir = path.join(process.cwd(), 'api');
-    const compiledApiDir = path.join(__dirname, 'api');
+    // Em dev (ts-node), __dirname aponta para a pasta source. Em prod, para dist/server.
+    const compiledApiDir = path.join(__dirname, 'api'); 
+    const isDev = path.extname(__filename) === '.ts';
+
     try {
         const moduleFolders = await fs.readdir(sourceApiDir, { withFileTypes: true });
 
@@ -55,13 +59,24 @@ const loadApiModules = async () => {
                     const manifestContent = await fs.readFile(manifestPath, 'utf-8');
                     const manifest = JSON.parse(manifestContent);
                     
-                    const routesPath = path.join(compiledApiDir, folder.name, manifest.routesFile);
-                    const { default: router } = await import(routesPath);
-                    
-                    if (router) {
-                        app.use(manifest.prefix, router);
-                        console.log(`[Module Loader] Módulo '${folder.name}' carregado com sucesso no prefixo '${manifest.prefix}'.`);
+                    // Ajusta a extensão do arquivo de rotas baseado no ambiente
+                    let routeFileName = manifest.routesFile;
+                    if (isDev && routeFileName.endsWith('.js')) {
+                        routeFileName = routeFileName.replace('.js', '.ts');
                     }
+                    
+                    const routesPath = path.join(compiledApiDir, folder.name, routeFileName);
+                    
+                    try {
+                        const { default: router } = await import(routesPath);
+                        if (router) {
+                            app.use(manifest.prefix, router);
+                            console.log(`[Module Loader] Módulo '${folder.name}' carregado com sucesso no prefixo '${manifest.prefix}'.`);
+                        }
+                    } catch (importError) {
+                        console.error(`[Module Loader] Erro ao importar rotas de '${routesPath}':`, importError);
+                    }
+                    
                 } catch (e) {
                     console.error(`[Module Loader] Falha ao carregar o módulo '${folder.name}'. Verifique o manifest.json e o arquivo de rotas.`, e);
                 }
