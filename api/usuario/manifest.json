@@ -1,5 +1,5 @@
 {
   "name": "Módulo de Usuário e Autenticação",
-  "prefix": "/api/iam",
+  "prefix": "/api",
   "routesFile": "./usuario.routes.js"
 }

@@ -13,6 +13,7 @@ import SupportTickets from './modules/suporte/SupportTickets';
 import UserManagement from './modules/usuario/UserManagement';
 import PublicSite from './modules/site/PublicSite';
 import Login from './modules/usuario/Login';
+import PreviewSite from './modules/site/PreviewSite';
 import InitialSetup from './modules/usuario/InitialSetup';
 import ForgotPassword from './modules/usuario/ForgotPassword';
 import Register from './modules/usuario/Register';
@@ -53,11 +54,6 @@ const AdminPanel = () => {
   const handleGoToDashboard = () => {
     setActiveModule(null);
   };
-
-  // Tratamento especial para o SiteEditor em tela cheia
-  if (activeModule === 'SITE') {
-    return <SiteEditor onBack={handleGoToDashboard} />;
-  }
 
   const ActiveModuleComponent = activeModule ? ModuleViews[activeModule] : null;
   const moduleInfo = activeModule ? APP_MODULES.find(m => m.key === activeModule) : null;
@@ -101,7 +97,7 @@ const AppContent: React.FC = () => {
     const checkSetupStatus = async () => {
       setSetupError(null);
       try {
-        const response = await fetch('/api/iam/setup/status');
+        const response = await fetch('/api/setup/status');
         if (!response.ok) {
             throw new Error(`O servidor respondeu com o status ${response.status}`);
         }
@@ -144,10 +140,11 @@ const AppContent: React.FC = () => {
     } else {
       content = isAuthenticated ? <AdminPanel /> : <Login />;
     }
-  } else {
-    // Roteamento dinâmico para páginas públicas
-    const slug = path === '/' ? 'home' : path.substring(1);
-    content = <PublicSite slug={slug} />;
+  } else if (path.startsWith('/preview')) {
+    content = <PreviewSite />;
+  }
+  else {
+    content = <PublicSite />;
   }
 
   return (

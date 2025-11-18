@@ -1,7 +1,9 @@
-// core/auth.middleware.ts - Middlewares de Autênticação e Autorização
+// core/auth.middleware.ts - Middlewares de Autenticação e Autorização
+// FIX: Add Node.js type reference to resolve globals like 'process'.
 /// <reference types="node" />
 
-import { Request, Response, NextFunction } from 'express';
+// FIX: Use require() for Express to ensure proper CommonJS module interoperability and type resolution.
+import express = require('express');
 import jwt from 'jsonwebtoken';
 import { UserRole, AppKey } from '../types';
 import { pool } from './db';
@@ -27,8 +29,8 @@ declare global {
     }
 }
 
-// FIX: Add explicit types for req, res, and next.
-export const verifyToken = (req: Request, res: Response, next: NextFunction) => {
+// FIX: Add explicit types for req, res, and next to resolve property access errors.
+export const verifyToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
@@ -45,8 +47,8 @@ export const verifyToken = (req: Request, res: Response, next: NextFunction) => 
     });
 };
 
-// FIX: Add explicit types for req, res, and next.
-export const isDeveloper = (req: Request, res: Response, next: NextFunction) => {
+// FIX: Add explicit types for req, res, and next to resolve property access errors.
+export const isDeveloper = (req: express.Request, res: express.Response, next: express.NextFunction) => {
     if (req.user?.role !== UserRole.DEVELOPER) {
         return res.status(403).json({ message: 'Acesso negado. Apenas desenvolvedores.' });
     }
@@ -54,8 +56,7 @@ export const isDeveloper = (req: Request, res: Response, next: NextFunction) => 
 };
 
 export const checkModulePermission = (requiredPermission: AppKey) => {
-    // FIX: Add explicit types for req, res, and next.
-    return async (req: Request, res: Response, next: NextFunction) => {
+    return async (req: express.Request, res: express.Response, next: express.NextFunction) => {
         if (!req.user) {
             return res.status(401).json({ message: 'Não autenticado' });
         }

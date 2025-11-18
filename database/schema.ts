@@ -1,4 +1,4 @@
-import { UserRole, SiteData } from '../types';
+import { UserRole } from '../types';
 
 /**
  * @file schema.ts
@@ -26,20 +26,15 @@ export interface User {
 // --- Tabelas Específicas dos Módulos ---
 
 /**
- * Representa a tabela `pages` (para o módulo Site).
- * Armazena metadados e o conteúdo de cada página individual do site.
+ * Representa a tabela `site_content` (para o módulo Site).
+ * Um armazenamento de chave-valor para conteúdo editável no site público.
  */
-export interface PageSchema {
-  id: string; // Chave Primária (UUID)
-  title: string;
-  slug: string; // Identificador único para a URL (ex: "sobre-nos")
-  is_homepage: boolean; // Indica se esta é a página inicial
-  is_published: boolean; // Permite rascunhos de páginas
-  content: SiteData; // Objeto JSONB contendo blocos e configurações da página
-  created_at: string; // Timestamp ISO 8601
-  updated_at: string; // Timestamp ISO 8601
+export interface SiteContent {
+  contentKey: string; // Chave Primária (ex., 'hero-title', 'about-us-paragraph')
+  contentValue: string; // O texto ou dado para essa chave
+  lastUpdatedAt: string; // Timestamp ISO 8601
+  updatedBy: User['id']; // Chave Estrangeira para users.id
 }
-
 
 /**
  * Representa a tabela `products` (para o módulo Loja).

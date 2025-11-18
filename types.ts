@@ -22,8 +22,6 @@ export interface HeroBlockContent {
   title: string;
   subtitle: string;
   ctaText: string;
-  ctaLink: string;
-  ctaEnabled: boolean;
 }
 
 export interface TextBlockContent {
@@ -38,109 +36,14 @@ export interface ImageBlockContent {
 
 export interface ButtonBlockContent {
   text: string;
-  link: string;
-}
-
-export interface MenuItem {
-  id: string;
-  label: string;
-  link: string;
-}
-
-export interface MenuBlockContent {
-  items: MenuItem[];
-}
-
-export interface VideoBlockContent {
-  videoUrl: string; // YouTube or Vimeo URL
-  autoplay?: boolean;
-  controls?: boolean;
-}
-
-export interface DividerBlockContent {
-  // No content needed, styles will control appearance
-}
-
-export interface SpacerBlockContent {
-  // No content needed, layout controls height
-}
-
-export interface BlockStyles {
-  backgroundColor?: string;
-  opacity?: number; // 0 to 1
-  textColor?: string;
-  zIndex?: number;
-  // Rich text styles
-  textAlign?: 'left' | 'center' | 'right' | 'justify';
-  fontWeight?: 'normal' | 'bold';
-  fontStyle?: 'normal' | 'italic';
-  fontFamily?: string;
-}
-
-
-// --- Estrutura do Construtor de Layout (Grade CSS) ---
-
-export interface BlockLayout {
-  colStart: number;
-  colEnd: number;
-  rowStart: number;
-  rowEnd: number;
-  alignSelf: 'start' | 'center' | 'end' | 'stretch';
-  justifySelf: 'start' | 'center' | 'end' | 'stretch';
+  link: string; // ex., '/#/store', 'https://example.com'
 }
 
 export type PageBlock = {
-  id: string;
-  layout: {
-    desktop: BlockLayout;
-    // Futuramente: tablet: BlockLayout; mobile: BlockLayout;
-  };
-  styles?: BlockStyles;
+  id: string; // ID único para o bloco (ex., de nanoid)
 } & (
   | { type: 'hero'; content: HeroBlockContent }
   | { type: 'text'; content: TextBlockContent }
   | { type: 'image'; content: ImageBlockContent }
   | { type: 'button'; content: ButtonBlockContent }
-  | { type: 'menu'; content: MenuBlockContent }
-  | { type: 'video'; content: VideoBlockContent }
-  | { type: 'divider'; content: DividerBlockContent }
-  | { type: 'spacer'; content: SpacerBlockContent }
 );
-
-
-// --- Tipos de Dados do Site ---
-
-export interface GridSettings {
-    columns: number;
-    rowHeight: number;
-    gap: number;
-}
-
-export interface SiteSettings {
-  brandName: string;
-  backgroundColor: string;
-}
-
-// Representa o objeto de conteúdo JSONB dentro de cada página
-export interface SiteData {
-  settings: SiteSettings;
-  gridSettings: {
-    desktop: GridSettings;
-    // Futuramente: tablet: GridSettings; mobile: GridSettings;
-  };
-  headerBlocks: PageBlock[];
-  contentBlocks: PageBlock[];
-  footerBlocks: PageBlock[];
-}
-
-// Representa uma página individual no banco de dados
-export interface Page {
-  id: string; // UUID
-  title: string;
-  slug: string; // URL part
-  is_homepage: boolean;
-  is_published: boolean;
-  content: SiteData | null;
-  created_at: string;
-  updated_at: string;
-}

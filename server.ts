@@ -1,37 +1,26 @@
 // server.ts - O Orquestrador Principal
+// FIX: Add Node.js type reference to resolve globals like 'process' and '__dirname'.
 /// <reference types="node" />
 
-import express, { Request, Response } from 'express';
+// FIX: Use require() for Express to ensure proper CommonJS module interoperability and type resolution.
+import express = require('express');
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs/promises';
 
 // Importa a função de inicialização do núcleo do banco de dados
-import { initializeDatabase, pool } from './core/db';
+import { initializeDatabase } from './core/db';
 
 // Carrega as variáveis de ambiente antes de qualquer outra coisa
 dotenv.config();
 
-// FIX: Explicitly type the express app to resolve middleware type conflicts.
-const app: express.Express = express();
+const app: express.Application = express();
 const PORT = process.env.PORT || 8069;
 
 app.use(cors());
+// FIX: The error on this line was due to an incorrect Express import. Correcting the import resolves it.
 app.use(express.json());
-
-// --- Rota de Verificação de Saúde ---
-app.get('/api/health', async (req: Request, res: Response) => {
-    try {
-        const client = await pool.connect();
-        await client.query('SELECT 1');
-        client.release();
-        res.status(200).json({ status: 'ok', message: 'Backend está rodando e conectado ao banco de dados.' });
-    } catch (error) {
-        res.status(503).json({ status: 'error', message: 'Falha ao conectar ao banco de dados.' });
-    }
-});
-
 
 // --- Carregador de Módulos Dinâmico ---
 const loadApiModules = async () => {
@@ -76,10 +65,12 @@ const serveFrontend = () => {
     const clientDistPath = path.join(projectRoot, 'dist', 'client');
     const staticRootPath = projectRoot;
 
+    // FIX: The error on these lines was due to an incorrect Express import. Correcting the import resolves it.
     app.use('/dist/client', express.static(clientDistPath));
     app.use(express.static(staticRootPath));
 
-    app.get('*', (req: Request, res: Response) => {
+    // FIX: Add explicit types for req and res to resolve property access errors.
+    app.get('*', (req: express.Request, res: express.Response) => {
         if (req.path.startsWith('/api/')) {
             return res.status(404).json({ message: 'Endpoint da API não encontrado.' });
         }
