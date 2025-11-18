@@ -25,7 +25,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const storedToken = localStorage.getItem('authToken');
       if (storedToken) {
         try {
-          const response = await fetch('/api/auth/me', {
+          const response = await fetch('/api/iam/auth/me', {
             headers: { 'Authorization': `Bearer ${storedToken}` }
           });
           if (!response.ok) {
@@ -52,7 +52,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isAuthenticated = !!token && !!currentUser;
 
   const login = async (email: string, pass: string) => {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch('/api/iam/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password: pass }),

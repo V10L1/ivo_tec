@@ -97,7 +97,7 @@ const AppContent: React.FC = () => {
     const checkSetupStatus = async () => {
       setSetupError(null);
       try {
-        const response = await fetch('/api/setup/status');
+        const response = await fetch('/api/iam/setup/status');
         if (!response.ok) {
             throw new Error(`O servidor respondeu com o status ${response.status}`);
         }
