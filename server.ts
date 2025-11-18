@@ -1,8 +1,7 @@
 // server.ts - O Orquestrador Principal
-// FIX: Add Node.js type reference to resolve globals like 'process' and '__dirname'.
 /// <reference types="node" />
 
-// FIX: Use standard ES module import for Express.
+// FIX: Removed aliasing for Request and Response types from express to resolve type conflicts.
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -15,7 +14,6 @@ import { initializeDatabase, pool } from './core/db';
 // Carrega as variáveis de ambiente antes de qualquer outra coisa
 dotenv.config();
 
-// FIX: Use express() to create the app. Type inference is sufficient.
 const app = express();
 const PORT = process.env.PORT || 8069;
 
@@ -23,7 +21,6 @@ app.use(cors());
 app.use(express.json());
 
 // --- Rota de Verificação de Saúde ---
-// FIX: Use Request and Response types from Express.
 app.get('/api/health', async (req: Request, res: Response) => {
     try {
         const client = await pool.connect();
@@ -82,7 +79,6 @@ const serveFrontend = () => {
     app.use('/dist/client', express.static(clientDistPath));
     app.use(express.static(staticRootPath));
 
-    // FIX: Use Request and Response types from Express.
     app.get('*', (req: Request, res: Response) => {
         if (req.path.startsWith('/api/')) {
             return res.status(404).json({ message: 'Endpoint da API não encontrado.' });

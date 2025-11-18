@@ -1,46 +1,140 @@
 // api/site/site.routes.ts
-// FIX: Use standard ES module import for Express.
+// FIX: Removed aliasing for Request and Response types from express to resolve type conflicts.
 import express, { Request, Response } from 'express';
 import { pool } from '../../core/db';
 import { verifyToken, checkModulePermission } from '../../core/auth.middleware';
 
 const router = express.Router();
 
-// FIX: Use Request and Response types from Express.
-router.get('/content', async (req: Request, res: Response) => {
+// --- Rotas Públicas (sem autenticação) ---
+
+// Obter página pela Home
+router.get('/pages/public/home', async (req: Request, res: Response) => {
     try {
         res.setHeader('Cache-Control', 'no-store');
-        const result = await pool.query('SELECT content FROM site_content WHERE id = 1');
+        const result = await pool.query('SELECT * FROM pages WHERE is_homepage = TRUE AND is_published = TRUE LIMIT 1');
         if (result.rows.length === 0) {
-            return res.json({ content: [] });
+            return res.status(404).json({ message: 'Nenhuma página inicial publicada foi encontrada.' });
         }
         res.json(result.rows[0]);
     } catch (error) {
-        console.error('Erro ao buscar conteúdo do site:', error);
+        console.error('Erro ao buscar página inicial:', error);
         res.status(500).json({ message: 'Falha ao buscar o conteúdo do site' });
     }
 });
 
-// FIX: Use Request and Response types from Express.
-router.put('/content', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
-    const { content } = req.body;
-    if (!content) {
-        return res.status(400).json({ message: 'O conteúdo é obrigatório' });
+// Obter página pelo slug
+router.get('/pages/public/slug/:slug', async (req: Request, res: Response) => {
+    try {
+        res.setHeader('Cache-Control', 'no-store');
+        const { slug } = req.params;
+        const result = await pool.query('SELECT * FROM pages WHERE slug = $1 AND is_published = TRUE', [slug]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Página não encontrada.' });
+        }
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Erro ao buscar página por slug:', error);
+        res.status(500).json({ message: 'Falha ao buscar o conteúdo do site' });
+    }
+});
+
+
+// --- Rotas de Administração (requerem autenticação e permissão) ---
+
+// Listar todas as páginas
+router.get('/pages', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
+    try {
+        const result = await pool.query('SELECT id, title, slug, is_homepage, is_published, updated_at FROM pages ORDER BY title');
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Erro ao listar páginas:', error);
+        res.status(500).json({ message: 'Falha ao buscar páginas' });
+    }
+});
+
+// Criar uma nova página
+router.post('/pages', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
+    const { title, slug, content } = req.body;
+    if (!title || !slug) {
+        return res.status(400).json({ message: 'Título e slug são obrigatórios.' });
+    }
+    try {
+        const result = await pool.query(
+            'INSERT INTO pages (title, slug, content) VALUES ($1, $2, $3) RETURNING *',
+            [title, slug, content || {}]
+        );
+        res.status(201).json(result.rows[0]);
+    } catch (error: any) {
+        if (error.code === '23505') { // unique_violation
+            return res.status(409).json({ message: 'Este slug já está em uso.' });
+        }
+        console.error('Erro ao criar página:', error);
+        res.status(500).json({ message: 'Falha ao criar página' });
+    }
+});
+
+// Obter dados de uma página específica para edição
+router.get('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const result = await pool.query('SELECT * FROM pages WHERE id = $1', [id]);
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'Página não encontrada.' });
+        }
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Erro ao buscar página:', error);
+        res.status(500).json({ message: 'Falha ao buscar dados da página' });
+    }
+});
+
+// Atualizar uma página
+router.put('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const { title, slug, is_published, content } = req.body;
+
+    if (!title || !slug || !content) {
+        return res.status(400).json({ message: 'Título, slug e conteúdo são obrigatórios.' });
     }
 
     try {
-        const query = `
-            INSERT INTO site_content (id, content)
-            VALUES (1, $1)
-            ON CONFLICT (id) 
-            DO UPDATE SET content = $1, last_updated_at = NOW();
-        `;
-        await pool.query(query, [JSON.stringify(content)]);
-        res.status(200).json({ message: 'Conteúdo salvo com sucesso' });
-    } catch (error) {
-        console.error('Erro ao salvar conteúdo do site:', error);
-        res.status(500).json({ message: 'Falha ao salvar o conteúdo do site' });
+        const result = await pool.query(
+            'UPDATE pages SET title = $1, slug = $2, is_published = $3, content = $4 WHERE id = $5 RETURNING *',
+            [title, slug, is_published, content, id]
+        );
+        if (result.rowCount === 0) {
+            return res.status(404).json({ message: 'Página não encontrada.' });
+        }
+        res.status(200).json(result.rows[0]);
+    } catch (error: any) {
+         if (error.code === '23505') {
+            return res.status(409).json({ message: 'Este slug já está em uso por outra página.' });
+        }
+        console.error('Erro ao atualizar página:', error);
+        res.status(500).json({ message: 'Falha ao salvar a página' });
     }
 });
+
+// Excluir uma página
+router.delete('/pages/:id', verifyToken, checkModulePermission('SITE'), async (req: Request, res: Response) => {
+    const { id } = req.params;
+    try {
+        const pageCheck = await pool.query('SELECT is_homepage FROM pages WHERE id = $1', [id]);
+        if (pageCheck.rows.length > 0 && pageCheck.rows[0].is_homepage) {
+            return res.status(403).json({ message: 'Não é possível excluir a página inicial.' });
+        }
+
+        const result = await pool.query('DELETE FROM pages WHERE id = $1', [id]);
+        if (result.rowCount === 0) {
+            return res.status(404).json({ message: 'Página não encontrada.' });
+        }
+        res.status(204).send();
+    } catch (error) {
+        console.error('Erro ao excluir página:', error);
+        res.status(500).json({ message: 'Falha ao excluir a página' });
+    }
+});
+
 
 export default router;

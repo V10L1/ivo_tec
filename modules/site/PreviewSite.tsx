@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MotorcycleIcon } from '../../components/icons/Icons';
-import { PageBlock } from '../../types';
+import { PageBlock, Page } from '../../types';
 
 // --- Renderizadores de Bloco Dinâmicos para Visualização ---
 
@@ -46,29 +46,34 @@ const renderPreviewBlock = (block: PageBlock) => {
     }
 };
 
+interface PreviewSiteProps {
+  pageId: string;
+}
 
-const PreviewSite: React.FC = () => {
-  const [pageBlocks, setPageBlocks] = useState<PageBlock[]>([]);
+const PreviewSite: React.FC<PreviewSiteProps> = ({ pageId }) => {
+  const [pageData, setPageData] = useState<Page | null>(null);
 
   useEffect(() => {
     try {
-      const storedContent = localStorage.getItem('sitePreviewContent');
+      const storedContent = localStorage.getItem(`sitePreviewContent_${pageId}`);
       if (storedContent) {
-        setPageBlocks(JSON.parse(storedContent));
+        setPageData(JSON.parse(storedContent));
       }
     } catch (error) {
       console.error("Falha ao carregar conteúdo de visualização do localStorage:", error);
     }
-  }, []);
+  }, [pageId]);
+
+  const siteSettings = pageData?.content?.settings;
+  const siteBlocks = pageData?.content?.blocks || [];
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 font-sans">
-      {/* Cabeçalho com banner de Modo de Visualização */}
       <header className="bg-slate-800/50 backdrop-blur-sm sticky top-0 z-10 border-b border-slate-800">
         <nav className="container mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <MotorcycleIcon className="w-8 h-8 text-cyan-400" />
-            <span className="text-xl font-bold">Mundo Moto</span>
+            <span className="text-xl font-bold">{siteSettings?.brandName || 'Marca'}</span>
           </div>
           <div className="bg-yellow-500/20 text-yellow-300 text-sm font-bold px-4 py-2 rounded-lg">
             MODO DE VISUALIZAÇÃO
@@ -76,17 +81,15 @@ const PreviewSite: React.FC = () => {
         </nav>
       </header>
 
-      {/* Área de Conteúdo Dinâmico */}
-      {pageBlocks.length > 0 ? (
-        pageBlocks.map(block => renderPreviewBlock(block))
+      {siteBlocks.length > 0 ? (
+        siteBlocks.map(block => renderPreviewBlock(block))
       ) : (
         <div className="text-center py-20 text-slate-500">Nenhum conteúdo para visualizar.</div>
       )}
       
-      {/* Rodapé */}
       <footer className="border-t border-slate-800 mt-20 py-8">
         <div className="container mx-auto px-6 text-center text-slate-500">
-          <p>&copy; {new Date().getFullYear()} Mundo Moto. Todos os Direitos Reservados.</p>
+          <p>&copy; {new Date().getFullYear()} {siteSettings?.brandName || 'Marca'}. Todos os Direitos Reservados.</p>
         </div>
       </footer>
     </div>

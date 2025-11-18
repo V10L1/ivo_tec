@@ -31,6 +31,7 @@ export const initializeDatabase = async () => {
         client = await pool.connect();
         console.log("Conexão com o banco de dados estabelecida com sucesso. Verificando o esquema...");
 
+        // Tabela de Usuários
         await client.query(`
             CREATE TABLE IF NOT EXISTS users (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -42,6 +43,7 @@ export const initializeDatabase = async () => {
             );
         `);
         
+        // Tabela de Permissões
         await client.query(`
             CREATE TABLE IF NOT EXISTS role_permissions (
                 role VARCHAR(50) PRIMARY KEY,
@@ -49,6 +51,7 @@ export const initializeDatabase = async () => {
             );
         `);
 
+        // Popular Permissões Padrão
         const permissionsCheck = await client.query('SELECT COUNT(*) FROM role_permissions');
         if (parseInt(permissionsCheck.rows[0].count, 10) === 0) {
             console.log("Tabela de permissões está vazia. Populando com os padrões...");
@@ -62,23 +65,74 @@ export const initializeDatabase = async () => {
             console.log("Permissões padrão inseridas com sucesso.");
         }
 
-
+        // Tabela de Páginas (Nova estrutura CMS)
         await client.query(`
-            CREATE TABLE IF NOT EXISTS site_content (
-                id INT PRIMARY KEY,
+            CREATE TABLE IF NOT EXISTS pages (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                title VARCHAR(255) NOT NULL,
+                slug VARCHAR(255) UNIQUE NOT NULL,
+                is_homepage BOOLEAN DEFAULT FALSE,
+                is_published BOOLEAN DEFAULT TRUE,
                 content JSONB,
-                last_updated_at TIMESTAMPTZ DEFAULT NOW()
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                updated_at TIMESTAMPTZ DEFAULT NOW()
             );
         `);
-        
-        const siteContentResult = await client.query('SELECT id FROM site_content WHERE id = 1');
-        if (siteContentResult.rowCount === 0) {
-             await client.query(`
-                INSERT INTO site_content (id, content) VALUES (1, '[{"id": "block_1", "type": "hero", "content": { "title": "Bem-vindo ao Mundo Moto", "subtitle": "Sua parada única para as melhores motos do planeta. Comece sua aventura hoje.", "ctaText": "Explorar Coleção" }}, {"id": "block_2", "type": "text", "content": { "heading": "Sobre Nossa Paixão", "body": "Nós vivemos e respiramos motocicletas. Nossa missão é fornecer aos entusiastas máquinas de alta qualidade e serviço incomparável. Cada moto em nossa coleção é escolhida a dedo e inspecionada para garantir que atenda aos nossos altos padrões de desempenho e confiabilidade." }}]');
-             `);
-             console.log("Conteúdo inicial do site inserido.");
+
+        // Gatilho para atualizar 'updated_at' em cada atualização de página
+        await client.query(`
+            CREATE OR REPLACE FUNCTION update_updated_at_column()
+            RETURNS TRIGGER AS $$
+            BEGIN
+               NEW.updated_at = NOW();
+               RETURN NEW;
+            END;
+            $$ language 'plpgsql';
+        `);
+        await client.query(`
+            DROP TRIGGER IF EXISTS update_pages_updated_at ON pages;
+            CREATE TRIGGER update_pages_updated_at
+            BEFORE UPDATE ON pages
+            FOR EACH ROW
+            EXECUTE FUNCTION update_updated_at_column();
+        `);
+
+        // Inserir página inicial padrão se não houver nenhuma
+        const pagesCheck = await client.query('SELECT COUNT(*) FROM pages');
+        if (parseInt(pagesCheck.rows[0].count, 10) === 0) {
+             const initialContent = {
+                settings: {
+                    brandName: "Mundo Moto",
+                    loginButtonText: "Login do Admin"
+                },
+                blocks: [
+                    {
+                        id: "block_1",
+                        type: "hero",
+                        content: {
+                            title: "Bem-vindo ao Mundo Moto",
+                            subtitle: "Sua parada única para as melhores motos do planeta. Comece sua aventura hoje.",
+                            ctaText: "Explorar Coleção"
+                        }
+                    },
+                    {
+                        id: "block_2",
+                        type: "text",
+                        content: {
+                            heading: "Sobre Nossa Paixão",
+                            body: "Nós vivemos e respiramos motocicletas. Nossa missão é fornecer aos entusiastas máquinas de alta qualidade e serviço incomparável. Cada moto em nossa coleção é escolhida a dedo e inspecionada para garantir que atenda aos nossos altos padrões de desempenho e confiabilidade."
+                        }
+                    }
+                ]
+             };
+             await client.query(
+                'INSERT INTO pages (title, slug, is_homepage, content) VALUES ($1, $2, $3, $4)',
+                ['Página Inicial', 'home', true, JSON.stringify(initialContent)]
+             );
+             console.log("Página inicial padrão criada.");
         }
 
+        // Outras tabelas de módulos
         await client.query(`CREATE TABLE IF NOT EXISTS product_categories (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name VARCHAR(255) NOT NULL, slug VARCHAR(255) UNIQUE NOT NULL);`);
         await client.query(`CREATE TABLE IF NOT EXISTS products (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name VARCHAR(255) NOT NULL, description TEXT, price DECIMAL(10, 2) NOT NULL, category_id UUID REFERENCES product_categories(id), image_url VARCHAR(2048), created_at TIMESTAMPTZ DEFAULT NOW());`);
         await client.query(`CREATE TABLE IF NOT EXISTS stock_inventory (product_id UUID PRIMARY KEY REFERENCES products(id) ON DELETE CASCADE, quantity INT NOT NULL DEFAULT 0, last_updated_at TIMESTAMPTZ DEFAULT NOW());`);

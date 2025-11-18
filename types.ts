@@ -47,3 +47,28 @@ export type PageBlock = {
   | { type: 'image'; content: ImageBlockContent }
   | { type: 'button'; content: ButtonBlockContent }
 );
+
+// --- Tipos de Dados do Site ---
+
+export interface SiteSettings {
+  brandName: string;
+  loginButtonText: string;
+}
+
+// Representa o objeto de conteúdo JSONB dentro de cada página
+export interface SiteData {
+  settings: SiteSettings;
+  blocks: PageBlock[];
+}
+
+// Representa uma página individual no banco de dados
+export interface Page {
+  id: string; // UUID
+  title: string;
+  slug: string; // URL part
+  is_homepage: boolean;
+  is_published: boolean;
+  content: SiteData;
+  created_at: string;
+  updated_at: string;
+}

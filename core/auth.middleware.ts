@@ -1,8 +1,7 @@
 // core/auth.middleware.ts - Middlewares de Autenticação e Autorização
-// FIX: Add Node.js type reference to resolve globals like 'process'.
 /// <reference types="node" />
 
-// FIX: Use standard ES module import for Express types.
+// FIX: Removed aliasing for express types to avoid conflict with DOM types.
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { UserRole, AppKey } from '../types';
@@ -29,7 +28,6 @@ declare global {
     }
 }
 
-// FIX: Use Request, Response, and NextFunction types from Express.
 export const verifyToken = (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -47,7 +45,6 @@ export const verifyToken = (req: Request, res: Response, next: NextFunction) => 
     });
 };
 
-// FIX: Use Request, Response, and NextFunction types from Express.
 export const isDeveloper = (req: Request, res: Response, next: NextFunction) => {
     if (req.user?.role !== UserRole.DEVELOPER) {
         return res.status(403).json({ message: 'Acesso negado. Apenas desenvolvedores.' });
@@ -56,7 +53,6 @@ export const isDeveloper = (req: Request, res: Response, next: NextFunction) => 
 };
 
 export const checkModulePermission = (requiredPermission: AppKey) => {
-    // FIX: Use Request, Response, and NextFunction types from Express.
     return async (req: Request, res: Response, next: NextFunction) => {
         if (!req.user) {
             return res.status(401).json({ message: 'Não autenticado' });

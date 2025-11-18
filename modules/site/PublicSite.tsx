@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { MotorcycleIcon } from '../../components/icons/Icons';
 import { useRouter } from '../../App';
-import { PageBlock } from '../../types';
+import { PageBlock, Page } from '../../types';
 
 // --- Renderizadores de Bloco Dinâmicos ---
-
 const renderBlock = (block: PageBlock) => {
     switch (block.type) {
         case 'hero':
@@ -47,59 +46,79 @@ const renderBlock = (block: PageBlock) => {
     }
 };
 
+interface PublicSiteProps {
+  slug: string;
+}
 
-const PublicSite: React.FC = () => {
+const PublicSite: React.FC<PublicSiteProps> = ({ slug }) => {
   const { navigate } = useRouter();
-  const [pageBlocks, setPageBlocks] = useState<PageBlock[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [page, setPage] = useState<Page | null>(null);
+  const [status, setStatus] = useState<'loading' | 'success' | 'not_found' | 'error'>('loading');
 
   useEffect(() => {
     const fetchContent = async () => {
+        setStatus('loading');
         try {
-            const response = await fetch('/api/site/content');
+            const endpoint = slug === 'home' ? '/api/site/pages/public/home' : `/api/site/pages/public/slug/${slug}`;
+            const response = await fetch(endpoint);
+            if (response.status === 404) {
+                setStatus('not_found');
+                return;
+            }
             if (!response.ok) throw new Error('A resposta da rede não foi ok');
-            const data = await response.json();
-            setPageBlocks(data.content || []);
+            const data: Page = await response.json();
+            setPage(data);
+            setStatus('success');
         } catch (error) {
             console.error("Falha ao buscar o conteúdo da página:", error);
-        } finally {
-            setIsLoading(false);
+            setStatus('error');
         }
     };
     fetchContent();
-  }, []);
+  }, [slug]);
 
   const handleNavigate = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     navigate('/administrator');
   };
 
+  const renderContent = () => {
+    if (status === 'loading') {
+      return <div className="text-center py-20">Carregando...</div>;
+    }
+    if (status === 'not_found') {
+      return <div className="text-center py-20">
+          <h1 className="text-4xl font-bold">404 - Página Não Encontrada</h1>
+          <p className="text-slate-400 mt-2">A página que você está procurando não existe.</p>
+      </div>;
+    }
+    if (status === 'error' || !page) {
+       return <div className="text-center py-20 text-red-400">Ocorreu um erro ao carregar o conteúdo.</div>;
+    }
+    return page.content.blocks?.map(block => renderBlock(block));
+  };
+  
+  const siteSettings = page?.content?.settings;
+
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 font-sans">
-      {/* Cabeçalho */}
       <header className="bg-slate-800/50 backdrop-blur-sm sticky top-0 z-10 border-b border-slate-800">
         <nav className="container mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <MotorcycleIcon className="w-8 h-8 text-cyan-400" />
-            <span className="text-xl font-bold">Mundo Moto</span>
+            <span className="text-xl font-bold">{siteSettings?.brandName || (status === 'loading' ? '' : 'Marca')}</span>
           </div>
           <a href="#/administrator" onClick={handleNavigate} className="bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-            Login do Admin
+            {siteSettings?.loginButtonText || (status === 'loading' ? '' : 'Login')}
           </a>
         </nav>
       </header>
 
-      {/* Área de Conteúdo Dinâmico */}
-      {isLoading ? (
-        <div className="text-center py-20">Carregando...</div>
-      ) : (
-        pageBlocks.map(block => renderBlock(block))
-      )}
+      {renderContent()}
       
-      {/* Rodapé */}
       <footer className="border-t border-slate-800 mt-20 py-8">
         <div className="container mx-auto px-6 text-center text-slate-500">
-          <p>&copy; {new Date().getFullYear()} Mundo Moto. Todos os Direitos Reservados.</p>
+          <p>&copy; {new Date().getFullYear()} {siteSettings?.brandName || (status === 'loading' ? '' : 'Marca')}. Todos os Direitos Reservados.</p>
         </div>
       </footer>
     </div>
