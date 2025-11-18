@@ -1,57 +1,133 @@
 import React, { useState, useEffect } from 'react';
-import { MotorcycleIcon } from '../../components/icons/Icons';
-import { useRouter } from '../../App';
-import { PageBlock, Page } from '../../types';
+import { Page, PageBlock, SiteData } from '../../types';
+
+const getYouTubeEmbedUrl = (url: string) => {
+    let videoId;
+    if (url.includes('youtube.com/watch?v=')) {
+        videoId = new URL(url).searchParams.get('v');
+    } else if (url.includes('youtu.be/')) {
+        videoId = new URL(url).pathname.split('/').pop();
+    }
+    return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
+};
 
 // --- Renderizadores de Bloco Dinâmicos ---
-const renderBlock = (block: PageBlock) => {
+const BlockRenderer: React.FC<{ block: PageBlock }> = ({ block }) => {
+    const commonClasses = "w-full h-full flex flex-col p-4";
+    const styles = block.styles || {};
+    const inlineStyle = {
+        backgroundColor: styles.backgroundColor,
+        opacity: styles.opacity,
+        color: styles.textColor,
+    };
+
     switch (block.type) {
         case 'hero':
             return (
-                <main key={block.id} className="container mx-auto px-6 py-16 text-center">
-                    <h1 className="text-5xl font-extrabold text-white mb-4">{block.content.title}</h1>
-                    <p className="text-lg text-slate-400 max-w-2xl mx-auto mb-8">{block.content.subtitle}</p>
-                    <button className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-8 rounded-full text-lg transition-transform transform hover:scale-105">
-                        {block.content.ctaText}
-                    </button>
-                </main>
+                <div style={inlineStyle} className={`${commonClasses} text-center items-center justify-center rounded-lg`}>
+                    <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-4" style={{color: styles.textColor}}>{block.content.title}</h1>
+                    <p className="text-md md:text-lg text-slate-300 max-w-2xl mx-auto mb-6" style={{color: styles.textColor}}>{block.content.subtitle}</p>
+                    {block.content.ctaEnabled && (
+                         <a href={block.content.ctaLink} className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 px-8 rounded-full text-lg transition-transform transform hover:scale-105">
+                            {block.content.ctaText}
+                        </a>
+                    )}
+                </div>
             );
         case 'text':
             return (
-                 <section key={block.id} className="py-12">
-                    <div className="container mx-auto px-6 max-w-3xl text-left">
-                        <h2 className="text-3xl font-bold text-center mb-6 text-white">{block.content.heading}</h2>
-                        <p className="text-slate-400 whitespace-pre-wrap leading-relaxed">{block.content.body}</p>
-                    </div>
-                </section>
+                 <div style={inlineStyle} className={`${commonClasses} text-left`}>
+                    <h2 className="text-3xl font-bold mb-4" style={{color: styles.textColor}}>{block.content.heading}</h2>
+                    <p className="text-slate-400 whitespace-pre-wrap leading-relaxed" style={{color: styles.textColor}}>{block.content.body}</p>
+                </div>
             );
         case 'image':
             return (
-                <section key={block.id} className="py-12">
-                    <div className="container mx-auto px-6">
-                        <img src={block.content.imageUrl} alt={block.content.altText} className="rounded-lg max-w-4xl h-auto mx-auto shadow-lg" />
-                    </div>
-                </section>
+                <img src={block.content.imageUrl} alt={block.content.altText} className="w-full h-full object-cover rounded-lg shadow-lg" style={{opacity: styles.opacity}}/>
             );
         case 'button':
             return (
-                 <section key={block.id} className="py-8 text-center">
-                    <a href={block.content.link} className="bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-8 rounded-lg inline-block transition-colors">
+                 <div className={`${commonClasses} items-center justify-center`}>
+                    <a href={block.content.link} className="text-white font-bold py-3 px-8 rounded-lg inline-block transition-colors" style={inlineStyle}>
                         {block.content.text}
                     </a>
-                </section>
+                </div>
             );
+        case 'menu':
+            return (
+                 <nav className={`${commonClasses} flex-row items-center justify-center gap-6`}>
+                    {block.content.items.map(item => (
+                        <a key={item.id} href={item.link} className="text-slate-300 hover:text-cyan-400 font-medium transition-colors" style={{color: styles.textColor}}>
+                            {item.label}
+                        </a>
+                    ))}
+                </nav>
+            );
+        case 'video':
+            const embedUrl = getYouTubeEmbedUrl(block.content.videoUrl);
+            return embedUrl ? (
+                <div className="w-full h-full rounded-lg overflow-hidden">
+                    <iframe
+                        width="100%"
+                        height="100%"
+                        src={embedUrl}
+                        title="YouTube video player"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                    ></iframe>
+                </div>
+            ) : <div className="p-4 text-red-400">URL de vídeo inválida. Use um link do YouTube.</div>;
+        case 'divider':
+            return <div className="flex items-center justify-center w-full h-full"><hr className="w-full border-slate-700" style={{borderColor: styles.backgroundColor}}/></div>;
+        case 'spacer':
+            return <div style={inlineStyle}></div>; // Spacer is just for layout
         default:
-            return null;
+            return <div className="p-4 bg-red-900 rounded-lg">Bloco desconhecido</div>;
     }
 };
+
+interface GridCanvasProps {
+    blocks: PageBlock[] | undefined;
+    gridSettings: SiteData['gridSettings']['desktop'] | undefined;
+}
+
+const GridCanvas: React.FC<GridCanvasProps> = ({ blocks = [], gridSettings }) => {
+    if (!gridSettings) return null;
+
+    const gridStyle = {
+        display: 'grid',
+        gridTemplateColumns: `repeat(${gridSettings.columns}, 1fr)`,
+        gridAutoRows: `${gridSettings.rowHeight}px`,
+        gap: `${gridSettings.gap}px`,
+    };
+
+    return (
+        <div className="container mx-auto px-4 py-8" style={gridStyle}>
+            {blocks.map(block => {
+                const { desktop: layout } = block.layout;
+                const blockStyle = {
+                    gridColumn: `${layout.colStart} / ${layout.colEnd}`,
+                    gridRow: `${layout.rowStart} / ${layout.rowEnd}`,
+                    alignSelf: layout.alignSelf,
+                    justifySelf: layout.justifySelf,
+                };
+                return (
+                    <div key={block.id} style={blockStyle}>
+                        <BlockRenderer block={block} />
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+
 
 interface PublicSiteProps {
   slug: string;
 }
 
 const PublicSite: React.FC<PublicSiteProps> = ({ slug }) => {
-  const { navigate } = useRouter();
   const [page, setPage] = useState<Page | null>(null);
   const [status, setStatus] = useState<'loading' | 'success' | 'not_found' | 'error'>('loading');
 
@@ -77,50 +153,43 @@ const PublicSite: React.FC<PublicSiteProps> = ({ slug }) => {
     fetchContent();
   }, [slug]);
 
-  const handleNavigate = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    e.preventDefault();
-    navigate('/administrator');
+  const siteSettings = page?.content?.settings;
+  const pageStyle = {
+    backgroundColor: siteSettings?.backgroundColor || '#0f172a' // slate-900
   };
 
-  const renderContent = () => {
-    if (status === 'loading') {
-      return <div className="text-center py-20">Carregando...</div>;
-    }
-    if (status === 'not_found') {
-      return <div className="text-center py-20">
-          <h1 className="text-4xl font-bold">404 - Página Não Encontrada</h1>
-          <p className="text-slate-400 mt-2">A página que você está procurando não existe.</p>
-      </div>;
-    }
-    if (status === 'error' || !page) {
-       return <div className="text-center py-20 text-red-400">Ocorreu um erro ao carregar o conteúdo.</div>;
-    }
-    return page.content.blocks?.map(block => renderBlock(block));
-  };
-  
-  const siteSettings = page?.content?.settings;
+  if (status === 'loading') {
+    return <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white">Carregando...</div>;
+  }
+  if (status === 'not_found') {
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white text-center">
+            <div>
+                <h1 className="text-4xl font-bold">404 - Página Não Encontrada</h1>
+                <p className="text-slate-400 mt-2">A página que você está procurando não existe.</p>
+            </div>
+        </div>
+    );
+  }
+  if (status === 'error' || !page?.content) {
+     return (
+        <div className="min-h-screen flex items-center justify-center bg-slate-900 text-red-400 text-center">
+            Ocorreu um erro ao carregar o conteúdo.
+        </div>
+     );
+  }
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 font-sans">
-      <header className="bg-slate-800/50 backdrop-blur-sm sticky top-0 z-10 border-b border-slate-800">
-        <nav className="container mx-auto px-6 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <MotorcycleIcon className="w-8 h-8 text-cyan-400" />
-            <span className="text-xl font-bold">{siteSettings?.brandName || (status === 'loading' ? '' : 'Marca')}</span>
-          </div>
-          <a href="#/administrator" onClick={handleNavigate} className="bg-slate-700 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">
-            {siteSettings?.loginButtonText || (status === 'loading' ? '' : 'Login')}
-          </a>
-        </nav>
-      </header>
-
-      {renderContent()}
-      
-      <footer className="border-t border-slate-800 mt-20 py-8">
-        <div className="container mx-auto px-6 text-center text-slate-500">
-          <p>&copy; {new Date().getFullYear()} {siteSettings?.brandName || (status === 'loading' ? '' : 'Marca')}. Todos os Direitos Reservados.</p>
-        </div>
-      </footer>
+    <div className="min-h-screen text-slate-100 font-sans" style={pageStyle}>
+        <header>
+            <GridCanvas blocks={page.content.headerBlocks} gridSettings={page.content.gridSettings.desktop} />
+        </header>
+        <main>
+            <GridCanvas blocks={page.content.contentBlocks} gridSettings={page.content.gridSettings.desktop} />
+        </main>
+        <footer>
+            <GridCanvas blocks={page.content.footerBlocks} gridSettings={page.content.gridSettings.desktop} />
+        </footer>
     </div>
   );
 };

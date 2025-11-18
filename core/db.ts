@@ -103,24 +103,71 @@ export const initializeDatabase = async () => {
              const initialContent = {
                 settings: {
                     brandName: "Mundo Moto",
-                    loginButtonText: "Login do Admin"
+                    loginButtonText: "Login do Admin",
+                    backgroundColor: "#0f172a"
                 },
-                blocks: [
+                gridSettings: {
+                    desktop: { columns: 48, rowHeight: 10, gap: 8 }
+                },
+                headerBlocks: [
+                    {
+                        id: "header_brand",
+                        type: "text",
+                        layout: { desktop: { colStart: 2, colEnd: 12, rowStart: 2, rowEnd: 6, alignSelf: 'center', justifySelf: 'start' } },
+                        styles: { backgroundColor: "transparent", textColor: "#f1f5f9" },
+                        content: {
+                            heading: "Mundo Moto",
+                            body: ""
+                        }
+                    },
+                    {
+                        id: "header_menu_1",
+                        type: "menu",
+                        layout: { desktop: { colStart: 20, colEnd: 48, rowStart: 2, rowEnd: 6, alignSelf: 'center', justifySelf: 'end' } },
+                        styles: { backgroundColor: "transparent", textColor: "#cbd5e1" },
+                        content: {
+                            items: [
+                                { id: "item1", label: "Home", link: "#/home" },
+                                { id: "item2", label: "Sobre", link: "#/sobre" },
+                                { id: "item3", label: "Contato", link: "#/contato" }
+                            ]
+                        }
+                    }
+                ],
+                contentBlocks: [
                     {
                         id: "block_1",
                         type: "hero",
+                        layout: { desktop: { colStart: 5, colEnd: 45, rowStart: 5, rowEnd: 28, alignSelf: 'stretch', justifySelf: 'stretch' } },
+                        styles: { backgroundColor: "#1e293b", opacity: 1, textColor: '#ffffff' },
                         content: {
                             title: "Bem-vindo ao Mundo Moto",
                             subtitle: "Sua parada única para as melhores motos do planeta. Comece sua aventura hoje.",
-                            ctaText: "Explorar Coleção"
+                            ctaText: "Explorar Coleção",
+                            ctaLink: "#",
+                            ctaEnabled: true
                         }
                     },
                     {
                         id: "block_2",
                         type: "text",
+                        layout: { desktop: { colStart: 8, colEnd: 42, rowStart: 32, rowEnd: 52, alignSelf: 'start', justifySelf: 'stretch' } },
+                        styles: { backgroundColor: "transparent", opacity: 1, textColor: '#cbd5e1' },
                         content: {
                             heading: "Sobre Nossa Paixão",
                             body: "Nós vivemos e respiramos motocicletas. Nossa missão é fornecer aos entusiastas máquinas de alta qualidade e serviço incomparável. Cada moto em nossa coleção é escolhida a dedo e inspecionada para garantir que atenda aos nossos altos padrões de desempenho e confiabilidade."
+                        }
+                    }
+                ],
+                footerBlocks: [
+                    {
+                        id: "footer_block_1",
+                        type: "text",
+                        layout: { desktop: { colStart: 1, colEnd: 49, rowStart: 2, rowEnd: 6, alignSelf: 'center', justifySelf: 'center' } },
+                        styles: { backgroundColor: "transparent", opacity: 1, textColor: '#64748b' },
+                        content: {
+                            heading: "",
+                            body: "© 2024 Mundo Moto. Todos os direitos reservados."
                         }
                     }
                 ]
