@@ -1,17 +1,11 @@
-// HACK: Declare Node.js globals to resolve TypeScript errors when @types/node is not available.
-declare const process: {
-    env: {
-        [key: string]: string | undefined;
-    };
-    exit(code?: number): never;
-};
 
-// core/db.ts - Gerenciador de Conexão com o Banco de Dados
+// core/db.ts - Database Connection Manager
 
-import { Pool } from 'pg';
+import pg from 'pg';
+const { Pool } = pg;
 import dotenv from 'dotenv';
-import { ROLE_PERMISSIONS, APP_MODULES } from '../constants';
-import { UserRole, TextStyles, FixedContainer } from '../types';
+import { ROLE_PERMISSIONS } from '../constants.js';
+import { UserRole } from '../types.js';
 
 dotenv.config();
 
@@ -21,9 +15,7 @@ if (!DATABASE_URL) {
     console.error("------------------------------------------------------------");
     console.error("--- ERRO FATAL: A variável DATABASE_URL não foi encontrada. ---");
     console.error("------------------------------------------------------------");
-    console.error("Verifique se o arquivo .env existe na raiz do projeto e se ele");
-    console.error("está acessível pelo processo da aplicação (verifique permissões).");
-    console.error("------------------------------------------------------------");
+    // Fix: Use process.exit instead of console.exit which is not standard
     process.exit(1);
 }
 
@@ -37,7 +29,7 @@ export const initializeDatabase = async () => {
         client = await pool.connect();
         console.log("Conexão com o banco de dados estabelecida com sucesso. Verificando o esquema...");
 
-        // Tabela de Usuários
+        // Users Table
         await client.query(`
             CREATE TABLE IF NOT EXISTS users (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -49,7 +41,7 @@ export const initializeDatabase = async () => {
             );
         `);
         
-        // Tabela de Permissões
+        // Permissions Table
         await client.query(`
             CREATE TABLE IF NOT EXISTS role_permissions (
                 role VARCHAR(50) PRIMARY KEY,
@@ -57,7 +49,7 @@ export const initializeDatabase = async () => {
             );
         `);
 
-        // Popular Permissões Padrão
+        // Populate Default Permissions
         const permissionsCheck = await client.query('SELECT COUNT(*) FROM role_permissions');
         if (parseInt(permissionsCheck.rows[0].count, 10) === 0) {
             console.log("Tabela de permissões está vazia. Populando com os padrões...");
@@ -71,7 +63,7 @@ export const initializeDatabase = async () => {
             console.log("Permissões padrão inseridas com sucesso.");
         }
 
-        // Tabela de Páginas (Nova estrutura CMS)
+        // Pages Table
         await client.query(`
             CREATE TABLE IF NOT EXISTS pages (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -85,7 +77,7 @@ export const initializeDatabase = async () => {
             );
         `);
 
-        // Gatilho para atualizar 'updated_at' em cada atualização de página
+        // Trigger for updated_at
         await client.query(`
             CREATE OR REPLACE FUNCTION update_updated_at_column()
             RETURNS TRIGGER AS $$
@@ -103,12 +95,9 @@ export const initializeDatabase = async () => {
             EXECUTE FUNCTION update_updated_at_column();
         `);
 
-        // Inserir página inicial padrão se não houver nenhuma
+        // Insert default homepage if none exists
         const pagesCheck = await client.query('SELECT COUNT(*) FROM pages');
         if (parseInt(pagesCheck.rows[0].count, 10) === 0) {
-            const defaultTextStyles: TextStyles = { textColor: '#cbd5e1', textAlign: 'left', fontWeight: 'normal', fontStyle: 'normal', fontFamily: 'sans-serif', fontSize: 16};
-            const defaultFixedContainer: Omit<FixedContainer, 'blocks'> = { enabled: false, size: 60, isCollapsed: false, collapsible: true, toggleButtonPosition: 'center' };
-            
              const initialContent = {
                 settings: {
                     brandName: "Mundo Moto",
@@ -118,10 +107,10 @@ export const initializeDatabase = async () => {
                     desktop: { columns: 48, rowHeight: 10, gap: 8 }
                 },
                 fixedContainers: {
-                    top: { ...defaultFixedContainer, size: 80, blocks: [] },
-                    left: { ...defaultFixedContainer, size: 240, blocks: [] },
-                    right: { ...defaultFixedContainer, size: 240, blocks: [] },
-                    bottom: { ...defaultFixedContainer, size: 60, blocks: [] },
+                    top: { enabled: false, size: 80, isCollapsed: false, collapsible: true, toggleButtonPosition: 'center', blocks: [] },
+                    left: { enabled: false, size: 240, isCollapsed: false, collapsible: true, toggleButtonPosition: 'center', blocks: [] },
+                    right: { enabled: false, size: 240, isCollapsed: false, collapsible: true, toggleButtonPosition: 'center', blocks: [] },
+                    bottom: { enabled: false, size: 60, isCollapsed: false, collapsible: true, toggleButtonPosition: 'center', blocks: [] },
                 },
                 mainBlocks: [
                     {
@@ -130,57 +119,22 @@ export const initializeDatabase = async () => {
                         layout: { desktop: { colStart: 5, colEnd: 45, rowStart: 5, rowEnd: 28, alignSelf: 'stretch', justifySelf: 'stretch' } },
                         styles: { backgroundColor: "#1e293b", backgroundOpacity: 1, textOpacity: 1, borderRadius: 'medium', zIndex: 1 },
                         content: {
-                            title: { text: "Bem-vindo ao Mundo Moto", styles: { ...defaultTextStyles, textColor: '#ffffff', textAlign: 'center', fontWeight: 'bold', fontSize: 48 } },
-                            subtitle: { text: "Sua parada única para as melhores motos do planeta. Comece sua aventura hoje.", styles: { ...defaultTextStyles, textColor: '#ffffff', textAlign: 'center', fontSize: 18 } },
+                            title: { text: "Bem-vindo ao Mundo Moto", styles: { textColor: '#ffffff', textAlign: 'center', fontWeight: 'bold', fontSize: 48 } },
+                            subtitle: { text: "Sua parada única para as melhores motos do planeta. Comece sua aventura hoje.", styles: { textColor: '#ffffff', textAlign: 'center', fontSize: 18 } },
                             ctaText: "Explorar Coleção",
                             ctaLink: "#",
                             ctaEnabled: true
                         }
-                    },
-                     {
-                        id: "block_button_1",
-                        type: "button",
-                        layout: { desktop: { colStart: 20, colEnd: 30, rowStart: 29, rowEnd: 33, alignSelf: 'start', justifySelf: 'center' } },
-                        styles: { backgroundColor: "#0891b2", backgroundOpacity: 1, textOpacity: 1, borderRadius: 'medium', zIndex: 1 },
-                        content: {
-                           text: { text: 'Nossa História', styles: {...defaultTextStyles, textAlign: 'center'}},
-                           actionType: 'link',
-                           linkUrl: '#/sobre',
-                           actionTarget: null
-                        }
-                    },
-                    {
-                        id: "block_2",
-                        type: "text",
-                        layout: { desktop: { colStart: 8, colEnd: 42, rowStart: 35, rowEnd: 55, alignSelf: 'start', justifySelf: 'stretch' } },
-                        styles: { backgroundColor: "transparent", backgroundOpacity: 1, textOpacity: 1, borderRadius: 'medium', zIndex: 1 },
-                        content: {
-                            heading: { text: "Sobre Nossa Paixão", styles: { ...defaultTextStyles, fontWeight: 'bold', fontSize: 32 } },
-                            body: { text: "Nós vivemos e respiramos motocicletas. Nossa missão é fornecer aos entusiastas máquinas de alta qualidade e serviço incomparável. Cada moto em nossa coleção é escolhida a dedo e inspecionada para garantir que atenda aos nossos altos padrões de desempenho e confiabilidade.", styles: {...defaultTextStyles, fontSize: 16 } }
-                        }
                     }
                 ],
-                footerBlocks: [
-                    {
-                        id: "footer_block_1",
-                        type: "text",
-                        layout: { desktop: { colStart: 1, colEnd: 49, rowStart: 2, rowEnd: 6, alignSelf: 'center', justifySelf: 'center' } },
-                        styles: { backgroundColor: "transparent", backgroundOpacity: 1, textOpacity: 1, borderRadius: 'medium', zIndex: 1 },
-                        content: {
-                            heading: { text: "", styles: defaultTextStyles },
-                            body: { text: "© 2024 Mundo Moto. Todos os direitos reservados.", styles: { ...defaultTextStyles, textColor: '#64748b', textAlign: 'center', fontSize: 14 } }
-                        }
-                    }
-                ]
+                footerBlocks: []
              };
              await client.query(
                 'INSERT INTO pages (title, slug, is_homepage, content) VALUES ($1, $2, $3, $4)',
                 ['Página Inicial', 'home', true, JSON.stringify(initialContent)]
              );
-             console.log("Página inicial padrão criada.");
         }
 
-        // Outras tabelas de módulos
         await client.query(`CREATE TABLE IF NOT EXISTS product_categories (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name VARCHAR(255) NOT NULL, slug VARCHAR(255) UNIQUE NOT NULL);`);
         await client.query(`CREATE TABLE IF NOT EXISTS products (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name VARCHAR(255) NOT NULL, description TEXT, price DECIMAL(10, 2) NOT NULL, category_id UUID REFERENCES product_categories(id), image_url VARCHAR(2048), created_at TIMESTAMPTZ DEFAULT NOW());`);
         await client.query(`CREATE TABLE IF NOT EXISTS stock_inventory (product_id UUID PRIMARY KEY REFERENCES products(id) ON DELETE CASCADE, quantity INT NOT NULL DEFAULT 0, last_updated_at TIMESTAMPTZ DEFAULT NOW());`);
@@ -191,21 +145,10 @@ export const initializeDatabase = async () => {
         return true;
 
     } catch (error: any) {
-        console.error("------------------------------------------------------------");
         console.error("--- ERRO CRÍTICO: FALHA AO CONECTAR/INICIALIZAR O BANCO DE DADOS ---");
-        console.error("------------------------------------------------------------");
         console.error("Mensagem de Erro:", error.message);
-        console.error("\nPossíveis Causas:");
-        console.error("  1. O serviço do PostgreSQL não está rodando no servidor.");
-        console.error("  2. As credenciais em DATABASE_URL no arquivo .env estão incorretas (usuário, senha, nome do banco).");
-        console.error("  3. O firewall está bloqueando a conexão na porta 5432.");
-        console.error("  4. O banco de dados especificado não existe e não foi criado.");
-        console.error("\nAplicação será encerrada. Verifique a configuração e reinicie.");
-        console.error("------------------------------------------------------------");
-        process.exit(1);
+        return false;
     } finally {
-        if (client) {
-            client.release();
-        }
+        if (client) client.release();
     }
 };

@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Uma plataforma de administração modular full-stack com frontend React e backend Node.js.",
   "main": "dist/server/server.js",
+  "type": "module",
   "scripts": {
     "build:backend": "tsc --project tsconfig.backend.json",
     "build:frontend": "esbuild index.tsx --bundle --outfile=dist/client/index.js --jsx=automatic --format=esm --external:react --external:react-dom/* --external:react/jsx-runtime",
