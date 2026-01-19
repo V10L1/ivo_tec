@@ -1,5 +1,4 @@
-
-import { SiteData, PageBlock, GridSettings, FixedContainer } from '../../types';
+import { SiteData, PageBlock, GridSettings, FixedContainer } from '../../types.js';
 
 // Helper para gerar IDs únicos no backend
 const generateId = (prefix: string) => `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;

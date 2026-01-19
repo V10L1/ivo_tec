@@ -1,4 +1,4 @@
-import { UserRole, SiteData } from '../types';
+import { UserRole, SiteData } from '../types.js';
 
 /**
  * @file schema.ts

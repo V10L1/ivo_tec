@@ -22,7 +22,8 @@ const PORT = process.env.PORT || 8069;
 
 // Fix: Cast cors middleware to any due to potential type mismatches in the environment
 app.use(cors() as any);
-app.use(express.json());
+// Fix: Cast express.json() to any to avoid "Argument of type 'NextHandleFunction' is not assignable to parameter of type 'PathParams'" error
+app.use(express.json() as any);
 
 // --- Health Check Route ---
 app.get('/api/health', async (req: Request, res: Response) => {
