@@ -5,10 +5,11 @@
   "main": "dist/server/server.js",
   "type": "module",
   "scripts": {
+    "clean": "rm -rf dist",
     "build:backend": "tsc --project tsconfig.backend.json",
     "build:frontend": "esbuild index.tsx --bundle --outfile=dist/client/index.js --jsx=automatic --format=esm --external:react --external:react-dom/* --external:react/jsx-runtime",
-    "build": "npm run build:backend && npm run build:frontend",
-    "dev:server": "ts-node-dev --respawn --transpile-only server.ts",
+    "build": "npm run clean && npm run build:backend && npm run build:frontend",
+    "dev:server": "ts-node-dev --respawn --transpile-only --esm server.ts",
     "start": "node dist/server/server.js",
     "deploy": "npm run build && pm2 reload ecosystem.config.js --update-env"
   },
@@ -22,7 +23,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@google/genai": "*",
+    "@google/genai": "^1.30.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
